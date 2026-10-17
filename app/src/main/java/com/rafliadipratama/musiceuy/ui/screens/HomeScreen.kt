@@ -79,28 +79,40 @@ fun HomeScreen(
     val featuredMixes = remember {
         listOf(
             FeaturedMix(
-                title = "Indie Pop Hits Indonesia",
+                title = "Indie Pop Indo",
                 subtitle = "Hindia, Nadin, Sal Priadi",
-                coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300",
-                searchQuery = "Indie Pop Indonesia Hindia"
+                coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500",
+                searchQuery = "Indie Pop Indonesia"
             ),
             FeaturedMix(
-                title = "Top 50 - Global",
+                title = "Top Hits Global",
                 subtitle = "Coldplay, Bruno Mars, Taylor",
-                coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300",
-                searchQuery = "Global Top Hits Coldplay"
+                coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500",
+                searchQuery = "Coldplay Bruno Mars Hits"
             ),
             FeaturedMix(
-                title = "Lo-Fi Chill & Code",
-                subtitle = "Relaksasi • Belajar • Santai",
-                coverUrl = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300",
-                searchQuery = "Lofi Hip Hop Chill"
+                title = "Pop Indo Terkini",
+                subtitle = "Bernadya, Feby, Tulus",
+                coverUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500",
+                searchQuery = "Bernadya Pop Indonesia"
             ),
             FeaturedMix(
-                title = "Acoustic Senja",
-                subtitle = "Akustik Gitar Indonesia",
-                coverUrl = "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=300",
-                searchQuery = "Akustik Senja Indonesia"
+                title = "Nostalgia 2000-an",
+                subtitle = "Sheila On 7, Dewa 19",
+                coverUrl = "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=500",
+                searchQuery = "Sheila On 7 Dewa 19"
+            ),
+            FeaturedMix(
+                title = "Lo-Fi Beats",
+                subtitle = "Relaksasi • Santai • Kopi",
+                coverUrl = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500",
+                searchQuery = "Lofi Hip Hop Chill Beats"
+            ),
+            FeaturedMix(
+                title = "Akustik Senja",
+                subtitle = "Petikan Gitar Kayu",
+                coverUrl = "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=500",
+                searchQuery = "Akustik Gitar Indonesia"
             )
         )
     }
@@ -229,9 +241,9 @@ fun HomeScreen(
                                 selectedFilter = pill
                                 when (pill) {
                                     "Semua" -> viewModel.loadTrending()
-                                    "Musik Resmi" -> viewModel.search("Top Official Hits")
-                                    "Artis Terverifikasi" -> viewModel.search("Hindia Tulus Coldplay")
-                                    "Top 50 Indo" -> viewModel.search("Top 50 Indonesia Pop")
+                                    "Musik Resmi" -> viewModel.search("Pop Indonesia Hits")
+                                    "Artis Terverifikasi" -> viewModel.search("Bernadya Hindia Tulus Nadin")
+                                    "Top 50 Indo" -> viewModel.search("Top Hits Indonesia")
                                 }
                             }
                             .padding(horizontal = 16.dp, vertical = 7.dp)

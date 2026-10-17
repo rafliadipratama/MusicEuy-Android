@@ -17,6 +17,7 @@ import com.rafliadipratama.musiceuy.data.model.Track
 import com.rafliadipratama.musiceuy.data.network.LrcLibClient
 import com.rafliadipratama.musiceuy.data.network.MusicStreamSource
 import com.rafliadipratama.musiceuy.service.MusicService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class RepeatMode { OFF, ALL, ONE }
 
@@ -157,22 +159,45 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             _uiState.update { it.copy(lyrics = lyrics) }
         }
 
-        val metadata = MediaMetadata.Builder()
-            .setTitle(track.title)
-            .setArtist(track.artist.name)
-            .setAlbumTitle(track.albumTitle ?: "")
-            .setArtworkUri(Uri.parse(track.coverUrl))
-            .build()
+        viewModelScope.launch {
+            var activeAudioUri = track.audioUrl
 
-        val mediaItem = MediaItem.Builder()
-            .setMediaId(track.id)
-            .setUri(track.audioUrl)
-            .setMediaMetadata(metadata)
-            .build()
+            // If audioUrl is a YouTube placeholder, resolve via NewPipeExtractor
+            if (activeAudioUri.startsWith("yt:") || !activeAudioUri.startsWith("http")) {
+                val videoId = track.id.removePrefix("yt:")
+                val stream = withContext(Dispatchers.IO) {
+                    streamSource.resolveYouTubeAudioStream(videoId)
+                }
+                if (!stream.isNullOrBlank()) {
+                    activeAudioUri = stream
+                } else {
+                    // Fallback to high quality direct stream
+                    val cleanMatch = withContext(Dispatchers.IO) {
+                        streamSource.fetchSaavn("${track.artist.name} ${track.title}", limit = 1).firstOrNull()
+                    }
+                    if (cleanMatch != null && cleanMatch.audioUrl.startsWith("http")) {
+                        activeAudioUri = cleanMatch.audioUrl
+                    }
+                }
+            }
 
-        controller.setMediaItem(mediaItem)
-        controller.prepare()
-        controller.play()
+            val metadata = MediaMetadata.Builder()
+                .setTitle(track.title)
+                .setArtist(track.artist.name)
+                .setAlbumTitle(track.albumTitle ?: "")
+                .setArtworkUri(Uri.parse(track.coverUrl))
+                .build()
+
+            val mediaItem = MediaItem.Builder()
+                .setMediaId(track.id)
+                .setUri(activeAudioUri)
+                .setMediaMetadata(metadata)
+                .build()
+
+            controller.setMediaItem(mediaItem)
+            controller.prepare()
+            controller.play()
+        }
     }
 
     fun togglePlayPause() {
