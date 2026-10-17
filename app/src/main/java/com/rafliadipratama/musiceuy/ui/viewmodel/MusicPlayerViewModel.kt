@@ -48,8 +48,14 @@ data class PlayerUiState(
     val isLyricsVisible: Boolean = false,
     val isQueueVisible: Boolean = false,
     val searchResults: List<Track> = emptyList(),
+    val searchResultArtists: List<Artist> = emptyList(),
+    val searchResultAlbums: List<Album> = emptyList(),
+    val searchCategory: String = "Semua",
     val trendingTracks: List<Track> = emptyList(),
     val mostPlayedTracks: List<Track> = emptyList(),
+    val newReleases: List<Album> = emptyList(),
+    val popularArtists: List<Artist> = emptyList(),
+    val selectedHomeFilter: String = "Semua",
     val favoriteArtists: List<String> = emptyList(),
     val playlists: List<Playlist> = emptyList(),
     val selectedPlaylist: Playlist? = null,
@@ -70,6 +76,8 @@ data class PlayerUiState(
     val isSleepTimerDialogVisible: Boolean = false,
     val downloadingTrackIds: Map<String, Float> = emptyMap(),
     val downloadedTrackIds: Set<String> = emptySet(),
+    val downloadedTracks: List<Track> = emptyList(),
+    val isDownloadedScreenVisible: Boolean = false,
     val downloadNotificationMessage: String? = null,
     val error: String? = null
 )
@@ -148,18 +156,47 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun setSearchCategory(category: String) {
+        _uiState.update { it.copy(searchCategory = category) }
+    }
+
+    fun selectHomeFilter(filter: String) {
+        _uiState.update { it.copy(selectedHomeFilter = filter) }
+        when (filter) {
+            "Semua", "Trending", "Rilisan Baru", "Artis Populer" -> {
+                _uiState.update { it.copy(searchResults = emptyList(), searchResultArtists = emptyList(), searchResultAlbums = emptyList()) }
+            }
+            "Pop Indonesia" -> search("Pop Indonesia Hits")
+            "Artis Terverifikasi" -> search("Sheila On 7 Bernadya Hindia Tulus")
+        }
+    }
+
     fun search(query: String) {
         if (query.isBlank()) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSearching = true, error = null) }
-            val results = withContext(Dispatchers.IO) {
-                pluginManager.search(query).ifEmpty { streamSource.searchTracks(query) }
+            val allResults = withContext(Dispatchers.IO) {
+                val pluginTracks = pluginManager.search(query)
+                if (pluginTracks.isNotEmpty()) {
+                    val artists = streamSource.searchArtists(query)
+                    val albums = streamSource.searchAlbums(query)
+                    com.rafliadipratama.musiceuy.data.network.SearchAllResults(
+                        tracks = pluginTracks,
+                        artists = artists,
+                        albums = albums
+                    )
+                } else {
+                    streamSource.searchAll(query)
+                }
             }
             _uiState.update {
                 it.copy(
-                    searchResults = results,
+                    searchResults = allResults.tracks,
+                    searchResultArtists = allResults.artists,
+                    searchResultAlbums = allResults.albums,
                     isSearching = false,
-                    error = if (results.isEmpty()) "Lagu tidak ditemukan. Coba kata kunci lain." else null
+                    error = if (allResults.tracks.isEmpty() && allResults.artists.isEmpty() && allResults.albums.isEmpty())
+                        "Tidak ditemukan hasil untuk '$query'. Coba kata kunci lain." else null
                 )
             }
         }
@@ -190,20 +227,26 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 )
             }
 
-            // If user has listening history, prioritize their favorite / most played songs
-            // Otherwise, fetch curated trending Indonesian tracks so startup is never random
-            if (mostPlayed.isNotEmpty()) {
-                _uiState.update { it.copy(trendingTracks = mostPlayed) }
-            } else {
-                val trending = withContext(Dispatchers.IO) { streamSource.fetchTrending() }
-                _uiState.update { it.copy(trendingTracks = trending) }
+            // Muat lagu yang sudah terunduh di HP
+            loadDownloadedTracks()
+
+            // Muat data Explore YouTube Music (Trending, Rilisan Baru, Musisi Populer)
+            val explore = withContext(Dispatchers.IO) {
+                streamSource.fetchExploreHome()
+            }
+            _uiState.update {
+                it.copy(
+                    trendingTracks = explore.trendingTracks,
+                    newReleases = explore.newReleases,
+                    popularArtists = explore.popularArtists
+                )
             }
         }
     }
 
     fun loadTrending() {
         viewModelScope.launch {
-            _uiState.update { it.copy(searchResults = emptyList(), error = null) }
+            _uiState.update { it.copy(searchResults = emptyList(), searchResultArtists = emptyList(), searchResultAlbums = emptyList(), error = null) }
             val trending = withContext(Dispatchers.IO) { streamSource.fetchTrending() }
             _uiState.update { it.copy(trendingTracks = trending) }
         }
@@ -217,6 +260,8 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             _uiState.update {
                 it.copy(
                     searchResults = mostPlayed,
+                    searchResultArtists = emptyList(),
+                    searchResultAlbums = emptyList(),
                     isSearching = false,
                     error = if (mostPlayed.isEmpty()) "Belum ada lagu yang sering diputar. Mulai dengarkan lagu favoritmu!" else null
                 )
@@ -272,8 +317,10 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
             android.util.Log.d("MusicEuy", "playTrack: title=${track.title}, artist=${track.artist.name}, initialUrl=${track.audioUrl}")
 
+            val isLocalAudio = activeAudioUri.startsWith("content://") || activeAudioUri.startsWith("file://")
+
             // If audioUrl is a placeholder (e.g. yt:ID), resolve via active plugins
-            if (!activeAudioUri.startsWith("http")) {
+            if (!isLocalAudio && !activeAudioUri.startsWith("http")) {
                 val resolvedStream = withContext(Dispatchers.IO) {
                     pluginManager.resolveStream(track)
                 }
@@ -291,7 +338,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 }
             }
 
-            if (!activeAudioUri.startsWith("http")) {
+            if (!isLocalAudio && !activeAudioUri.startsWith("http")) {
                 android.util.Log.e("MusicEuy", "Cannot play track: activeAudioUri is invalid ($activeAudioUri)")
                 _uiState.update { it.copy(isPlaying = false, error = "Stream audio belum tersedia untuk '${track.title}'. Coba lagu lain.") }
                 return@launch
@@ -299,11 +346,15 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
             android.util.Log.d("MusicEuy", "Setting MediaItem URI: $activeAudioUri")
 
+            val artworkUri = if (track.coverUrl.isNotBlank()) {
+                try { Uri.parse(track.coverUrl) } catch (_: Exception) { null }
+            } else null
+
             val metadata = MediaMetadata.Builder()
                 .setTitle(track.title)
                 .setArtist(track.artist.name)
                 .setAlbumTitle(track.albumTitle ?: "")
-                .setArtworkUri(Uri.parse(track.coverUrl))
+                .setArtworkUri(artworkUri)
                 .build()
 
             val mediaItem = MediaItem.Builder()
@@ -797,6 +848,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                             downloadNotificationMessage = "✓ Tersimpan di $path"
                         )
                     }
+                    loadDownloadedTracks()
                 },
                 onFailure = { err ->
                     _uiState.update {
@@ -808,6 +860,47 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 }
             )
         }
+    }
+
+    fun loadDownloadedTracks() {
+        viewModelScope.launch {
+            val downloaded = withContext(Dispatchers.IO) {
+                downloadManager.getDownloadedTracks()
+            }
+            val downloadedIds = downloaded.map { it.id }.toSet()
+            _uiState.update {
+                it.copy(
+                    downloadedTracks = downloaded,
+                    downloadedTrackIds = it.downloadedTrackIds + downloadedIds
+                )
+            }
+        }
+    }
+
+    fun deleteDownloadedTrack(track: Track) {
+        viewModelScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                downloadManager.deleteDownloadedTrack(track)
+            }
+            if (success) {
+                loadDownloadedTracks()
+                _uiState.update {
+                    it.copy(
+                        downloadNotificationMessage = "Lagu '${track.title}' dihapus dari unduhan",
+                        downloadedTrackIds = it.downloadedTrackIds - track.id
+                    )
+                }
+            }
+        }
+    }
+
+    fun openDownloadedTracks() {
+        loadDownloadedTracks()
+        _uiState.update { it.copy(isDownloadedScreenVisible = true, isPlayerExpanded = false) }
+    }
+
+    fun closeDownloadedTracks() {
+        _uiState.update { it.copy(isDownloadedScreenVisible = false) }
     }
 
     fun clearDownloadMessage() {

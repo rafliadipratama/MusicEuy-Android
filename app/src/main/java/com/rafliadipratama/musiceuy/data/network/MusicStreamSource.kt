@@ -5,6 +5,7 @@ import com.rafliadipratama.musiceuy.data.model.Album
 import com.rafliadipratama.musiceuy.data.model.Artist
 import com.rafliadipratama.musiceuy.data.model.Track
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -19,6 +20,18 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
+
+data class SearchAllResults(
+    val tracks: List<Track> = emptyList(),
+    val artists: List<Artist> = emptyList(),
+    val albums: List<Album> = emptyList()
+)
+
+data class ExploreHomeData(
+    val trendingTracks: List<Track> = emptyList(),
+    val newReleases: List<Album> = emptyList(),
+    val popularArtists: List<Artist> = emptyList()
+)
 
 class MusicStreamSource(
     private val client: OkHttpClient = OkHttpClient.Builder()
@@ -222,6 +235,314 @@ class MusicStreamSource(
             // YouTube Music query error
         }
         tracks
+    }
+
+    suspend fun searchArtists(query: String): List<Artist> = withContext(Dispatchers.IO) {
+        val artists = mutableListOf<Artist>()
+        try {
+            val url = "https://music.youtube.com/youtubei/v1/search"
+            val payload = JSONObject().apply {
+                put("query", query.trim())
+                put("params", "EgWKAQIgAWoSEAUQAxAEEAoQDhAJEBAQFRAR")
+                put("context", JSONObject().apply {
+                    put("client", JSONObject().apply {
+                        put("clientName", "WEB_REMIX")
+                        put("clientVersion", "1.20240318.01.00")
+                        put("hl", "id")
+                        put("gl", "ID")
+                    })
+                })
+            }
+
+            val request = Request.Builder()
+                .url(url)
+                .header("Content-Type", "application/json")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .post(payload.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val json = JSONObject(body)
+                        val contents = json.optJSONObject("contents")
+                            ?.optJSONObject("tabbedSearchResultsRenderer")
+                            ?.optJSONArray("tabs")
+                            ?.optJSONObject(0)
+                            ?.optJSONObject("tabRenderer")
+                            ?.optJSONObject("content")
+                            ?.optJSONObject("sectionListRenderer")
+                            ?.optJSONArray("contents")
+
+                        if (contents != null) {
+                            for (s in 0 until contents.length()) {
+                                val sec = contents.optJSONObject(s) ?: continue
+                                val shelf = sec.optJSONObject("musicShelfRenderer") ?: continue
+                                val items = shelf.optJSONArray("contents") ?: continue
+
+                                for (i in 0 until items.length()) {
+                                    val item = items.optJSONObject(i)?.optJSONObject("musicResponsiveListItemRenderer") ?: continue
+                                    val cols = item.optJSONArray("flexColumns") ?: continue
+                                    if (cols.length() < 1) continue
+
+                                    val nameRuns = cols.optJSONObject(0)
+                                        ?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")
+                                        ?.optJSONObject("text")
+                                        ?.optJSONArray("runs")
+                                    val name = nameRuns?.optJSONObject(0)?.optString("text", "") ?: ""
+                                    if (name.isBlank() || isIndianContent(name, name)) continue
+
+                                    val navEndpoint = item.optJSONObject("navigationEndpoint")
+                                    val browseId = navEndpoint?.optJSONObject("browseEndpoint")?.optString("browseId", "") ?: ""
+
+                                    val thumbs = item.optJSONObject("thumbnail")
+                                        ?.optJSONObject("musicThumbnailRenderer")
+                                        ?.optJSONObject("thumbnail")
+                                        ?.optJSONArray("thumbnails")
+                                    var thumbUrl = thumbs?.optJSONObject(thumbs.length() - 1)?.optString("url", "") ?: ""
+                                    thumbUrl = thumbUrl.replace(Regex("=w\\d+-h\\d+"), "=w500-h500")
+
+                                    artists.add(
+                                        Artist(
+                                            id = if (browseId.isNotBlank()) browseId else "artist_${name.hashCode()}",
+                                            name = name,
+                                            avatarUrl = if (thumbUrl.isNotBlank()) thumbUrl else null,
+                                            isVerified = true
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+        artists
+    }
+
+    suspend fun searchAlbums(query: String): List<Album> = withContext(Dispatchers.IO) {
+        val albums = mutableListOf<Album>()
+        try {
+            val url = "https://music.youtube.com/youtubei/v1/search"
+            val payload = JSONObject().apply {
+                put("query", query.trim())
+                put("params", "EgWKAQIYAWoSEAUQAxAEEAoQDhAJEBAQFRAR")
+                put("context", JSONObject().apply {
+                    put("client", JSONObject().apply {
+                        put("clientName", "WEB_REMIX")
+                        put("clientVersion", "1.20240318.01.00")
+                        put("hl", "id")
+                        put("gl", "ID")
+                    })
+                })
+            }
+
+            val request = Request.Builder()
+                .url(url)
+                .header("Content-Type", "application/json")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .post(payload.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val json = JSONObject(body)
+                        val contents = json.optJSONObject("contents")
+                            ?.optJSONObject("tabbedSearchResultsRenderer")
+                            ?.optJSONArray("tabs")
+                            ?.optJSONObject(0)
+                            ?.optJSONObject("tabRenderer")
+                            ?.optJSONObject("content")
+                            ?.optJSONObject("sectionListRenderer")
+                            ?.optJSONArray("contents")
+
+                        if (contents != null) {
+                            for (s in 0 until contents.length()) {
+                                val sec = contents.optJSONObject(s) ?: continue
+                                val shelf = sec.optJSONObject("musicShelfRenderer") ?: continue
+                                val items = shelf.optJSONArray("contents") ?: continue
+
+                                for (i in 0 until items.length()) {
+                                    val item = items.optJSONObject(i)?.optJSONObject("musicResponsiveListItemRenderer") ?: continue
+                                    val cols = item.optJSONArray("flexColumns") ?: continue
+                                    if (cols.length() < 2) continue
+
+                                    val titleRuns = cols.optJSONObject(0)
+                                        ?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")
+                                        ?.optJSONObject("text")
+                                        ?.optJSONArray("runs")
+                                    val title = titleRuns?.optJSONObject(0)?.optString("text", "") ?: ""
+                                    if (title.isBlank()) continue
+
+                                    val subRuns = cols.optJSONObject(1)
+                                        ?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")
+                                        ?.optJSONObject("text")
+                                        ?.optJSONArray("runs")
+                                    val artistName = if ((subRuns?.length() ?: 0) > 2) subRuns?.optJSONObject(2)?.optString("text", "Artist") ?: "Artist" else "Artist"
+                                    val year = if ((subRuns?.length() ?: 0) > 4) subRuns?.optJSONObject(4)?.optString("text", "") ?: "" else ""
+
+                                    if (isIndianContent(title, artistName)) continue
+
+                                    val navEndpoint = item.optJSONObject("navigationEndpoint")
+                                    val browseId = navEndpoint?.optJSONObject("browseEndpoint")?.optString("browseId", "") ?: ""
+
+                                    val thumbs = item.optJSONObject("thumbnail")
+                                        ?.optJSONObject("musicThumbnailRenderer")
+                                        ?.optJSONObject("thumbnail")
+                                        ?.optJSONArray("thumbnails")
+                                    var thumbUrl = thumbs?.optJSONObject(thumbs.length() - 1)?.optString("url", "") ?: ""
+                                    thumbUrl = thumbUrl.replace(Regex("=w\\d+-h\\d+"), "=w500-h500")
+
+                                    albums.add(
+                                        Album(
+                                            id = if (browseId.isNotBlank()) browseId else "album_${title.hashCode()}",
+                                            title = title,
+                                            artistName = artistName,
+                                            year = year,
+                                            coverUrl = thumbUrl
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+        albums
+    }
+
+    suspend fun searchAll(query: String): SearchAllResults = withContext(Dispatchers.IO) {
+        val cleanQ = query.trim()
+        if (cleanQ.isBlank()) return@withContext SearchAllResults()
+
+        val tracksDef = async { searchTracks(cleanQ) }
+        val artistsDef = async { searchArtists(cleanQ) }
+        val albumsDef = async { searchAlbums(cleanQ) }
+
+        SearchAllResults(
+            tracks = tracksDef.await(),
+            artists = artistsDef.await(),
+            albums = albumsDef.await()
+        )
+    }
+
+    suspend fun fetchExploreHome(): ExploreHomeData = withContext(Dispatchers.IO) {
+        val newReleases = mutableListOf<Album>()
+
+        try {
+            val url = "https://music.youtube.com/youtubei/v1/browse"
+            val payload = JSONObject().apply {
+                put("browseId", "FEmusic_explore")
+                put("context", JSONObject().apply {
+                    put("client", JSONObject().apply {
+                        put("clientName", "WEB_REMIX")
+                        put("clientVersion", "1.20240318.01.00")
+                        put("hl", "id")
+                        put("gl", "ID")
+                    })
+                })
+            }
+
+            val request = Request.Builder()
+                .url(url)
+                .header("Content-Type", "application/json")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .post(payload.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val json = JSONObject(body)
+                        val sections = json.optJSONObject("contents")
+                            ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                            ?.optJSONArray("tabs")
+                            ?.optJSONObject(0)
+                            ?.optJSONObject("tabRenderer")
+                            ?.optJSONObject("content")
+                            ?.optJSONObject("sectionListRenderer")
+                            ?.optJSONArray("contents")
+
+                        if (sections != null) {
+                            for (s in 0 until sections.length()) {
+                                val sec = sections.optJSONObject(s) ?: continue
+                                val shelf = sec.optJSONObject("musicCarouselShelfRenderer") ?: continue
+                                val header = shelf.optJSONObject("header")
+                                    ?.optJSONObject("musicCarouselShelfBasicHeaderRenderer")
+                                    ?.optJSONObject("title")
+                                    ?.optJSONArray("runs")
+                                    ?.optJSONObject(0)
+                                    ?.optString("text", "") ?: ""
+                                val items = shelf.optJSONArray("contents") ?: continue
+
+                                if (header.contains("terbaru", ignoreCase = true) || header.contains("album", ignoreCase = true)) {
+                                    for (i in 0 until items.length()) {
+                                        val it = items.optJSONObject(i)?.optJSONObject("musicTwoRowItemRenderer") ?: continue
+                                        val title = it.optJSONObject("title")?.optJSONArray("runs")?.optJSONObject(0)?.optString("text", "") ?: ""
+                                        val subRuns = it.optJSONObject("subtitle")?.optJSONArray("runs")
+                                        val artist = if ((subRuns?.length() ?: 0) > 2) subRuns?.optJSONObject(2)?.optString("text", "Artist") ?: "Artist" else "Artist"
+                                        val browseId = it.optJSONObject("navigationEndpoint")?.optJSONObject("browseEndpoint")?.optString("browseId", "") ?: ""
+                                        val thumbs = it.optJSONObject("thumbnailRenderer")
+                                            ?.optJSONObject("musicThumbnailRenderer")
+                                            ?.optJSONObject("thumbnail")
+                                            ?.optJSONArray("thumbnails")
+                                        var thumbUrl = thumbs?.optJSONObject(thumbs.length() - 1)?.optString("url", "") ?: ""
+                                        thumbUrl = thumbUrl.replace(Regex("=w\\d+-h\\d+"), "=w500-h500")
+
+                                        if (title.isNotBlank() && !isIndianContent(title, artist)) {
+                                            newReleases.add(
+                                                Album(
+                                                    id = if (browseId.isNotBlank()) browseId else "rel_${title.hashCode()}",
+                                                    title = title,
+                                                    artistName = artist,
+                                                    year = "2024",
+                                                    coverUrl = thumbUrl
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+
+        if (newReleases.isEmpty()) {
+            newReleases.addAll(searchAlbums("Pop Indonesia Terbaru").take(10))
+        }
+
+        val trending = try {
+            val hits = searchYouTubeMusic("Top Hits Indonesia Viral")
+            if (hits.isNotEmpty()) hits else fetchTrending()
+        } catch (_: Exception) {
+            fetchTrending()
+        }
+
+        val popularArtists = listOf(
+            Artist(id = "UCoy8sTKrImqfSq6TYOSW81A", name = "Sheila On 7", avatarUrl = "https://lh3.googleusercontent.com/ZBI5XEhdUvkE59Kr7HKZYIjoopuA_kC0uPAWNsEw-EmLfTtRaXuDEv-qYWTv_lahkpA8Yuhe7P-sO2Y=w500-h500"),
+            Artist(id = "artist_bernadya", name = "Bernadya", avatarUrl = "https://yt3.googleusercontent.com/a/ACg8ocIdkG482z9_Bernadya=w500-h500"),
+            Artist(id = "artist_hindia", name = "Hindia", avatarUrl = "https://yt3.googleusercontent.com/a/ACg8ocLq8Hindia=w500-h500"),
+            Artist(id = "artist_nadin", name = "Nadin Amizah", avatarUrl = "https://yt3.googleusercontent.com/a/ACg8ocNadinAmizah=w500-h500"),
+            Artist(id = "artist_salpriadi", name = "Sal Priadi", avatarUrl = "https://yt3.googleusercontent.com/a/ACg8ocSalPriadi=w500-h500"),
+            Artist(id = "artist_juicyluicy", name = "Juicy Luicy", avatarUrl = "https://yt3.googleusercontent.com/a/ACg8ocJuicyLuicy=w500-h500"),
+            Artist(id = "artist_mahalini", name = "Mahalini", avatarUrl = "https://yt3.googleusercontent.com/a/ACg8ocMahalini=w500-h500"),
+            Artist(id = "artist_tulus", name = "Tulus", avatarUrl = "https://yt3.googleusercontent.com/a/ACg8ocTulus=w500-h500"),
+            Artist(id = "artist_dennycaknan", name = "Denny Caknan", avatarUrl = "https://yt3.googleusercontent.com/a/ACg8ocDennyCaknan=w500-h500"),
+            Artist(id = "artist_pamungkas", name = "Pamungkas", avatarUrl = "https://yt3.googleusercontent.com/a/ACg8ocPamungkas=w500-h500")
+        )
+
+        ExploreHomeData(
+            trendingTracks = trending,
+            newReleases = newReleases,
+            popularArtists = popularArtists
+        )
     }
 
     suspend fun searchTracks(query: String): List<Track> = withContext(Dispatchers.IO) {

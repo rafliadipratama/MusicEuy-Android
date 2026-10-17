@@ -1,5 +1,6 @@
 package com.rafliadipratama.musiceuy.data.local
 
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.media.MediaScannerConnection
@@ -7,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import com.rafliadipratama.musiceuy.data.model.Artist
 import com.rafliadipratama.musiceuy.data.model.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -32,6 +34,140 @@ class MusicDownloadManager(
         .readTimeout(60, TimeUnit.SECONDS)
         .build()
 ) {
+
+    fun getDownloadedTracks(): List<Track> {
+        val tracks = mutableListOf<Track>()
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val projection = arrayOf(
+                    MediaStore.Audio.Media._ID,
+                    MediaStore.Audio.Media.TITLE,
+                    MediaStore.Audio.Media.ARTIST,
+                    MediaStore.Audio.Media.ALBUM,
+                    MediaStore.Audio.Media.DURATION,
+                    MediaStore.Audio.Media.SIZE,
+                    MediaStore.Audio.Media.DISPLAY_NAME
+                )
+                val selection = "${MediaStore.Audio.Media.RELATIVE_PATH} LIKE ? OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE ?"
+                val selectionArgs = arrayOf("Music/MusicEuy%", "%.m4a")
+                val uri = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                context.contentResolver.query(uri, projection, selection, selectionArgs, "${MediaStore.Audio.Media.DATE_ADDED} DESC")?.use { cursor ->
+                    val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                    val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+                    val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+                    val albumCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+                    val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+                    val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+                    val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+
+                    while (cursor.moveToNext()) {
+                        val id = cursor.getLong(idCol)
+                        val rawTitle = cursor.getString(titleCol) ?: ""
+                        val rawArtist = cursor.getString(artistCol) ?: ""
+                        val album = cursor.getString(albumCol) ?: "MusicEuy"
+                        val duration = (cursor.getInt(durationCol) / 1000).coerceAtLeast(0)
+                        val size = cursor.getLong(sizeCol)
+                        val displayName = cursor.getString(nameCol) ?: ""
+
+                        var finalTitle = rawTitle
+                        var finalArtist = rawArtist
+                        if (finalArtist.isBlank() || finalArtist.equals("<unknown>", ignoreCase = true)) {
+                            val cleanName = displayName.removeSuffix(".m4a").removeSuffix(".mp3")
+                            if (cleanName.contains(" - ")) {
+                                val parts = cleanName.split(" - ", limit = 2)
+                                finalArtist = parts[0].trim()
+                                finalTitle = parts[1].trim()
+                            } else {
+                                finalArtist = "MusicEuy Offline"
+                                finalTitle = cleanName
+                            }
+                        }
+
+                        val contentUri = ContentUris.withAppendedId(
+                            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                            id
+                        )
+
+                        tracks.add(
+                            Track(
+                                id = "local_$id",
+                                title = finalTitle,
+                                artist = Artist(id = "artist_$finalArtist", name = finalArtist),
+                                albumTitle = album,
+                                durationSec = duration,
+                                audioUrl = contentUri.toString(),
+                                coverUrl = "",
+                                isLiked = false,
+                                isVerified = true,
+                                isDownloaded = true,
+                                fileSizeBytes = size,
+                                sourceLabel = "Penyimpanan HP (Offline)"
+                            )
+                        )
+                    }
+                }
+            } else {
+                val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "MusicEuy")
+                if (dir.exists() && dir.isDirectory) {
+                    dir.listFiles { f -> f.extension.equals("m4a", ignoreCase = true) || f.extension.equals("mp3", ignoreCase = true) }?.forEach { f ->
+                        val cleanName = f.nameWithoutExtension
+                        var artist = "MusicEuy Offline"
+                        var title = cleanName
+                        if (cleanName.contains(" - ")) {
+                            val parts = cleanName.split(" - ", limit = 2)
+                            artist = parts[0].trim()
+                            title = parts[1].trim()
+                        }
+                        tracks.add(
+                            Track(
+                                id = "local_${f.name.hashCode()}",
+                                title = title,
+                                artist = Artist(id = "artist_$artist", name = artist),
+                                albumTitle = "MusicEuy",
+                                durationSec = 0,
+                                audioUrl = Uri.fromFile(f).toString(),
+                                coverUrl = "",
+                                isLiked = false,
+                                isVerified = true,
+                                isDownloaded = true,
+                                fileSizeBytes = f.length(),
+                                sourceLabel = "Penyimpanan HP (Offline)"
+                            )
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MusicDownloadManager", "Error querying downloaded tracks", e)
+        }
+        return tracks
+    }
+
+    fun deleteDownloadedTrack(track: Track): Boolean {
+        return try {
+            if (track.audioUrl.startsWith("content://")) {
+                val uri = Uri.parse(track.audioUrl)
+                context.contentResolver.delete(uri, null, null) > 0
+            } else if (track.audioUrl.startsWith("file://")) {
+                val file = File(Uri.parse(track.audioUrl).path ?: "")
+                file.delete()
+            } else {
+                val safeName = getSafeFileName(track)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val selection = "${MediaStore.Audio.Media.DISPLAY_NAME} = ?"
+                    val selectionArgs = arrayOf(safeName)
+                    val uri = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                    context.contentResolver.delete(uri, selection, selectionArgs) > 0
+                } else {
+                    val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "MusicEuy")
+                    File(dir, safeName).delete()
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MusicDownloadManager", "Error deleting track: ${track.title}", e)
+            false
+        }
+    }
 
     fun isTrackDownloaded(track: Track): Boolean {
         val safeName = getSafeFileName(track)

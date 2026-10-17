@@ -18,6 +18,8 @@ data class Track(
     val coverUrl: String,
     val isLiked: Boolean = false,
     val isVerified: Boolean = true,
+    val isDownloaded: Boolean = false,
+    val fileSizeBytes: Long = 0L,
     val sourceLabel: String = "YouTube Music Verified"
 ) {
     val durationFormatted: String
@@ -25,5 +27,12 @@ data class Track(
             val mins = durationSec / 60
             val secs = durationSec % 60
             return String.format("%02d:%02d", mins, secs)
+        }
+
+    val fileSizeFormatted: String
+        get() {
+            if (fileSizeBytes <= 0) return ""
+            val mb = fileSizeBytes.toDouble() / (1024 * 1024)
+            return String.format("%.1f MB", mb)
         }
 }

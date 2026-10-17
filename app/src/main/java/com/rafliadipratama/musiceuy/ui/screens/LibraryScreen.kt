@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material3.AlertDialog
@@ -205,10 +206,10 @@ fun LibraryScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Quick Tiles: Lagu Disukai & Sering Diputar
+                // Quick Tiles: Lagu Disukai, Lagu Diunduh, Sering Diputar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Lagu Disukai Tile
                     Card(
@@ -221,12 +222,12 @@ fun LibraryScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(14.dp)
+                                .padding(12.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(Color(0xFFE91E63).copy(alpha = 0.2f)),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -234,20 +235,66 @@ fun LibraryScreen(
                                     imageVector = Icons.Default.Favorite,
                                     contentDescription = null,
                                     tint = Color(0xFFE91E63),
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Lagu Disukai",
+                                text = "Disukai",
                                 color = TextPrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
                             )
                             Text(
                                 text = "${uiState.likedTracks.size} lagu",
                                 color = TextMuted,
-                                fontSize = 12.sp
+                                fontSize = 11.sp,
+                                maxLines = 1
+                            )
+                        }
+                    }
+
+                    // Lagu Diunduh Tile
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceContainerHigh),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { viewModel.openDownloadedTracks() }
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF00E5FF).copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DownloadDone,
+                                    contentDescription = null,
+                                    tint = Color(0xFF00E5FF),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Diunduh",
+                                color = TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = "${uiState.downloadedTracks.size} offline",
+                                color = TextMuted,
+                                fontSize = 11.sp,
+                                maxLines = 1
                             )
                         }
                     }
@@ -266,12 +313,12 @@ fun LibraryScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(14.dp)
+                                .padding(12.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(BrandGreen.copy(alpha = 0.2f)),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -279,23 +326,25 @@ fun LibraryScreen(
                                     imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                                     contentDescription = null,
                                     tint = BrandGreen,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Sering Diputar",
+                                text = "Sering",
                                 color = TextPrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
                             )
                             Text(
                                 text = if (uiState.mostPlayedTracks.isNotEmpty())
-                                    "${uiState.mostPlayedTracks.size} lagu sering"
+                                    "${uiState.mostPlayedTracks.size} lagu"
                                 else
-                                    "Otomatis tersimpan",
+                                    "Otomatis",
                                 color = TextMuted,
-                                fontSize = 12.sp
+                                fontSize = 11.sp,
+                                maxLines = 1
                             )
                         }
                     }

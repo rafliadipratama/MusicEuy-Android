@@ -40,6 +40,7 @@ import com.rafliadipratama.musiceuy.ui.components.QueueBottomSheet
 import com.rafliadipratama.musiceuy.ui.components.SleepTimerBottomSheet
 import com.rafliadipratama.musiceuy.ui.components.TrackContextMenuBottomSheet
 import com.rafliadipratama.musiceuy.ui.screens.ArtistDetailScreen
+import com.rafliadipratama.musiceuy.ui.screens.DownloadedTracksScreen
 import com.rafliadipratama.musiceuy.ui.screens.HomeScreen
 import com.rafliadipratama.musiceuy.ui.screens.LibraryScreen
 import com.rafliadipratama.musiceuy.ui.screens.PlayerScreen
@@ -61,7 +62,11 @@ class MainActivity : ComponentActivity() {
                 val uiState by viewModel.uiState.collectAsState()
                 var selectedTab by remember { mutableStateOf(NavigationTab.HOME) }
 
-                BackHandler(enabled = uiState.selectedPlaylist != null) {
+                BackHandler(enabled = uiState.isDownloadedScreenVisible) {
+                    viewModel.closeDownloadedTracks()
+                }
+
+                BackHandler(enabled = !uiState.isDownloadedScreenVisible && uiState.selectedPlaylist != null) {
                     viewModel.closePlaylist()
                 }
 
@@ -184,6 +189,18 @@ class MainActivity : ComponentActivity() {
                                 onBackClick = { viewModel.closePlaylist() }
                             )
                         }
+                    }
+
+                    // Downloaded Tracks Screen Overlay
+                    AnimatedVisibility(
+                        visible = uiState.isDownloadedScreenVisible,
+                        enter = slideInVertically(initialOffsetY = { it }),
+                        exit = slideOutVertically(targetOffsetY = { it })
+                    ) {
+                        DownloadedTracksScreen(
+                            viewModel = viewModel,
+                            onBackClick = { viewModel.closeDownloadedTracks() }
+                        )
                     }
 
                     // Full-screen Player Overlay
