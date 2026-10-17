@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -89,19 +90,35 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                BackHandler(enabled = uiState.selectedPlaylist == null && uiState.selectedArtist == null && !uiState.isAddToPlaylistSheetVisible && uiState.trackForContextMenu != null) {
+                BackHandler(enabled = uiState.trackForContextMenu != null) {
                     viewModel.dismissTrackContextMenu()
                 }
 
-                BackHandler(enabled = uiState.selectedPlaylist == null && uiState.selectedArtist == null && !uiState.isAddToPlaylistSheetVisible && uiState.isQueueVisible) {
+                BackHandler(enabled = uiState.isQueueVisible) {
                     viewModel.dismissQueue()
                 }
 
-                BackHandler(enabled = uiState.selectedPlaylist == null && uiState.selectedArtist == null && !uiState.isAddToPlaylistSheetVisible && !uiState.isQueueVisible && uiState.isPlayerExpanded) {
+                BackHandler(enabled = uiState.isEqualizerSheetVisible) {
+                    viewModel.dismissEqualizer()
+                }
+
+                BackHandler(enabled = uiState.isPlayerExpanded) {
                     viewModel.collapsePlayer()
                 }
 
-                BackHandler(enabled = uiState.selectedPlaylist == null && uiState.selectedArtist == null && !uiState.isAddToPlaylistSheetVisible && !uiState.isQueueVisible && !uiState.isPlayerExpanded && selectedTab != NavigationTab.HOME) {
+                BackHandler(enabled = !uiState.isPlayerExpanded && uiState.selectedArtist != null) {
+                    viewModel.closeArtistDetail()
+                }
+
+                BackHandler(enabled = !uiState.isPlayerExpanded && uiState.selectedPlaylist != null) {
+                    viewModel.closePlaylist()
+                }
+
+                BackHandler(enabled = !uiState.isPlayerExpanded && uiState.isDownloadedScreenVisible) {
+                    viewModel.closeDownloadedTracks()
+                }
+
+                BackHandler(enabled = !uiState.isPlayerExpanded && uiState.selectedArtist == null && uiState.selectedPlaylist == null && !uiState.isDownloadedScreenVisible && selectedTab != NavigationTab.HOME) {
                     selectedTab = NavigationTab.HOME
                 }
 
@@ -119,47 +136,6 @@ class MainActivity : ComponentActivity() {
                             onNavigateToHome = { selectedTab = NavigationTab.HOME }
                         )
                         NavigationTab.PLUGINS -> PluginsScreen(viewModel = viewModel)
-                    }
-
-                    // Bottom Navigation Bar + MiniPlayer Dock
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth(),
-                        color = Color(0xFF161B22),
-                        shadowElevation = 12.dp
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .navigationBarsPadding()
-                        ) {
-                            AnimatedVisibility(
-                                visible = uiState.currentTrack != null,
-                                enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
-                                exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
-                            ) {
-                                uiState.currentTrack?.let { track ->
-                                    MiniPlayer(
-                                        track = track,
-                                        isPlaying = uiState.isPlaying,
-                                        currentPosMs = uiState.currentPositionMs,
-                                        durationMs = uiState.durationMs,
-                                        dominantColor = uiState.dominantColor,
-                                        onPlayPause = { viewModel.togglePlayPause() },
-                                        onNext = { viewModel.nextTrack() },
-                                        onQueueClick = { viewModel.toggleQueue() },
-                                        onClick = { viewModel.expandPlayer() },
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                            }
-
-                            BottomNavBar(
-                                selectedTab = selectedTab,
-                                onTabSelected = { selectedTab = it }
-                            )
-                        }
                     }
 
                     // Artist Detail Screen Overlay
@@ -204,7 +180,65 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // Full-screen Player Overlay
+                    // STICKY BOTTOM DOCK (MiniPlayer on EVERY screen + BottomNavBar on root tabs)
+                    val isRootTab = uiState.selectedArtist == null && uiState.selectedPlaylist == null && !uiState.isDownloadedScreenVisible
+                    val showBottomDock = !uiState.isPlayerExpanded && (uiState.currentTrack != null || isRootTab)
+
+                    if (showBottomDock) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth(),
+                            color = Color(0xFF161B22),
+                            shadowElevation = 16.dp
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .widthIn(max = 840.dp)
+                                        .fillMaxWidth()
+                                        .navigationBarsPadding()
+                                ) {
+                                    // MiniPlayer - Sticky & Synchronous on ALL screens
+                                    AnimatedVisibility(
+                                        visible = uiState.currentTrack != null,
+                                        enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
+                                        exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
+                                    ) {
+                                        uiState.currentTrack?.let { track ->
+                                            MiniPlayer(
+                                                track = track,
+                                                isPlaying = uiState.isPlaying,
+                                                currentPosMs = uiState.currentPositionMs,
+                                                durationMs = uiState.durationMs,
+                                                dominantColor = uiState.dominantColor,
+                                                onPlayPause = { viewModel.togglePlayPause() },
+                                                onNext = { viewModel.nextTrack() },
+                                                onQueueClick = { viewModel.toggleQueue() },
+                                                onClick = { viewModel.expandPlayer() },
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+                                    }
+
+                                    // Bottom Navigation Bar - Visible on root tabs
+                                    AnimatedVisibility(
+                                        visible = isRootTab
+                                    ) {
+                                        BottomNavBar(
+                                            selectedTab = selectedTab,
+                                            onTabSelected = { selectedTab = it }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Full-screen Player Overlay (100% Opaque, covers screen when expanded)
                     AnimatedVisibility(
                         visible = uiState.isPlayerExpanded,
                         enter = slideInVertically(initialOffsetY = { it }),
