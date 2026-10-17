@@ -142,6 +142,22 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun loadSpotifyTop50() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSearching = true, error = null) }
+            val results = withContext(Dispatchers.IO) {
+                pluginManager.spotifySource.getTop50Indonesia()
+            }
+            _uiState.update {
+                it.copy(
+                    searchResults = results,
+                    isSearching = false,
+                    error = if (results.isEmpty()) "Gagal memuat Spotify Top 50. Periksa koneksi internet." else null
+                )
+            }
+        }
+    }
+
     fun playTrack(track: Track, newQueue: List<Track>? = null) {
         val controller = mediaController ?: return
         val currentQueue = newQueue ?: _uiState.value.queue.ifEmpty { listOf(track) }

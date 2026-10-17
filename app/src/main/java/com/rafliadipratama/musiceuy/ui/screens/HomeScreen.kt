@@ -79,6 +79,12 @@ fun HomeScreen(
     val featuredMixes = remember {
         listOf(
             FeaturedMix(
+                title = "Spotify Top 50",
+                subtitle = "Tangga Lagu Resmi Indonesia",
+                coverUrl = "https://charts-images.scdn.co/assets/locale_en/regional/daily/region_id_default.jpg",
+                searchQuery = "spotify:top50"
+            ),
+            FeaturedMix(
                 title = "Indie Pop Indo",
                 subtitle = "Hindia, Nadin, Sal Priadi",
                 coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500",
@@ -107,17 +113,11 @@ fun HomeScreen(
                 subtitle = "Relaksasi • Santai • Kopi",
                 coverUrl = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500",
                 searchQuery = "Lofi Hip Hop Chill Beats"
-            ),
-            FeaturedMix(
-                title = "Akustik Senja",
-                subtitle = "Petikan Gitar Kayu",
-                coverUrl = "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=500",
-                searchQuery = "Akustik Gitar Indonesia"
             )
         )
     }
 
-    val filterPills = listOf("Semua", "Musik Resmi", "Artis Terverifikasi", "Top 50 Indo")
+    val filterPills = listOf("Semua", "Spotify Top 50", "Musik Resmi", "Artis Terverifikasi", "Top Hits Global")
 
     Box(
         modifier = modifier
@@ -239,9 +239,10 @@ fun HomeScreen(
                                 selectedFilter = pill
                                 when (pill) {
                                     "Semua" -> viewModel.loadTrending()
+                                    "Spotify Top 50" -> viewModel.loadSpotifyTop50()
                                     "Musik Resmi" -> viewModel.search("Pop Indonesia Hits")
                                     "Artis Terverifikasi" -> viewModel.search("Bernadya Hindia Tulus Nadin")
-                                    "Top 50 Indo" -> viewModel.search("Top Hits Indonesia")
+                                    "Top Hits Global" -> viewModel.search("Coldplay Bruno Mars Hits")
                                 }
                             }
                             .padding(horizontal = 16.dp, vertical = 7.dp)
@@ -286,14 +287,26 @@ fun HomeScreen(
                                     Box(modifier = Modifier.weight(1f)) {
                                         FeaturedMixCard(
                                             mix = featuredMixes[i],
-                                            onClick = { viewModel.search(featuredMixes[i].searchQuery) }
+                                            onClick = {
+                                                if (featuredMixes[i].searchQuery == "spotify:top50") {
+                                                    viewModel.loadSpotifyTop50()
+                                                } else {
+                                                    viewModel.search(featuredMixes[i].searchQuery)
+                                                }
+                                            }
                                         )
                                     }
                                     if (i + 1 < featuredMixes.size) {
                                         Box(modifier = Modifier.weight(1f)) {
                                             FeaturedMixCard(
                                                 mix = featuredMixes[i + 1],
-                                                onClick = { viewModel.search(featuredMixes[i + 1].searchQuery) }
+                                                onClick = {
+                                                    if (featuredMixes[i + 1].searchQuery == "spotify:top50") {
+                                                        viewModel.loadSpotifyTop50()
+                                                    } else {
+                                                        viewModel.search(featuredMixes[i + 1].searchQuery)
+                                                    }
+                                                }
                                             )
                                         }
                                     }

@@ -26,15 +26,42 @@ class YouTubeMusicPlugin(
 
     override suspend fun resolveStream(track: Track): String? {
         if (!isEnabled) return null
-        val videoId = if (track.id.startsWith("yt:")) {
-            track.id.removePrefix("yt:")
+
+        var videoId: String? = null
+
+        if (track.id.startsWith("yt:")) {
+            videoId = track.id.removePrefix("yt:")
         } else if (track.audioUrl.startsWith("yt:")) {
-            track.audioUrl.removePrefix("yt:")
-        } else if (!track.audioUrl.startsWith("http")) {
-            track.id
-        } else {
+            videoId = track.audioUrl.removePrefix("yt:")
+        } else if (track.audioUrl.startsWith("http")) {
             return track.audioUrl
         }
-        return streamSource.resolveYouTubeAudioStream(videoId)
+
+        // If not a direct YouTube ID (e.g. from Spotify metadata),
+        // search YouTube Music for verified song matching title + artist strictly
+        if (videoId == null) {
+            val query = "${track.artist.name} ${track.title}"
+            android.util.Log.d("MusicEuy", "YouTubeMusicPlugin resolving track via YouTube: $query")
+            val ytCandidates = streamSource.searchYouTubeMusic(query)
+            val bestMatch = ytCandidates.firstOrNull { candidate ->
+                streamSource.isStrictMatch(
+                    expectedTitle = track.title,
+                    expectedArtist = track.artist.name,
+                    candidateTitle = candidate.title,
+                    candidateArtist = candidate.artist.name
+                )
+            } ?: ytCandidates.firstOrNull()
+
+            if (bestMatch != null) {
+                videoId = bestMatch.id.removePrefix("yt:")
+                android.util.Log.d("MusicEuy", "Matched to YouTube videoId=$videoId (title=${bestMatch.title})")
+            }
+        }
+
+        if (videoId != null && !videoId.startsWith("http")) {
+            return streamSource.resolveYouTubeAudioStream(videoId)
+        }
+
+        return null
     }
 }

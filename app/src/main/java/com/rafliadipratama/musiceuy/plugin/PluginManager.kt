@@ -10,7 +10,8 @@ import kotlinx.coroutines.flow.update
 
 class PluginManager(
     private val context: Context,
-    private val streamSource: MusicStreamSource = MusicStreamSource()
+    private val streamSource: MusicStreamSource = MusicStreamSource(),
+    val spotifySource: com.rafliadipratama.musiceuy.data.network.SpotifyPublicSource = com.rafliadipratama.musiceuy.data.network.SpotifyPublicSource()
 ) {
 
     private val prefs = context.getSharedPreferences("musiceuy_plugins", Context.MODE_PRIVATE)
@@ -26,6 +27,11 @@ class PluginManager(
         val ytPlugin = YouTubeMusicPlugin(
             streamSource = streamSource,
             isEnabled = prefs.getBoolean("plugin_enabled_ytmusic", true)
+        )
+
+        val spotifyPlugin = SpotifyMetadataPlugin(
+            spotifySource = spotifySource,
+            isEnabled = prefs.getBoolean("plugin_enabled_spotify_public", true)
         )
 
         val saavnPlugin = JioSaavnPlugin(
@@ -44,7 +50,7 @@ class PluginManager(
             isBuiltIn = true
         )
 
-        _plugins.value = listOf(ytPlugin, saavnPlugin, spotubeBridgePlugin)
+        _plugins.value = listOf(ytPlugin, spotifyPlugin, saavnPlugin, spotubeBridgePlugin)
     }
 
     fun togglePlugin(pluginId: String, isEnabled: Boolean) {
@@ -87,7 +93,8 @@ class PluginManager(
         val enabledPlugins = _plugins.value.filter { it.isEnabled }
 
         // 1. Try plugin matching track's prefix
-        if (track.id.startsWith("yt:") || track.audioUrl.startsWith("yt:")) {
+        if (track.id.startsWith("yt:") || track.audioUrl.startsWith("yt:") ||
+            track.id.startsWith("sp:") || track.audioUrl.startsWith("sp:")) {
             val ytPlugin = enabledPlugins.firstOrNull { it.id == "ytmusic" }
             val stream = ytPlugin?.resolveStream(track)
             if (!stream.isNullOrBlank()) return stream
