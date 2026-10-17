@@ -337,6 +337,10 @@ class MainActivity : ComponentActivity() {
                                             viewModel.playTrack(track)
                                             viewModel.dismissTrackContextMenu()
                                         },
+                                        onStartRadio = {
+                                            viewModel.dismissTrackContextMenu()
+                                            viewModel.startSongRadio(track)
+                                        },
                                         onPlayNext = { viewModel.playNext(track) },
                                         onAddToQueue = { viewModel.addToQueue(track) },
                                         onAddToPlaylist = {

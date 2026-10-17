@@ -18,19 +18,29 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +62,14 @@ import com.rafliadipratama.musiceuy.ui.theme.TextPrimary
 import com.rafliadipratama.musiceuy.ui.theme.TextSecondary
 import com.rafliadipratama.musiceuy.ui.viewmodel.MusicPlayerViewModel
 
+enum class PlaylistSortOption(val title: String) {
+    DEFAULT("Urutan Asli"),
+    TITLE_AZ("Judul (A-Z)"),
+    ARTIST_AZ("Artis (A-Z)"),
+    DURATION_DESC("Durasi Terpanjang"),
+    DURATION_ASC("Durasi Terpendek")
+}
+
 @Composable
 fun PlaylistDetailScreen(
     playlist: Playlist,
@@ -61,6 +79,28 @@ fun PlaylistDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentPlaylist = uiState.playlists.find { it.id == playlist.id } ?: playlist
+
+    var searchQuery by remember { mutableStateOf("") }
+    var sortOption by remember { mutableStateOf(PlaylistSortOption.DEFAULT) }
+    var isSortMenuExpanded by remember { mutableStateOf(false) }
+
+    val filteredTracks = remember(currentPlaylist.tracks, searchQuery, sortOption) {
+        val searched = if (searchQuery.isBlank()) {
+            currentPlaylist.tracks
+        } else {
+            currentPlaylist.tracks.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                it.artist.name.contains(searchQuery, ignoreCase = true)
+            }
+        }
+        when (sortOption) {
+            PlaylistSortOption.DEFAULT -> searched
+            PlaylistSortOption.TITLE_AZ -> searched.sortedBy { it.title.lowercase() }
+            PlaylistSortOption.ARTIST_AZ -> searched.sortedBy { it.artist.name.lowercase() }
+            PlaylistSortOption.DURATION_DESC -> searched.sortedByDescending { it.durationSec }
+            PlaylistSortOption.DURATION_ASC -> searched.sortedBy { it.durationSec }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -235,10 +275,104 @@ fun PlaylistDetailScreen(
                 }
             }
 
+            // Search & Sort Bar (if playlist is not empty)
+            if (currentPlaylist.tracks.isNotEmpty()) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("Cari di playlist ini...", color = TextMuted, fontSize = 13.sp) },
+                            singleLine = true,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            trailingIcon = {
+                                if (searchQuery.isNotBlank()) {
+                                    IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(24.dp)) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Hapus pencarian",
+                                            tint = TextMuted,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = BrandGreen,
+                                unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
+                                focusedContainerColor = SurfaceContainerHigh,
+                                unfocusedContainerColor = SurfaceContainerHigh,
+                                cursorColor = BrandGreen,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(50.dp)
+                        )
+
+                        // Sort Button with Dropdown
+                        Box {
+                            IconButton(
+                                onClick = { isSortMenuExpanded = true },
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(SurfaceContainerHigh)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Sort,
+                                    contentDescription = "Urutkan",
+                                    tint = if (sortOption != PlaylistSortOption.DEFAULT) BrandGreen else TextSecondary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = isSortMenuExpanded,
+                                onDismissRequest = { isSortMenuExpanded = false },
+                                modifier = Modifier.background(SurfaceContainerHigh)
+                            ) {
+                                PlaylistSortOption.entries.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = option.title,
+                                                color = if (sortOption == option) BrandGreen else TextPrimary,
+                                                fontWeight = if (sortOption == option) FontWeight.Bold else FontWeight.Normal,
+                                                fontSize = 13.sp
+                                            )
+                                        },
+                                        onClick = {
+                                            sortOption = option
+                                            isSortMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Track List Header
             item {
                 Text(
-                    text = "Daftar Lagu (${currentPlaylist.tracks.size})",
+                    text = if (searchQuery.isNotBlank()) "Hasil Pencarian (${filteredTracks.size})" else "Daftar Lagu (${filteredTracks.size})",
                     color = TextPrimary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
@@ -271,8 +405,23 @@ fun PlaylistDetailScreen(
                         }
                     }
                 }
+            } else if (filteredTracks.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Tidak ada lagu yang cocok dengan \"$searchQuery\"",
+                            color = TextMuted,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
             } else {
-                items(currentPlaylist.tracks, key = { it.id }) { track ->
+                items(filteredTracks, key = { it.id }) { track ->
                     val isActive = uiState.currentTrack?.id == track.id
                     val isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked
                     Box(modifier = Modifier.padding(horizontal = 12.dp)) {
@@ -282,7 +431,7 @@ fun PlaylistDetailScreen(
                             isActive = isActive,
                             isLiked = isLiked,
                             onClick = {
-                                viewModel.playTrack(track, currentPlaylist.tracks)
+                                viewModel.playTrack(track, filteredTracks)
                             },
                             onArtistClick = { artist ->
                                 viewModel.openArtistDetail(artist)

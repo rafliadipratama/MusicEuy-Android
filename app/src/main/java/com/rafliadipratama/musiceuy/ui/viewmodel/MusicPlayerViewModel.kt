@@ -85,6 +85,13 @@ data class PlayerUiState(
     val isEqualizerSheetVisible: Boolean = false,
     val isBackupRestoreDialogVisible: Boolean = false,
     val backupRestoreMessage: String? = null,
+    val isImportPlaylistDialogVisible: Boolean = false,
+    val isImportingPlaylist: Boolean = false,
+    val isRecapDialogVisible: Boolean = false,
+    val listeningStats: com.rafliadipratama.musiceuy.data.local.ListeningStats = com.rafliadipratama.musiceuy.data.local.ListeningStats(),
+    val isStorageDialogVisible: Boolean = false,
+    val audioCacheSizeBytes: Long = 0L,
+    val downloadedSizeBytes: Long = 0L,
     val error: String? = null
 )
 
@@ -94,7 +101,8 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     val pluginManager = com.rafliadipratama.musiceuy.plugin.PluginManager(application, streamSource)
     val historyManager = LocalMusicHistoryManager(application)
     val downloadManager = com.rafliadipratama.musiceuy.data.local.MusicDownloadManager(application)
-    private val lrcClient = LrcLibClient()
+    val playlistImporter = com.rafliadipratama.musiceuy.data.network.PlaylistImporter()
+    private val lrcClient = LrcLibClient(cacheDir = application.filesDir)
     private var sleepTimerJob: Job? = null
 
     private val _uiState = MutableStateFlow(PlayerUiState())
@@ -182,11 +190,14 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     fun selectHomeFilter(filter: String) {
         _uiState.update { it.copy(selectedHomeFilter = filter) }
         when (filter) {
-            "Semua", "Trending", "Rilisan Baru", "Artis Populer" -> {
+            "Semua" -> {
                 _uiState.update { it.copy(searchResults = emptyList(), searchResultArtists = emptyList(), searchResultAlbums = emptyList()) }
+                filterHomeCategory("Semua")
             }
-            "Pop Indonesia" -> search("Pop Indonesia Hits")
-            "Artis Terverifikasi" -> search("Sheila On 7 Bernadya Hindia Tulus")
+            else -> {
+                _uiState.update { it.copy(searchResults = emptyList(), searchResultArtists = emptyList(), searchResultAlbums = emptyList()) }
+                filterHomeCategory(filter)
+            }
         }
     }
 
@@ -928,6 +939,9 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                         )
                     }
                     loadDownloadedTracks()
+                    viewModelScope.launch(Dispatchers.IO) {
+                        try { lrcClient.fetchLyrics(track.artist.name, track.title) } catch (_: Exception) {}
+                    }
                 },
                 onFailure = { err ->
                     _uiState.update {
@@ -1059,6 +1073,116 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             _uiState.update { it.copy(backupRestoreMessage = "Gagal memulihkan. Format JSON tidak sesuai.") }
         }
         return success
+    }
+
+    fun startSongRadio(track: Track) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isAutoplayEnabled = true,
+                    downloadNotificationMessage = "Memulai Radio Lagu '${track.title}'..."
+                )
+            }
+            val related = streamSource.fetchSongRadio(track)
+            val queue = listOf(track) + related
+            playTrack(track, queue)
+        }
+    }
+
+    fun filterHomeCategory(category: String) {
+        _uiState.update { it.copy(selectedHomeFilter = category) }
+        viewModelScope.launch {
+            if (category == "Semua") {
+                val homeData = streamSource.fetchExploreHome()
+                _uiState.update {
+                    it.copy(
+                        trendingTracks = homeData.trendingTracks,
+                        newReleases = homeData.newReleases,
+                        popularArtists = homeData.popularArtists
+                    )
+                }
+            } else {
+                val tracks = streamSource.fetchMoodCategoryTracks(category)
+                if (tracks.isNotEmpty()) {
+                    _uiState.update { it.copy(trendingTracks = tracks) }
+                }
+            }
+        }
+    }
+
+    fun playOfficialChart(chartName: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(downloadNotificationMessage = "Memuat $chartName...") }
+            val chartTracks = streamSource.fetchOfficialChart(chartName)
+            if (chartTracks.isNotEmpty()) {
+                playTrack(chartTracks.first(), chartTracks)
+            }
+        }
+    }
+
+    fun showImportPlaylistDialog() {
+        _uiState.update { it.copy(isImportPlaylistDialogVisible = true) }
+    }
+
+    fun dismissImportPlaylistDialog() {
+        _uiState.update { it.copy(isImportPlaylistDialogVisible = false, isImportingPlaylist = false) }
+    }
+
+    fun importPlaylistFromUrl(url: String, customName: String? = null, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isImportingPlaylist = true) }
+            try {
+                val res = playlistImporter.importFromUrl(url, customName)
+                historyManager.saveImportedPlaylist(res.playlist)
+                _uiState.update {
+                    it.copy(
+                        playlists = historyManager.getAllPlaylists(),
+                        isImportingPlaylist = false,
+                        isImportPlaylistDialogVisible = false
+                    )
+                }
+                onResult(true, "Berhasil mengimpor playlist ${res.sourceName}: \"${res.playlist.name}\" (${res.tracks.size} lagu)")
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isImportingPlaylist = false) }
+                onResult(false, e.message ?: "Gagal mengimpor playlist")
+            }
+        }
+    }
+
+    fun showRecapDialog() {
+        val stats = historyManager.getListeningStats()
+        _uiState.update { it.copy(isRecapDialogVisible = true, listeningStats = stats) }
+    }
+
+    fun dismissRecapDialog() {
+        _uiState.update { it.copy(isRecapDialogVisible = false) }
+    }
+
+    fun showStorageDialog() {
+        val cacheSize = com.rafliadipratama.musiceuy.data.local.MusicCacheManager.getCacheSizeBytes(getApplication())
+        val downloadSize = downloadManager.getTotalDownloadedSizeBytes()
+        _uiState.update {
+            it.copy(
+                isStorageDialogVisible = true,
+                audioCacheSizeBytes = cacheSize,
+                downloadedSizeBytes = downloadSize
+            )
+        }
+    }
+
+    fun dismissStorageDialog() {
+        _uiState.update { it.copy(isStorageDialogVisible = false) }
+    }
+
+    fun clearAudioCache() {
+        com.rafliadipratama.musiceuy.data.local.MusicCacheManager.clearCache(getApplication())
+        val newCacheSize = com.rafliadipratama.musiceuy.data.local.MusicCacheManager.getCacheSizeBytes(getApplication())
+        _uiState.update {
+            it.copy(
+                audioCacheSizeBytes = newCacheSize,
+                downloadNotificationMessage = "Cache streaming audio berhasil dibersihkan."
+            )
+        }
     }
 
     override fun onCleared() {

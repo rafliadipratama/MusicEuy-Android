@@ -313,4 +313,30 @@ class MusicDownloadManager(
         val sanitized = raw.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim()
         return "$sanitized.m4a"
     }
+
+    fun getTotalDownloadedSizeBytes(): Long {
+        var totalBytes = 0L
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val projection = arrayOf(MediaStore.Audio.Media.SIZE)
+                val selection = "${MediaStore.Audio.Media.RELATIVE_PATH} LIKE ? OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE ?"
+                val selectionArgs = arrayOf("Music/MusicEuy%", "%.m4a")
+                val uri = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                context.contentResolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
+                    val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+                    while (cursor.moveToNext()) {
+                        totalBytes += cursor.getLong(sizeCol)
+                    }
+                }
+            } else {
+                val musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
+                val appDir = File(musicDir, "MusicEuy")
+                if (appDir.exists() && appDir.isDirectory) {
+                    appDir.listFiles()?.forEach { totalBytes += it.length() }
+                }
+            }
+        } catch (_: Exception) {}
+        return totalBytes
+    }
 }
+

@@ -7,6 +7,14 @@ import com.rafliadipratama.musiceuy.data.model.Track
 import org.json.JSONArray
 import org.json.JSONObject
 
+data class ListeningStats(
+    val totalPlayCount: Int = 0,
+    val estimatedMinutes: Long = 0L,
+    val topArtists: List<Pair<String, Int>> = emptyList(),
+    val topTracks: List<Track> = emptyList(),
+    val favoriteArtist: String? = null
+)
+
 /**
  * Local database manager for user listening history, preferences, and playlists.
  * Operates 100% locally without requiring user accounts or cloud authentication.
@@ -20,6 +28,53 @@ class LocalMusicHistoryManager(context: Context) {
         private const val KEY_TRACKS = "played_tracks_json"
         private const val KEY_PLAYLISTS = "playlists_json"
         private const val KEY_LIKED_TRACKS = "liked_tracks_json"
+    }
+
+    fun getListeningStats(): ListeningStats {
+        try {
+            val currentMap = loadTracksMap()
+            var totalPlays = 0
+            var totalSec = 0L
+            val artistCounts = mutableMapOf<String, Int>()
+
+            for (entry in currentMap.values) {
+                val count = entry.optInt("playCount", 1)
+                val dur = entry.optInt("durationSec", 200)
+                totalPlays += count
+                totalSec += (dur.toLong() * count)
+                val artist = entry.optString("artistName", "")
+                if (artist.isNotBlank()) {
+                    artistCounts[artist] = (artistCounts[artist] ?: 0) + count
+                }
+            }
+
+            val topArtists = artistCounts.entries
+                .sortedByDescending { it.value }
+                .take(5)
+                .map { it.key to it.value }
+
+            val topTracks = currentMap.values
+                .sortedByDescending { it.optInt("playCount", 0) }
+                .take(5)
+                .map { jsonToTrack(it) }
+
+            return ListeningStats(
+                totalPlayCount = totalPlays,
+                estimatedMinutes = totalSec / 60,
+                topArtists = topArtists,
+                topTracks = topTracks,
+                favoriteArtist = topArtists.firstOrNull()?.first
+            )
+        } catch (_: Exception) {
+            return ListeningStats()
+        }
+    }
+
+    fun saveImportedPlaylist(playlist: Playlist) {
+        val all = getAllPlaylists().toMutableList()
+        all.removeAll { it.id == playlist.id }
+        all.add(0, playlist)
+        savePlaylists(all)
     }
 
     /**

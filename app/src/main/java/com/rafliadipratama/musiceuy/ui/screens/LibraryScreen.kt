@@ -23,11 +23,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material.icons.filled.SettingsBackupRestore
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
@@ -35,12 +38,16 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.rafliadipratama.musiceuy.ui.components.MusicEuyRecapBottomSheet
+import com.rafliadipratama.musiceuy.ui.components.StorageManagerBottomSheet
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
 import android.widget.Toast
@@ -286,6 +293,118 @@ fun LibraryScreen(
         )
     }
 
+    if (uiState.isImportPlaylistDialogVisible) {
+        val context = LocalContext.current
+        var playlistUrl by remember { mutableStateOf("") }
+        var customName by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissImportPlaylistDialog() },
+            containerColor = SurfaceContainerHigh,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Link,
+                        contentDescription = null,
+                        tint = BrandGreen,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Impor Playlist dari Link",
+                        color = TextPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Tempel tautan playlist publik Spotify atau YouTube Music:",
+                        color = TextSecondary,
+                        fontSize = 13.sp
+                    )
+                    OutlinedTextField(
+                        value = playlistUrl,
+                        onValueChange = { playlistUrl = it },
+                        placeholder = { Text("https://open.spotify.com/playlist/... atau YouTube", color = TextMuted, fontSize = 12.sp) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BrandGreen,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = customName,
+                        onValueChange = { customName = it },
+                        placeholder = { Text("Nama playlist lokal (opsional)", color = TextMuted, fontSize = 12.sp) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BrandGreen,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (playlistUrl.isNotBlank()) {
+                            viewModel.importPlaylistFromUrl(playlistUrl, customName) { _, msg ->
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    enabled = playlistUrl.isNotBlank() && !uiState.isImportingPlaylist,
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandGreen)
+                ) {
+                    if (uiState.isImportingPlaylist) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.Black,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Mengimpor...", color = Color(0xFF0C0E11), fontWeight = FontWeight.Bold)
+                    } else {
+                        Text("Impor", color = Color(0xFF0C0E11), fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.dismissImportPlaylistDialog() },
+                    enabled = !uiState.isImportingPlaylist
+                ) {
+                    Text("Batal", color = TextSecondary)
+                }
+            }
+        )
+    }
+
+    if (uiState.isStorageDialogVisible) {
+        StorageManagerBottomSheet(
+            cacheSizeBytes = uiState.audioCacheSizeBytes,
+            downloadSizeBytes = uiState.downloadedSizeBytes,
+            onClearCacheClick = { viewModel.clearAudioCache() },
+            onDismiss = { viewModel.dismissStorageDialog() }
+        )
+    }
+
+    if (uiState.isRecapDialogVisible) {
+        MusicEuyRecapBottomSheet(
+            stats = uiState.listeningStats,
+            onDismiss = { viewModel.dismissRecapDialog() }
+        )
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -336,14 +455,36 @@ fun LibraryScreen(
                         }
                     }
 
-                    // Backup & Restore Action Button
-                    IconButton(onClick = { viewModel.showBackupRestoreDialog() }) {
-                        Icon(
-                            imageVector = Icons.Default.SettingsBackupRestore,
-                            contentDescription = "Cadangkan & Pulihkan",
-                            tint = BrandGreen,
-                            modifier = Modifier.size(24.dp)
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Recap / Statistik
+                        IconButton(onClick = { viewModel.showRecapDialog() }) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "MusicEuy Recap",
+                                tint = Color(0xFFFF4081),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        // Storage & Cache Manager
+                        IconButton(onClick = { viewModel.showStorageDialog() }) {
+                            Icon(
+                                imageVector = Icons.Default.SdStorage,
+                                contentDescription = "Penyimpanan & Cache",
+                                tint = Color(0xFF4FC3F7),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        // Backup & Restore
+                        IconButton(onClick = { viewModel.showBackupRestoreDialog() }) {
+                            Icon(
+                                imageVector = Icons.Default.SettingsBackupRestore,
+                                contentDescription = "Cadangkan & Pulihkan",
+                                tint = BrandGreen,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
                 }
 
@@ -518,16 +659,29 @@ fun LibraryScreen(
                         )
                     }
 
-                    Text(
-                        text = "+ Buat Baru",
-                        color = BrandGreen,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .clickable { showCreateDialog = true }
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Impor Link",
+                            color = Color(0xFF4FC3F7),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { viewModel.showImportPlaylistDialog() }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "+ Buat Baru",
+                            color = BrandGreen,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { showCreateDialog = true }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))

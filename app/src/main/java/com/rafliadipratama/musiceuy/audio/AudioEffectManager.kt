@@ -31,7 +31,8 @@ data class AudioEffectState(
     val isBassBoostEnabled: Boolean = false,
     val bassBoostStrength: Short = 0, // 0 to 1000
     val isLoudnessEnabled: Boolean = false,
-    val audioQuality: AudioQuality = AudioQuality.STANDAR
+    val audioQuality: AudioQuality = AudioQuality.STANDAR,
+    val crossfadeSeconds: Int = 0
 )
 
 object AudioEffectManager {
@@ -44,6 +45,7 @@ object AudioEffectManager {
     private const val KEY_BASS_STRENGTH = "bass_strength"
     private const val KEY_LOUDNESS_ENABLED = "loudness_enabled"
     private const val KEY_AUDIO_QUALITY = "audio_quality"
+    private const val KEY_CROSSFADE = "crossfade_seconds"
 
     val PRESET_MAP = mapOf(
         "Datar" to listOf<Short>(0, 0, 0, 0, 0),
@@ -81,6 +83,7 @@ object AudioEffectManager {
         val levels = (0 until 5).map { i ->
             prefs.getInt("$KEY_BAND_PREFIX$i", defaultLevels.getOrElse(i) { 0 }.toInt()).toShort()
         }
+        val crossfade = prefs.getInt(KEY_CROSSFADE, 0)
 
         _state.value = AudioEffectState(
             isEqEnabled = eqEnabled,
@@ -89,8 +92,15 @@ object AudioEffectManager {
             isBassBoostEnabled = bassEnabled,
             bassBoostStrength = bassStrength,
             isLoudnessEnabled = loudnessEnabled,
-            audioQuality = quality
+            audioQuality = quality,
+            crossfadeSeconds = crossfade
         )
+    }
+
+    fun setCrossfadeSeconds(context: Context, seconds: Int) {
+        val clamped = seconds.coerceIn(0, 12)
+        getPrefs(context).edit().putInt(KEY_CROSSFADE, clamped).apply()
+        _state.value = _state.value.copy(crossfadeSeconds = clamped)
     }
 
     fun attachAudioSession(context: Context, audioSessionId: Int) {

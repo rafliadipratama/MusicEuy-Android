@@ -23,11 +23,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.Card
@@ -47,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -72,6 +75,12 @@ import com.rafliadipratama.musiceuy.ui.theme.TextSecondary
 import com.rafliadipratama.musiceuy.ui.theme.VerifiedBadge
 import com.rafliadipratama.musiceuy.ui.viewmodel.MusicPlayerViewModel
 
+private data class OfficialChart(
+    val title: String,
+    val subtitle: String,
+    val gradientColors: List<Color>
+)
+
 @Composable
 fun HomeScreen(
     viewModel: MusicPlayerViewModel,
@@ -81,8 +90,17 @@ fun HomeScreen(
     var searchInput by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val homeFilterPills = listOf("Semua", "Trending", "Rilisan Baru", "Artis Populer", "Pop Indonesia")
+    val homeFilterPills = listOf("Semua", "Fokus / Belajar", "Santai & Chill", "Workout", "Pesta", "Pop Indonesia", "Indie", "Rock", "Dangdut")
     val searchCategoryPills = listOf("Semua", "Lagu", "Artis", "Album")
+
+    val officialCharts = remember {
+        listOf(
+            OfficialChart("Top 50 Indonesia", "Hits terpopuler Tanah Air", listOf(Color(0xFF007991), Color(0xFF78FFD6))),
+            OfficialChart("Top 50 Global", "Hits teratas seluruh dunia", listOf(Color(0xFF8A2387), Color(0xFFE94057))),
+            OfficialChart("Viral Hits Indonesia", "Tren viral TikTok & medsos", listOf(Color(0xFF11998E), Color(0xFF38EF7D))),
+            OfficialChart("Rilisan Baru", "Koleksi musik rilisan terbaru", listOf(Color(0xFFFF416C), Color(0xFFFF4B2B)))
+        )
+    }
 
     val isSearchMode = searchInput.isNotBlank() || uiState.searchResults.isNotEmpty() ||
             uiState.searchResultArtists.isNotEmpty() || uiState.searchResultAlbums.isNotEmpty()
@@ -345,10 +363,73 @@ fun HomeScreen(
                 } else {
                     // ==================== HOME YOUTUBE MUSIC LAYOUT ====================
 
+                    // 0. Tangga Lagu & Charts Resmi
+                    item {
+                        SectionHeader(title = "Tangga Lagu & Charts Resmi", icon = Icons.Default.Leaderboard)
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(officialCharts) { chart ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(width = 175.dp, height = 115.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(Brush.linearGradient(chart.gradientColors))
+                                        .clickable { viewModel.playOfficialChart(chart.title) }
+                                        .padding(14.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = chart.title,
+                                                color = Color.White,
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = chart.subtitle,
+                                                color = Color.White.copy(alpha = 0.85f),
+                                                fontSize = 11.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.End)
+                                                .size(32.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.Black.copy(alpha = 0.45f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = "Putar Chart",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(18.dp))
+                    }
+
                     // 1. Putar Cepat / Favoritmu (Jika ada history dengar)
                     if (uiState.mostPlayedTracks.isNotEmpty()) {
                         item {
-                            SectionHeader(title = "Putar Cepat Favoritmu", icon = Icons.Default.TrendingUp)
+                            SectionHeader(title = "Putar Cepat Favoritmu", icon = Icons.AutoMirrored.Filled.TrendingUp)
                         }
 
                         val quickPicks = uiState.mostPlayedTracks.take(4)

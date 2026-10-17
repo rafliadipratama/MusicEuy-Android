@@ -43,4 +43,34 @@ object MusicCacheManager {
             .setUpstreamDataSourceFactory(upstreamFactory)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
+
+    fun getCacheSizeBytes(context: Context): Long {
+        val cacheDir = File(context.cacheDir, "exoplayer_music_cache")
+        return simpleCache?.cacheSpace ?: getFolderSize(cacheDir)
+    }
+
+    private fun getFolderSize(file: File): Long {
+        if (!file.exists()) return 0L
+        if (!file.isDirectory) return file.length()
+        var size = 0L
+        file.listFiles()?.forEach { size += getFolderSize(it) }
+        return size
+    }
+
+    fun clearCache(context: Context): Boolean {
+        return try {
+            val cache = getCache(context)
+            val keys = cache.keys.toList()
+            for (key in keys) {
+                try {
+                    cache.removeResource(key)
+                } catch (_: Exception) {}
+            }
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("MusicEuy", "Error clearing cache: ${e.message}")
+            false
+        }
+    }
 }
+

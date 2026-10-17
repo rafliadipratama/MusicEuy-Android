@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 
 class LrcLibClient(
+    private val cacheDir: java.io.File? = null,
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
@@ -20,13 +21,71 @@ class LrcLibClient(
 ) {
     private val timestampPattern = Pattern.compile("\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})\\](.*)")
 
+    private fun getCacheFile(artist: String, track: String): java.io.File? {
+        val dir = cacheDir ?: return null
+        val lyricsFolder = java.io.File(dir, "lyrics_cache").apply { if (!exists()) mkdirs() }
+        val safeName = "${sanitize(artist)}_${cleanTrackTitle(track)}"
+            .replace(Regex("[^a-zA-Z0-9_-]"), "_")
+            .lowercase()
+            .take(80)
+        return java.io.File(lyricsFolder, "$safeName.json")
+    }
+
+    fun loadFromCache(artist: String, track: String): Lyrics? {
+        val file = getCacheFile(artist, track) ?: return null
+        if (!file.exists() || file.length() == 0L) return null
+        return try {
+            val jsonStr = file.readText()
+            val json = JSONObject(jsonStr)
+            val plain = json.optString("plainLyrics", "").ifBlank { null }
+            val syncedArr = json.optJSONArray("syncedLyrics")
+            val syncedList = mutableListOf<LyricLine>()
+            if (syncedArr != null) {
+                for (i in 0 until syncedArr.length()) {
+                    val item = syncedArr.getJSONObject(i)
+                    syncedList.add(LyricLine(item.getLong("timestampMs"), item.getString("text")))
+                }
+            }
+            Lyrics(plainLyrics = plain, syncedLyrics = syncedList)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun saveToCache(artist: String, track: String, lyrics: Lyrics) {
+        if (!lyrics.hasSyncedLyrics && lyrics.plainLyrics.isNullOrBlank()) return
+        val file = getCacheFile(artist, track) ?: return
+        try {
+            val json = JSONObject().apply {
+                put("plainLyrics", lyrics.plainLyrics ?: "")
+                val arr = JSONArray()
+                lyrics.syncedLyrics.forEach { line ->
+                    arr.put(JSONObject().apply {
+                        put("timestampMs", line.timestampMs)
+                        put("text", line.text)
+                    })
+                }
+                put("syncedLyrics", arr)
+            }
+            file.writeText(json.toString())
+        } catch (_: Exception) {}
+    }
+
     suspend fun fetchLyrics(artistName: String, trackName: String): Lyrics = withContext(Dispatchers.IO) {
+        // 0. Check offline disk cache first for instant load
+        val cached = loadFromCache(artistName, trackName)
+        if (cached != null && (cached.hasSyncedLyrics || !cached.plainLyrics.isNullOrBlank())) {
+            android.util.Log.d("MusicEuy", "Lyrics loaded from offline cache for: $artistName - $trackName")
+            return@withContext cached
+        }
+
         val cleanArtist = sanitize(artistName)
         val cleanTrack = cleanTrackTitle(trackName)
 
         // 1. Try exact get with clean title
         var result = tryGet(cleanArtist, cleanTrack)
         if (result.hasSyncedLyrics || !result.plainLyrics.isNullOrBlank()) {
+            saveToCache(artistName, trackName, result)
             return@withContext result
         }
 
@@ -34,6 +93,7 @@ class LrcLibClient(
         if (cleanTrack != trackName.trim()) {
             result = tryGet(artistName.trim(), trackName.trim())
             if (result.hasSyncedLyrics || !result.plainLyrics.isNullOrBlank()) {
+                saveToCache(artistName, trackName, result)
                 return@withContext result
             }
         }
@@ -41,6 +101,7 @@ class LrcLibClient(
         // 3. Fallback: Search API
         val searchResult = trySearch("$cleanArtist $cleanTrack")
         if (searchResult.hasSyncedLyrics || !searchResult.plainLyrics.isNullOrBlank()) {
+            saveToCache(artistName, trackName, searchResult)
             return@withContext searchResult
         }
 
@@ -48,6 +109,7 @@ class LrcLibClient(
         if (cleanTrack.length >= 3) {
             val trackOnlyResult = trySearch(cleanTrack)
             if (trackOnlyResult.hasSyncedLyrics || !trackOnlyResult.plainLyrics.isNullOrBlank()) {
+                saveToCache(artistName, trackName, trackOnlyResult)
                 return@withContext trackOnlyResult
             }
         }

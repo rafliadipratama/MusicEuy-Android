@@ -212,6 +212,7 @@ fun PlayerScreen(
                 isSleepTimerActive = isTimerActive,
                 sleepTimerRemainingSeconds = uiState.sleepTimerRemainingSeconds,
                 onDismiss = { isOptionsSheetVisible = false },
+                onStartRadioClick = { viewModel.startSongRadio(track) },
                 onSleepTimerClick = { viewModel.showSleepTimerDialog() },
                 onShareStoryClick = { viewModel.shareCurrentTrackStory() },
                 onAddToPlaylistClick = { viewModel.showAddToPlaylist(track) },

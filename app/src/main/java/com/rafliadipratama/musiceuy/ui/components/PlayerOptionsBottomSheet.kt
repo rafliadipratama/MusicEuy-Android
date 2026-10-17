@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Person
@@ -52,6 +53,7 @@ fun PlayerOptionsBottomSheet(
     isSleepTimerActive: Boolean,
     sleepTimerRemainingSeconds: Long?,
     onDismiss: () -> Unit,
+    onStartRadioClick: () -> Unit = {},
     onSleepTimerClick: () -> Unit,
     onShareStoryClick: () -> Unit,
     onAddToPlaylistClick: () -> Unit,
@@ -134,6 +136,17 @@ fun PlayerOptionsBottomSheet(
             } else {
                 "Atur timer otomatis berhenti putar lagu"
             }
+
+            OptionItem(
+                icon = Icons.Default.AllInclusive,
+                title = "Mulai Radio Lagu",
+                subtitle = "Putar otomatis lagu-lagu dengan vibe dan artis serupa",
+                isHighlight = true,
+                onClick = {
+                    onDismiss()
+                    onStartRadioClick()
+                }
+            )
 
             OptionItem(
                 icon = Icons.Default.Bedtime,

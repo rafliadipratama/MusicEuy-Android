@@ -1208,4 +1208,64 @@ class MusicStreamSource(
         }
         tracks
     }
+
+    /**
+     * Generates a Song Radio queue (Quick Picks) based on the seed track's artist and title.
+     * Produces related songs with similar vibe, mood, and genre.
+     */
+    suspend fun fetchSongRadio(track: Track): List<Track> = withContext(Dispatchers.IO) {
+        val radioTracks = mutableListOf<Track>()
+        try {
+            // First pass: search radio mix for artist + title
+            val query1 = "${track.artist.name} ${track.title} radio mix"
+            val results1 = searchYouTubeMusic(query1)
+            radioTracks.addAll(results1.filter { it.id != track.id })
+
+            // Second pass: if fewer than 10 tracks, search artist's popular tracks
+            if (radioTracks.size < 10) {
+                val query2 = "${track.artist.name} songs hits"
+                val results2 = searchYouTubeMusic(query2)
+                for (item in results2) {
+                    if (item.id != track.id && radioTracks.none { it.id == item.id || it.title.equals(item.title, ignoreCase = true) }) {
+                        radioTracks.add(item)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MusicEuy", "Error fetching song radio: ${e.message}")
+        }
+        radioTracks.distinctBy { it.id }
+    }
+
+    /**
+     * Fetches curated tracks based on user-selected mood/genre chip on the Home screen.
+     */
+    suspend fun fetchMoodCategoryTracks(category: String): List<Track> = withContext(Dispatchers.IO) {
+        val query = when (category) {
+            "Fokus / Belajar", "Fokus" -> "lofi study chill beats focus instrumental"
+            "Santai & Chill", "Santai" -> "lagu santai akustik indie senja indonesia"
+            "Workout / Energi", "Workout" -> "workout gym energetic hype edm motivation"
+            "Pesta / Party", "Pesta" -> "party dance club hits remix"
+            "Pop Indonesia", "Pop" -> "pop indonesia terbaru terbaik hits 2024"
+            "Indie Indonesia", "Indie" -> "indie pop indonesia terbaik senja"
+            "Rock" -> "rock indonesia hits terbaik classic alternative"
+            "Dangdut Koplo", "Dangdut" -> "dangdut koplo terbaru viral hits"
+            "Rilisan Baru" -> "lagu baru rilis indonesia hits 2024"
+            else -> "lagu trending indonesia terpopuler"
+        }
+        searchYouTubeMusic(query)
+    }
+
+    /**
+     * Fetches official curated charts (Top 50 Indonesia, Top 50 Global, Viral Hits).
+     */
+    suspend fun fetchOfficialChart(chartName: String): List<Track> = withContext(Dispatchers.IO) {
+        val query = when (chartName) {
+            "Top 50 Indonesia" -> "Top 50 Hits Indonesia Terpopuler 2024"
+            "Top 50 Global" -> "Top 50 Global Hits Billboard Official"
+            "Viral Hits Indonesia" -> "Viral Hits TikTok Indonesia Terbaru"
+            else -> "Top Trending Indonesia"
+        }
+        searchYouTubeMusic(query)
+    }
 }

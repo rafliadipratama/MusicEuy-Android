@@ -335,7 +335,7 @@ fun EqualizerBottomSheet(
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.VolumeUp,
+                                imageVector = Icons.Filled.VolumeUp,
                                 contentDescription = null,
                                 tint = AccentEmerald,
                                 modifier = Modifier.size(18.dp)
@@ -368,6 +368,83 @@ fun EqualizerBottomSheet(
                             uncheckedTrackColor = DarkSurface
                         )
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // ==================== Crossfade & Gapless Playback ====================
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(SurfaceContainerHigh)
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Speed,
+                                contentDescription = null,
+                                tint = AccentEmerald,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Crossfade & Gapless",
+                                color = TextPrimary,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Text(
+                            text = if (effectState.crossfadeSeconds > 0) "${effectState.crossfadeSeconds} detik" else "Mati",
+                            color = if (effectState.crossfadeSeconds > 0) AccentEmerald else TextMuted,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Transisi memudar halus antar lagu tanpa jeda sunyi (gapless)",
+                        color = TextMuted,
+                        fontSize = 12.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val crossfadeOptions = listOf(0, 3, 6, 9, 12)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        crossfadeOptions.forEach { secs ->
+                            val isSelected = effectState.crossfadeSeconds == secs
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isSelected) AccentEmerald else DarkSurface)
+                                    .clickable { AudioEffectManager.setCrossfadeSeconds(context, secs) }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (secs == 0) "Mati" else "${secs}s",
+                                    color = if (isSelected) Color.Black else TextPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

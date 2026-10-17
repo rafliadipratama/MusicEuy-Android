@@ -4,15 +4,140 @@ import android.app.PendingIntent
 import android.content.Intent
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
+import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import com.rafliadipratama.musiceuy.MainActivity
 
-class MusicService : MediaSessionService() {
+/**
+ * Foreground MediaLibraryService powering background audio playback,
+ * lockscreen media controls, Bluetooth audio focus, and Android Auto dashboard media browsing.
+ */
+class MusicService : MediaLibraryService() {
 
     private var player: ExoPlayer? = null
-    private var mediaSession: MediaSession? = null
+    private var mediaLibrarySession: MediaLibrarySession? = null
+
+    private val libraryCallback = object : MediaLibrarySession.Callback {
+        override fun onGetLibraryRoot(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            params: LibraryParams?
+        ): ListenableFuture<LibraryResult<MediaItem>> {
+            val rootItem = MediaItem.Builder()
+                .setMediaId("ROOT_ID")
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle("MusicEuy")
+                        .setIsBrowsable(true)
+                        .setIsPlayable(false)
+                        .build()
+                )
+                .build()
+            return Futures.immediateFuture(LibraryResult.ofItem(rootItem, params))
+        }
+
+        override fun onGetChildren(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            parentId: String,
+            page: Int,
+            pageSize: Int,
+            params: LibraryParams?
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+            val items = mutableListOf<MediaItem>()
+
+            try {
+                if (parentId == "ROOT_ID") {
+                    // Root Categories for Android Auto Dashboard
+                    items.add(
+                        MediaItem.Builder()
+                            .setMediaId("FOLDER_FAVORITES")
+                            .setMediaMetadata(
+                                MediaMetadata.Builder()
+                                    .setTitle("Lagu Disukai")
+                                    .setIsBrowsable(true)
+                                    .setIsPlayable(false)
+                                    .build()
+                            )
+                            .build()
+                    )
+                    items.add(
+                        MediaItem.Builder()
+                            .setMediaId("FOLDER_DOWNLOADED")
+                            .setMediaMetadata(
+                                MediaMetadata.Builder()
+                                    .setTitle("Lagu Terunduh (Offline)")
+                                    .setIsBrowsable(true)
+                                    .setIsPlayable(false)
+                                    .build()
+                            )
+                            .build()
+                    )
+                    items.add(
+                        MediaItem.Builder()
+                            .setMediaId("FOLDER_HISTORY")
+                            .setMediaMetadata(
+                                MediaMetadata.Builder()
+                                    .setTitle("Baru Saja Diputar")
+                                    .setIsBrowsable(true)
+                                    .setIsPlayable(false)
+                                    .build()
+                            )
+                            .build()
+                    )
+                } else if (parentId == "FOLDER_DOWNLOADED") {
+                    val dm = com.rafliadipratama.musiceuy.data.local.MusicDownloadManager(this@MusicService)
+                    val downloaded = dm.getDownloadedTracks()
+                    for (t in downloaded) {
+                        items.add(
+                            MediaItem.Builder()
+                                .setMediaId(t.id)
+                                .setUri(t.audioUrl)
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setTitle(t.title)
+                                        .setArtist(t.artist.name)
+                                        .setIsBrowsable(false)
+                                        .setIsPlayable(true)
+                                        .build()
+                                )
+                                .build()
+                        )
+                    }
+                } else if (parentId == "FOLDER_FAVORITES" || parentId == "FOLDER_HISTORY") {
+                    val hm = com.rafliadipratama.musiceuy.data.local.LocalMusicHistoryManager(this@MusicService)
+                    val tracks = if (parentId == "FOLDER_FAVORITES") hm.getLikedTracks() else hm.getRecentlyPlayedTracks()
+                    for (t in tracks) {
+                        items.add(
+                            MediaItem.Builder()
+                                .setMediaId(t.id)
+                                .setUri(if (t.audioUrl.startsWith("http")) t.audioUrl else null)
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setTitle(t.title)
+                                        .setArtist(t.artist.name)
+                                        .setIsBrowsable(false)
+                                        .setIsPlayable(true)
+                                        .build()
+                                )
+                                .build()
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MusicEuy", "Error building MediaLibrary children: ${e.message}")
+            }
+
+            return Futures.immediateFuture(LibraryResult.ofItemList(ImmutableList.copyOf(items), params))
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -27,13 +152,13 @@ class MusicService : MediaSessionService() {
 
         player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(mediaSourceFactory)
-            .setAudioAttributes(audioAttributes, true) // true = handle audio focus automatically
-            .setHandleAudioBecomingNoisy(true) // pause when headphones disconnected
+            .setAudioAttributes(audioAttributes, true) // automatic audio focus
+            .setHandleAudioBecomingNoisy(true) // pause when headphones unplugged
             .build()
 
         player?.addListener(object : androidx.media3.common.Player.Listener {
             override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                if (audioSessionId != androidx.media3.common.C.AUDIO_SESSION_ID_UNSET) {
+                if (audioSessionId != C.AUDIO_SESSION_ID_UNSET) {
                     com.rafliadipratama.musiceuy.audio.AudioEffectManager.attachAudioSession(this@MusicService, audioSessionId)
                 }
             }
@@ -44,7 +169,7 @@ class MusicService : MediaSessionService() {
         })
 
         val initialSessionId = player?.audioSessionId ?: 0
-        if (initialSessionId != 0 && initialSessionId != androidx.media3.common.C.AUDIO_SESSION_ID_UNSET) {
+        if (initialSessionId != 0 && initialSessionId != C.AUDIO_SESSION_ID_UNSET) {
             com.rafliadipratama.musiceuy.audio.AudioEffectManager.attachAudioSession(this, initialSessionId)
         }
 
@@ -57,14 +182,14 @@ class MusicService : MediaSessionService() {
         )
 
         player?.let { exo ->
-            mediaSession = MediaSession.Builder(this, exo)
+            mediaLibrarySession = MediaLibrarySession.Builder(this, exo, libraryCallback)
                 .setSessionActivity(pendingIntent)
                 .build()
         }
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
-        return mediaSession
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
+        return mediaLibrarySession
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -76,20 +201,20 @@ class MusicService : MediaSessionService() {
             exo.clearMediaItems()
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
-        mediaSession?.run {
+        mediaLibrarySession?.run {
             player.release()
             release()
-            mediaSession = null
+            mediaLibrarySession = null
         }
         player = null
         stopSelf()
     }
 
     override fun onDestroy() {
-        mediaSession?.run {
+        mediaLibrarySession?.run {
             player.release()
             release()
-            mediaSession = null
+            mediaLibrarySession = null
         }
         player = null
         com.rafliadipratama.musiceuy.audio.AudioEffectManager.releaseEffects()

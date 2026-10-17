@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -60,6 +61,7 @@ fun TrackContextMenuBottomSheet(
     onToggleLike: () -> Unit,
     onOpenArtist: () -> Unit,
     onDownload: () -> Unit = {},
+    onStartRadio: () -> Unit = {},
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -138,6 +140,14 @@ fun TrackContextMenuBottomSheet(
                 title = "Putar Sekarang",
                 subtitle = "Langsung putar lagu ini",
                 onClick = onPlayNow
+            )
+
+            ContextMenuItem(
+                icon = Icons.Default.AllInclusive,
+                iconTint = BrandGreen,
+                title = "Mulai Radio Lagu",
+                subtitle = "Putar lagu-lagu serupa berdasarkan vibe lagu ini",
+                onClick = onStartRadio
             )
 
             ContextMenuItem(
