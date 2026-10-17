@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.rafliadipratama.musiceuy.data.model.Artist
 import com.rafliadipratama.musiceuy.data.model.Track
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreen
 import com.rafliadipratama.musiceuy.ui.theme.SurfaceContainer
@@ -42,93 +45,126 @@ fun TrackItem(
     track: Track,
     isPlaying: Boolean,
     isActive: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onArtistClick: ((Artist) -> Unit)? = null,
+    onAddToPlaylistClick: ((Track) -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(if (isActive) SurfaceContainerHigh else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Thumbnail
-        Box(
+        // Main Clickable Area to Play Track
+        Row(
             modifier = Modifier
-                .size(54.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .weight(1f)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            AsyncImage(
-                model = track.coverUrl,
-                contentDescription = track.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.matchParentSize()
-            )
+            // Thumbnail
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(10.dp))
+            ) {
+                AsyncImage(
+                    model = track.coverUrl,
+                    contentDescription = track.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.matchParentSize()
+                )
 
-            if (isActive) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(Color.Black.copy(alpha = 0.5f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Equalizer else Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        tint = BrandGreen,
-                        modifier = Modifier.size(26.dp)
-                    )
+                if (isActive) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.5f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Equalizer else Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = BrandGreen,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
-        // Title and Artist Info
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = track.title,
-                color = if (isActive) BrandGreen else TextPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 2.dp)
+            // Title and Artist Info
+            Column(
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = track.artist.name,
-                    color = TextSecondary,
-                    fontSize = 13.sp,
+                    text = track.title,
+                    color = if (isActive) BrandGreen else TextPrimary,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                if (track.artist.isVerified || track.isVerified) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Default.Verified,
-                        contentDescription = "Artis Terverifikasi",
-                        tint = VerifiedBadge,
-                        modifier = Modifier.size(15.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .then(
+                            if (onArtistClick != null) {
+                                Modifier.clickable { onArtistClick(track.artist) }
+                            } else Modifier
+                        )
+                ) {
+                    Text(
+                        text = track.artist.name,
+                        color = TextSecondary,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+
+                    if (track.artist.isVerified || track.isVerified) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.Verified,
+                            contentDescription = "Artis Terverifikasi",
+                            tint = VerifiedBadge,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
                 }
             }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Duration
+            Text(
+                text = track.durationFormatted,
+                color = TextMuted,
+                fontSize = 12.sp
+            )
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
-
-        // Duration
-        Text(
-            text = track.durationFormatted,
-            color = TextMuted,
-            fontSize = 12.sp
-        )
+        // Trailing Add to Playlist Action Button
+        if (onAddToPlaylistClick != null) {
+            IconButton(
+                onClick = { onAddToPlaylistClick(track) },
+                modifier = Modifier.size(42.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
+                    contentDescription = "Tambah ke Playlist",
+                    tint = TextSecondary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
     }
 }

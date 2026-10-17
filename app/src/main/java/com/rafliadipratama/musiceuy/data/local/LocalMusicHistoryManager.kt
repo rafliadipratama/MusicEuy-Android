@@ -2,14 +2,15 @@ package com.rafliadipratama.musiceuy.data.local
 
 import android.content.Context
 import com.rafliadipratama.musiceuy.data.model.Artist
+import com.rafliadipratama.musiceuy.data.model.Playlist
 import com.rafliadipratama.musiceuy.data.model.Track
 import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Local database manager for user listening history and preferences.
+ * Local database manager for user listening history, preferences, and playlists.
  * Operates 100% locally without requiring user accounts or cloud authentication.
- * Stores play counts, timestamps, and most frequently played tracks.
+ * Stores play counts, timestamps, most frequently played tracks, and custom playlists.
  */
 class LocalMusicHistoryManager(context: Context) {
 
@@ -17,6 +18,7 @@ class LocalMusicHistoryManager(context: Context) {
 
     companion object {
         private const val KEY_TRACKS = "played_tracks_json"
+        private const val KEY_PLAYLISTS = "playlists_json"
     }
 
     /**
@@ -158,5 +160,145 @@ class LocalMusicHistoryManager(context: Context) {
             isVerified = isVerified,
             sourceLabel = sourceLabel
         )
+    }
+
+    // ==================== Playlist Operations ====================
+
+    fun createPlaylist(name: String, description: String = ""): Playlist {
+        val playlist = Playlist(
+            name = name.ifBlank { "Playlist Saya" },
+            description = description,
+            tracks = emptyList()
+        )
+        val all = getAllPlaylists().toMutableList()
+        all.add(0, playlist)
+        savePlaylists(all)
+        return playlist
+    }
+
+    fun getAllPlaylists(): List<Playlist> {
+        val jsonStr = prefs.getString(KEY_PLAYLISTS, null) ?: return defaultPlaylists()
+        return try {
+            val arr = JSONArray(jsonStr)
+            val list = mutableListOf<Playlist>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                val id = obj.optString("id", "")
+                val name = obj.optString("name", "Playlist")
+                val desc = obj.optString("description", "")
+                val coverUrl = obj.optString("coverUrl", "").takeIf { it.isNotBlank() }
+                val createdAt = obj.optLong("createdAt", System.currentTimeMillis())
+
+                val tracksArr = obj.optJSONArray("tracks") ?: JSONArray()
+                val tracks = mutableListOf<Track>()
+                for (j in 0 until tracksArr.length()) {
+                    tracks.add(jsonToTrack(tracksArr.getJSONObject(j)))
+                }
+                list.add(
+                    Playlist(
+                        id = id,
+                        name = name,
+                        description = desc,
+                        coverUrl = coverUrl ?: tracks.firstOrNull()?.coverUrl,
+                        tracks = tracks,
+                        createdAt = createdAt
+                    )
+                )
+            }
+            if (list.isEmpty()) defaultPlaylists() else list
+        } catch (_: Exception) {
+            defaultPlaylists()
+        }
+    }
+
+    fun addTrackToPlaylist(playlistId: String, track: Track): Boolean {
+        val all = getAllPlaylists().toMutableList()
+        val index = all.indexOfFirst { it.id == playlistId }
+        if (index == -1) return false
+
+        val current = all[index]
+        if (current.tracks.any { it.id == track.id }) return false
+
+        val updatedTracks = current.tracks.toMutableList().apply { add(track) }
+        val updatedPlaylist = current.copy(
+            tracks = updatedTracks,
+            coverUrl = current.coverUrl ?: track.coverUrl
+        )
+        all[index] = updatedPlaylist
+        savePlaylists(all)
+        return true
+    }
+
+    fun removeTrackFromPlaylist(playlistId: String, trackId: String): Boolean {
+        val all = getAllPlaylists().toMutableList()
+        val index = all.indexOfFirst { it.id == playlistId }
+        if (index == -1) return false
+
+        val current = all[index]
+        val updatedTracks = current.tracks.filterNot { it.id == trackId }
+        val updatedPlaylist = current.copy(
+            tracks = updatedTracks,
+            coverUrl = updatedTracks.firstOrNull()?.coverUrl
+        )
+        all[index] = updatedPlaylist
+        savePlaylists(all)
+        return true
+    }
+
+    fun deletePlaylist(playlistId: String): Boolean {
+        val all = getAllPlaylists().filterNot { it.id == playlistId }
+        savePlaylists(all)
+        return true
+    }
+
+    private fun savePlaylists(playlists: List<Playlist>) {
+        val arr = JSONArray()
+        for (pl in playlists) {
+            val obj = JSONObject().apply {
+                put("id", pl.id)
+                put("name", pl.name)
+                put("description", pl.description)
+                put("coverUrl", pl.coverUrl ?: "")
+                put("createdAt", pl.createdAt)
+
+                val tracksArr = JSONArray()
+                for (t in pl.tracks) {
+                    val tObj = JSONObject().apply {
+                        put("id", t.id)
+                        put("title", t.title)
+                        put("artistName", t.artist.name)
+                        put("artistAvatar", t.artist.avatarUrl ?: "")
+                        put("albumTitle", t.albumTitle ?: "")
+                        put("durationSec", t.durationSec)
+                        put("audioUrl", t.audioUrl)
+                        put("coverUrl", t.coverUrl)
+                        put("isVerified", t.isVerified)
+                        put("sourceLabel", t.sourceLabel)
+                    }
+                    tracksArr.put(tObj)
+                }
+                put("tracks", tracksArr)
+            }
+            arr.put(obj)
+        }
+        prefs.edit().putString(KEY_PLAYLISTS, arr.toString()).apply()
+    }
+
+    private fun defaultPlaylists(): List<Playlist> {
+        val default1 = Playlist(
+            id = "pl_favorit_indo",
+            name = "Kompilasi Lagu Favorit",
+            description = "Daftar lagu santai dan terpopuler pilihan lokal",
+            coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500",
+            tracks = emptyList()
+        )
+        val default2 = Playlist(
+            id = "pl_senja",
+            name = "Akustik & Senja",
+            description = "Teman santai sore hari dan relaksasi",
+            coverUrl = "https://images.unsplash.com/photo-1445985543470-41fdd6ce388d?w=500",
+            tracks = emptyList()
+        )
+        return listOf(default1, default2)
     }
 }

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lyrics
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -139,6 +140,14 @@ fun PlayerScreen(
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { viewModel.showAddToPlaylist(track) }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
+                            contentDescription = "Tambah ke Playlist",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
                     IconButton(onClick = { viewModel.toggleLyrics() }) {
                         Icon(
                             imageVector = Icons.Default.Lyrics,
@@ -243,7 +252,10 @@ fun PlayerScreen(
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 2.dp)
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { viewModel.openArtistDetail(track.artist) }
+                        .padding(vertical = 2.dp)
                 ) {
                     Text(
                         text = track.artist.name,

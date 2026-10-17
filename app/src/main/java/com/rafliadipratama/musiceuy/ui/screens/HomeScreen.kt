@@ -374,6 +374,12 @@ fun HomeScreen(
                         isActive = isActive,
                         onClick = {
                             viewModel.playTrack(track, tracks)
+                        },
+                        onArtistClick = { artist ->
+                            viewModel.openArtistDetail(artist)
+                        },
+                        onAddToPlaylistClick = {
+                            viewModel.showAddToPlaylist(track)
                         }
                     )
                 }

@@ -29,6 +29,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 import com.rafliadipratama.musiceuy.data.local.LocalMusicHistoryManager
+import com.rafliadipratama.musiceuy.data.model.Artist
+import com.rafliadipratama.musiceuy.data.model.Playlist
 
 enum class RepeatMode { OFF, ALL, ONE }
 
@@ -48,6 +50,13 @@ data class PlayerUiState(
     val trendingTracks: List<Track> = emptyList(),
     val mostPlayedTracks: List<Track> = emptyList(),
     val favoriteArtists: List<String> = emptyList(),
+    val playlists: List<Playlist> = emptyList(),
+    val selectedPlaylist: Playlist? = null,
+    val selectedArtist: Artist? = null,
+    val artistTracks: List<Track> = emptyList(),
+    val isLoadingArtist: Boolean = false,
+    val isAddToPlaylistSheetVisible: Boolean = false,
+    val trackToAddToPlaylist: Track? = null,
     val isSearching: Boolean = false,
     val error: String? = null
 )
@@ -149,7 +158,16 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             val favArtists = withContext(Dispatchers.IO) {
                 historyManager.getFavoriteArtists()
             }
-            _uiState.update { it.copy(mostPlayedTracks = mostPlayed, favoriteArtists = favArtists) }
+            val playlists = withContext(Dispatchers.IO) {
+                historyManager.getAllPlaylists()
+            }
+            _uiState.update {
+                it.copy(
+                    mostPlayedTracks = mostPlayed,
+                    favoriteArtists = favArtists,
+                    playlists = playlists
+                )
+            }
 
             // If user has listening history, prioritize their favorite / most played songs
             // Otherwise, fetch curated trending Indonesian tracks so startup is never random
@@ -376,6 +394,114 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             val current = state.currentTrack
             state.copy(queue = if (current != null) listOf(current) else emptyList())
         }
+    }
+
+    // ==================== Playlist & Artist Management ====================
+
+    fun loadPlaylists() {
+        viewModelScope.launch {
+            val list = withContext(Dispatchers.IO) { historyManager.getAllPlaylists() }
+            _uiState.update { it.copy(playlists = list) }
+        }
+    }
+
+    fun createPlaylist(name: String, description: String = "", initialTrack: Track? = null) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val p = historyManager.createPlaylist(name, description)
+                if (initialTrack != null) {
+                    historyManager.addTrackToPlaylist(p.id, initialTrack)
+                }
+            }
+            loadPlaylists()
+            if (initialTrack != null) {
+                _uiState.update { it.copy(isAddToPlaylistSheetVisible = false, trackToAddToPlaylist = null) }
+            }
+        }
+    }
+
+    fun addTrackToPlaylist(playlistId: String, track: Track) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                historyManager.addTrackToPlaylist(playlistId, track)
+            }
+            loadPlaylists()
+            if (_uiState.value.selectedPlaylist?.id == playlistId) {
+                val updated = withContext(Dispatchers.IO) {
+                    historyManager.getAllPlaylists().find { it.id == playlistId }
+                }
+                _uiState.update { it.copy(selectedPlaylist = updated) }
+            }
+            _uiState.update { it.copy(isAddToPlaylistSheetVisible = false, trackToAddToPlaylist = null) }
+        }
+    }
+
+    fun removeTrackFromPlaylist(playlistId: String, trackId: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                historyManager.removeTrackFromPlaylist(playlistId, trackId)
+            }
+            loadPlaylists()
+            if (_uiState.value.selectedPlaylist?.id == playlistId) {
+                val updated = withContext(Dispatchers.IO) {
+                    historyManager.getAllPlaylists().find { it.id == playlistId }
+                }
+                _uiState.update { it.copy(selectedPlaylist = updated) }
+            }
+        }
+    }
+
+    fun deletePlaylist(playlistId: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                historyManager.deletePlaylist(playlistId)
+            }
+            loadPlaylists()
+            if (_uiState.value.selectedPlaylist?.id == playlistId) {
+                _uiState.update { it.copy(selectedPlaylist = null) }
+            }
+        }
+    }
+
+    fun openPlaylist(playlist: Playlist) {
+        _uiState.update { it.copy(selectedPlaylist = playlist) }
+    }
+
+    fun closePlaylist() {
+        _uiState.update { it.copy(selectedPlaylist = null) }
+    }
+
+    fun showAddToPlaylist(track: Track) {
+        _uiState.update { it.copy(isAddToPlaylistSheetVisible = true, trackToAddToPlaylist = track) }
+    }
+
+    fun dismissAddToPlaylist() {
+        _uiState.update { it.copy(isAddToPlaylistSheetVisible = false, trackToAddToPlaylist = null) }
+    }
+
+    fun openArtistDetail(artist: Artist) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    selectedArtist = artist,
+                    artistTracks = emptyList(),
+                    isLoadingArtist = true
+                )
+            }
+            val results = withContext(Dispatchers.IO) {
+                pluginManager.search(artist.name).ifEmpty { streamSource.searchTracks(artist.name) }
+            }
+            _uiState.update {
+                it.copy(
+                    artistTracks = results,
+                    isLoadingArtist = false
+                )
+            }
+        }
+    }
+
+    fun closeArtistDetail() {
+        _uiState.update { it.copy(selectedArtist = null, artistTracks = emptyList()) }
     }
 
     override fun onCleared() {

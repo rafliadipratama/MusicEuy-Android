@@ -53,13 +53,21 @@ class MusicService : MediaSessionService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
+        android.util.Log.d("MusicEuy", "MusicService onTaskRemoved: Stopping playback and releasing session")
         val exo = player
         if (exo != null) {
+            exo.pause()
             exo.stop()
             exo.clearMediaItems()
         }
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        mediaSession?.run {
+            player.release()
+            release()
+            mediaSession = null
+        }
+        player = null
         stopSelf()
-        super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {
