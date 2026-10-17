@@ -1,0 +1,56 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- Card Background -->
+    <path
+        android:pathData="M28,0 L72,0 A28,28 0 0,1 100,28 L100,72 A28,28 0 0,1 72,100 L28,100 A28,28 0 0,1 0,72 L0,28 A28,28 0 0,1 28,0 Z"
+        android:fillColor="#1E2023"/>
+
+    <!-- Subtle Border -->
+    <path
+        android:pathData="M28,2 L72,2 A26,26 0 0,1 98,28 L98,72 A26,26 0 0,1 72,98 L28,98 A26,26 0 0,1 2,72 L2,28 A26,26 0 0,1 28,2 Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#3375FF9E"
+        android:fillColor="#00000000"/>
+
+    <!-- Soundwave Bars (MusicEuy Electric Green) -->
+    <!-- Bar 1 -->
+    <path
+        android:pathData="M24,38 L24,62"
+        android:strokeWidth="8"
+        android:strokeLineCap="round"
+        android:strokeColor="#00E676"/>
+
+    <!-- Bar 2 -->
+    <path
+        android:pathData="M38,22 L38,78"
+        android:strokeWidth="8"
+        android:strokeLineCap="round"
+        android:strokeColor="#75FF9E"/>
+
+    <!-- Bar 3 (Center Tallest) -->
+    <path
+        android:pathData="M52,14 L52,86"
+        android:strokeWidth="8"
+        android:strokeLineCap="round"
+        android:strokeColor="#00E676"/>
+
+    <!-- Bar 4 -->
+    <path
+        android:pathData="M66,26 L66,74"
+        android:strokeWidth="8"
+        android:strokeLineCap="round"
+        android:strokeColor="#75FF9E"/>
+
+    <!-- Bar 5 -->
+    <path
+        android:pathData="M80,40 L80,60"
+        android:strokeWidth="8"
+        android:strokeLineCap="round"
+        android:strokeColor="#00E676"/>
+
+</vector>

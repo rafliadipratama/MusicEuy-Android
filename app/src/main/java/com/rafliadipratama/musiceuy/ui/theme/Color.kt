@@ -2,11 +2,27 @@ package com.rafliadipratama.musiceuy.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val DarkBackground = Color(0xFF0C0A14)
-val DarkSurface = Color(0xFF161324)
-val DarkSurfaceVariant = Color(0xFF221E38)
-val AccentPurple = Color(0xFF9333EA)
-val AccentEmerald = Color(0xFF10B981)
-val TextPrimary = Color(0xFFF3F4F6)
-val TextSecondary = Color(0xFF9CA3AF)
-val TextMuted = Color(0xFF6B7280)
+// Official MusicEuy Mobile Design Tokens (Obsidian Audio Palette)
+val ObsidianBackground = Color(0xFF111317)
+val SurfaceContainerLowest = Color(0xFF0C0E11)
+val SurfaceContainerLow = Color(0xFF1A1C1F)
+val SurfaceContainer = Color(0xFF1E2023)
+val SurfaceContainerHigh = Color(0xFF282A2D)
+val SurfaceContainerHighest = Color(0xFF333538)
+
+val BrandGreen = Color(0xFF00E676)
+val BrandGreenBright = Color(0xFF75FF9E)
+val BrandGreenSecondary = Color(0xFF4EDEA3)
+val BrandGreenDeep = Color(0xFF027C40)
+
+val TextPrimary = Color(0xFFE2E2E6)
+val TextSecondary = Color(0xFFBACBB9)
+val TextMuted = Color(0xFF859585)
+val VerifiedBadge = Color(0xFF00E676)
+
+// Aliases for compatibility
+val DarkBackground = ObsidianBackground
+val DarkSurface = SurfaceContainer
+val DarkSurfaceVariant = SurfaceContainerHigh
+val AccentEmerald = BrandGreen
+val AccentPurple = BrandGreenBright
