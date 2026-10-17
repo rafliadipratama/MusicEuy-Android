@@ -29,9 +29,89 @@ class MusicStreamSource(
         val results = mutableListOf<Track>()
 
         // 1. Primary: JioSaavn (Full length 320kbps / 160kbps songs, no 30s preview limit)
+        val directSaavn = fetchSaavn(query.trim())
+        if (directSaavn.isNotEmpty()) {
+            return@withContext directSaavn
+        }
+
+        // 2. Secondary: Deezer search with automatic JioSaavn full-stream resolution
         try {
             val encoded = URLEncoder.encode(query.trim(), "UTF-8")
-            val saavnUrl = "https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&n=25&p=1&q=$encoded&_marker=0&ctx=android"
+            val url = "https://api.deezer.com/search?q=$encoded&limit=15"
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "Mozilla/5.0")
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val json = JSONObject(body)
+                        val data = json.optJSONArray("data")
+                        if (data != null) {
+                            for (i in 0 until minOf(data.length(), 10)) {
+                                val item = data.optJSONObject(i) ?: continue
+                                val id = item.optLong("id", 0L).toString()
+                                val title = item.optString("title", "Unknown Track")
+                                val artistObj = item.optJSONObject("artist")
+                                val artistName = artistObj?.optString("name", "Unknown Artist") ?: "Unknown Artist"
+                                val artistAvatar = artistObj?.optString("picture_medium", "")
+
+                                val albumObj = item.optJSONObject("album")
+                                val albumTitle = albumObj?.optString("title", "")
+                                val coverUrl = albumObj?.optString("cover_big", "")
+                                    ?: albumObj?.optString("cover_medium", "")
+                                    ?: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500"
+
+                                // Attempt to resolve full stream for this corrected title from JioSaavn
+                                val saavnMatches = fetchSaavn("$artistName $title", limit = 3).ifEmpty {
+                                    fetchSaavn(title, limit = 3)
+                                }
+
+                                if (saavnMatches.isNotEmpty()) {
+                                    val matched = saavnMatches.first()
+                                    results.add(
+                                        matched.copy(
+                                            coverUrl = if (matched.coverUrl.isNotBlank()) matched.coverUrl else coverUrl,
+                                            albumTitle = if (matched.albumTitle.isNullOrBlank()) albumTitle else matched.albumTitle
+                                        )
+                                    )
+                                } else {
+                                    val streamUrl = item.optString("preview", "")
+                                    val duration = item.optInt("duration", 0)
+                                    if (streamUrl.isNotBlank()) {
+                                        results.add(
+                                            Track(
+                                                id = "dz:$id",
+                                                title = title,
+                                                artist = Artist(id = id, name = artistName, avatarUrl = artistAvatar),
+                                                albumTitle = albumTitle,
+                                                durationSec = duration,
+                                                audioUrl = streamUrl,
+                                                coverUrl = coverUrl
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            // Ignore fallback error
+        }
+
+        results
+    }
+
+    fun fetchSaavn(query: String, limit: Int = 25): List<Track> {
+        if (query.isBlank()) return emptyList()
+        val list = mutableListOf<Track>()
+        try {
+            val encoded = URLEncoder.encode(query.trim(), "UTF-8")
+            val saavnUrl = "https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&n=$limit&p=1&q=$encoded&_marker=0&ctx=android"
             val request = Request.Builder()
                 .url(saavnUrl)
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
@@ -64,7 +144,7 @@ class MusicStreamSource(
                                 val fullStreamUrl = decryptFullStreamUrl(encryptedUrl)
 
                                 if (!fullStreamUrl.isNullOrBlank()) {
-                                    results.add(
+                                    list.add(
                                         Track(
                                             id = "js:$id",
                                             title = title,
@@ -82,67 +162,9 @@ class MusicStreamSource(
                 }
             }
         } catch (_: Exception) {
-            // Error in JioSaavn, continue to fallback
+            // Error fetching from JioSaavn
         }
-
-        // 2. Secondary Fallback: Deezer (in case JioSaavn returned no tracks)
-        if (results.isEmpty()) {
-            try {
-                val encoded = URLEncoder.encode(query.trim(), "UTF-8")
-                val url = "https://api.deezer.com/search?q=$encoded&limit=25"
-                val request = Request.Builder()
-                    .url(url)
-                    .header("User-Agent", "Mozilla/5.0")
-                    .build()
-
-                client.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) {
-                        val body = response.body?.string()
-                        if (!body.isNullOrBlank()) {
-                            val json = JSONObject(body)
-                            val data = json.optJSONArray("data")
-                            if (data != null) {
-                                for (i in 0 until data.length()) {
-                                    val item = data.optJSONObject(i) ?: continue
-                                    val id = item.optLong("id", 0L).toString()
-                                    val title = item.optString("title", "Unknown Track")
-                                    val duration = item.optInt("duration", 0)
-                                    val streamUrl = item.optString("preview", "")
-
-                                    val artistObj = item.optJSONObject("artist")
-                                    val artistName = artistObj?.optString("name", "Unknown Artist") ?: "Unknown Artist"
-                                    val artistAvatar = artistObj?.optString("picture_medium", "")
-
-                                    val albumObj = item.optJSONObject("album")
-                                    val albumTitle = albumObj?.optString("title", "")
-                                    val coverUrl = albumObj?.optString("cover_big", "")
-                                        ?: albumObj?.optString("cover_medium", "")
-                                        ?: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500"
-
-                                    if (streamUrl.isNotBlank()) {
-                                        results.add(
-                                            Track(
-                                                id = "dz:$id",
-                                                title = title,
-                                                artist = Artist(id = id, name = artistName, avatarUrl = artistAvatar),
-                                                albumTitle = albumTitle,
-                                                durationSec = duration,
-                                                audioUrl = streamUrl,
-                                                coverUrl = coverUrl
-                                            )
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (_: Exception) {
-                // Ignore fallback error
-            }
-        }
-
-        results
+        return list
     }
 
     suspend fun fetchTrending(): List<Track> = withContext(Dispatchers.IO) {
