@@ -22,7 +22,11 @@ class MusicService : MediaSessionService() {
             .setUsage(C.USAGE_MEDIA)
             .build()
 
+        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(this)
+            .setDataSourceFactory(com.rafliadipratama.musiceuy.data.local.MusicCacheManager.createCacheDataSourceFactory(this))
+
         player = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(mediaSourceFactory)
             .setAudioAttributes(audioAttributes, true) // true = handle audio focus automatically
             .setHandleAudioBecomingNoisy(true) // pause when headphones disconnected
             .build()

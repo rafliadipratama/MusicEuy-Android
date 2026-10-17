@@ -64,6 +64,13 @@ data class PlayerUiState(
     val likedTracks: List<Track> = emptyList(),
     val likedTrackIds: Set<String> = emptySet(),
     val isSearching: Boolean = false,
+    val isLoadingLyrics: Boolean = false,
+    val sleepTimerRemainingSeconds: Long? = null,
+    val isSleepTimerEndOfTrack: Boolean = false,
+    val isSleepTimerDialogVisible: Boolean = false,
+    val downloadingTrackIds: Map<String, Float> = emptyMap(),
+    val downloadedTrackIds: Set<String> = emptySet(),
+    val downloadNotificationMessage: String? = null,
     val error: String? = null
 )
 
@@ -72,7 +79,9 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     val streamSource = MusicStreamSource()
     val pluginManager = com.rafliadipratama.musiceuy.plugin.PluginManager(application, streamSource)
     val historyManager = LocalMusicHistoryManager(application)
+    val downloadManager = com.rafliadipratama.musiceuy.data.local.MusicDownloadManager(application)
     private val lrcClient = LrcLibClient()
+    private var sleepTimerJob: Job? = null
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
@@ -227,8 +236,16 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 queue = currentQueue,
                 currentPositionMs = 0L,
                 lyrics = Lyrics(),
+                isLoadingLyrics = true,
                 error = null
             )
+        }
+
+        // Check if track is already downloaded to local storage
+        viewModelScope.launch(Dispatchers.IO) {
+            if (downloadManager.isTrackDownloaded(track)) {
+                _uiState.update { it.copy(downloadedTrackIds = it.downloadedTrackIds + track.id) }
+            }
         }
 
         // Record locally for offline recommendation & history
@@ -247,7 +264,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         // Fetch synchronized lyrics in background
         viewModelScope.launch {
             val lyrics = lrcClient.fetchLyrics(track.artist.name, track.title)
-            _uiState.update { it.copy(lyrics = lyrics) }
+            _uiState.update { it.copy(lyrics = lyrics, isLoadingLyrics = false) }
         }
 
         viewModelScope.launch {
@@ -341,6 +358,15 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun handleTrackEnded() {
         val state = _uiState.value
+
+        // Check if sleep timer is set to stop at the end of track
+        if (state.isSleepTimerEndOfTrack) {
+            mediaController?.pause()
+            seekTo(0)
+            _uiState.update { it.copy(isSleepTimerEndOfTrack = false, sleepTimerRemainingSeconds = null) }
+            return
+        }
+
         when (state.repeatMode) {
             RepeatMode.ONE -> {
                 seekTo(0)
@@ -639,8 +665,158 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         _uiState.update { it.copy(selectedArtist = null, artistTracks = emptyList(), artistAlbums = emptyList()) }
     }
 
+    // --- Sleep Timer ---
+
+    fun setSleepTimer(minutes: Int) {
+        sleepTimerJob?.cancel()
+        val totalSeconds = minutes * 60L
+        _uiState.update {
+            it.copy(
+                sleepTimerRemainingSeconds = totalSeconds,
+                isSleepTimerEndOfTrack = false,
+                isSleepTimerDialogVisible = false
+            )
+        }
+
+        sleepTimerJob = viewModelScope.launch {
+            var remaining = totalSeconds
+            while (remaining > 0 && isActive) {
+                delay(1000)
+                remaining--
+                _uiState.update { it.copy(sleepTimerRemainingSeconds = remaining) }
+            }
+            if (isActive) {
+                mediaController?.pause()
+                _uiState.update {
+                    it.copy(
+                        sleepTimerRemainingSeconds = null,
+                        isSleepTimerEndOfTrack = false
+                    )
+                }
+            }
+        }
+    }
+
+    fun setSleepTimerEndOfTrack() {
+        sleepTimerJob?.cancel()
+        _uiState.update {
+            it.copy(
+                sleepTimerRemainingSeconds = null,
+                isSleepTimerEndOfTrack = true,
+                isSleepTimerDialogVisible = false
+            )
+        }
+    }
+
+    fun cancelSleepTimer() {
+        sleepTimerJob?.cancel()
+        _uiState.update {
+            it.copy(
+                sleepTimerRemainingSeconds = null,
+                isSleepTimerEndOfTrack = false,
+                isSleepTimerDialogVisible = false
+            )
+        }
+    }
+
+    fun showSleepTimerDialog() {
+        _uiState.update { it.copy(isSleepTimerDialogVisible = true) }
+    }
+
+    fun hideSleepTimerDialog() {
+        _uiState.update { it.copy(isSleepTimerDialogVisible = false) }
+    }
+
+    // --- Music Download ---
+
+    fun downloadTrack(track: Track) {
+        if (_uiState.value.downloadingTrackIds.containsKey(track.id)) return
+
+        viewModelScope.launch {
+            val isAlreadyDownloaded = withContext(Dispatchers.IO) {
+                downloadManager.isTrackDownloaded(track)
+            }
+            if (isAlreadyDownloaded) {
+                _uiState.update {
+                    it.copy(
+                        downloadedTrackIds = it.downloadedTrackIds + track.id,
+                        downloadNotificationMessage = "Lagu '${track.title}' sudah tersimpan di penyimpanan HP."
+                    )
+                }
+                return@launch
+            }
+
+            _uiState.update {
+                it.copy(
+                    downloadingTrackIds = it.downloadingTrackIds + (track.id to 0.01f),
+                    downloadNotificationMessage = "Mulai mengunduh '${track.title}'..."
+                )
+            }
+
+            var activeAudioUri = track.audioUrl
+            if (!activeAudioUri.startsWith("http")) {
+                val resolved = withContext(Dispatchers.IO) {
+                    pluginManager.resolveStream(track)
+                }
+                if (!resolved.isNullOrBlank() && resolved.startsWith("http")) {
+                    activeAudioUri = resolved
+                } else {
+                    val fallback = withContext(Dispatchers.IO) {
+                        streamSource.resolveYouTubeAudioStream(track.id.removePrefix("yt:"))
+                    }
+                    if (!fallback.isNullOrBlank()) {
+                        activeAudioUri = fallback
+                    }
+                }
+            }
+
+            if (!activeAudioUri.startsWith("http")) {
+                _uiState.update {
+                    it.copy(
+                        downloadingTrackIds = it.downloadingTrackIds - track.id,
+                        downloadNotificationMessage = "Gagal mengunduh: URL stream audio '${track.title}' tidak tersedia."
+                    )
+                }
+                return@launch
+            }
+
+            val result = withContext(Dispatchers.IO) {
+                downloadManager.downloadTrack(track, activeAudioUri) { progress ->
+                    _uiState.update { state ->
+                        state.copy(downloadingTrackIds = state.downloadingTrackIds + (track.id to progress))
+                    }
+                }
+            }
+
+            result.fold(
+                onSuccess = { path ->
+                    _uiState.update {
+                        it.copy(
+                            downloadingTrackIds = it.downloadingTrackIds - track.id,
+                            downloadedTrackIds = it.downloadedTrackIds + track.id,
+                            downloadNotificationMessage = "✓ Tersimpan di $path"
+                        )
+                    }
+                },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(
+                            downloadingTrackIds = it.downloadingTrackIds - track.id,
+                            downloadNotificationMessage = "Gagal mengunduh '${track.title}': ${err.message}"
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    fun clearDownloadMessage() {
+        _uiState.update { it.copy(downloadNotificationMessage = null) }
+    }
+
     override fun onCleared() {
         progressJob?.cancel()
+        sleepTimerJob?.cancel()
         controllerFuture?.let { MediaController.releaseFuture(it) }
         super.onCleared()
     }

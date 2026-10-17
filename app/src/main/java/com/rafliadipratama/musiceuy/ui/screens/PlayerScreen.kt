@@ -21,9 +21,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -37,6 +41,7 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -142,6 +147,15 @@ fun PlayerScreen(
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    val isTimerActive = uiState.sleepTimerRemainingSeconds != null || uiState.isSleepTimerEndOfTrack
+                    IconButton(onClick = { viewModel.showSleepTimerDialog() }) {
+                        Icon(
+                            imageVector = Icons.Default.Bedtime,
+                            contentDescription = "Pengatur Waktu Tidur",
+                            tint = if (isTimerActive) AccentEmerald else TextSecondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                     IconButton(onClick = { viewModel.showAddToPlaylist(track) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
@@ -180,11 +194,29 @@ fun PlayerScreen(
             ) {
                 if (uiState.isLyricsVisible) {
                     // Synced Lyrics View
-                    if (uiState.lyrics.hasSyncedLyrics) {
+                    if (uiState.isLoadingLyrics) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = AccentEmerald,
+                                modifier = Modifier.size(32.dp),
+                                strokeWidth = 3.dp
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "Menyelaraskan lirik...",
+                                color = TextSecondary,
+                                fontSize = 13.sp
+                            )
+                        }
+                    } else if (uiState.lyrics.hasSyncedLyrics) {
                         LazyColumn(
                             state = lyricsListState,
                             modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            contentPadding = PaddingValues(vertical = 36.dp)
                         ) {
                             itemsIndexed(uiState.lyrics.syncedLyrics) { index, line ->
                                 val nextTimestamp = uiState.lyrics.syncedLyrics.getOrNull(index + 1)?.timestampMs ?: Long.MAX_VALUE
@@ -193,35 +225,52 @@ fun PlayerScreen(
                                 Text(
                                     text = line.text,
                                     fontSize = if (isLineActive) 22.sp else 16.sp,
-                                    fontWeight = if (isLineActive) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isLineActive) AccentEmerald else TextMuted,
+                                    fontWeight = if (isLineActive) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isLineActive) AccentEmerald else TextSecondary.copy(alpha = 0.45f),
                                     textAlign = TextAlign.Center,
+                                    lineHeight = if (isLineActive) 30.sp else 24.sp,
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
                                         .clickable { viewModel.seekTo(line.timestampMs) }
-                                        .padding(vertical = 4.dp)
+                                        .padding(vertical = 6.dp, horizontal = 12.dp)
                                 )
                             }
                         }
                     } else if (!uiState.lyrics.plainLyrics.isNullOrBlank()) {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(vertical = 24.dp)
+                        ) {
                             item {
                                 Text(
                                     text = uiState.lyrics.plainLyrics ?: "",
-                                    color = TextSecondary,
+                                    color = TextPrimary.copy(alpha = 0.9f),
                                     fontSize = 16.sp,
-                                    lineHeight = 24.sp,
+                                    lineHeight = 28.sp,
                                     textAlign = TextAlign.Center,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
                     } else {
-                        Text(
-                            text = "Lirik belum tersedia untuk lagu ini",
-                            color = TextMuted,
-                            fontSize = 14.sp
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lyrics,
+                                contentDescription = null,
+                                tint = TextMuted,
+                                modifier = Modifier.size(42.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Lirik belum tersedia untuk lagu ini",
+                                color = TextMuted,
+                                fontSize = 14.sp
+                            )
+                        }
                     }
                 } else {
                     // Album Cover Art
@@ -284,16 +333,53 @@ fun PlayerScreen(
                 }
 
                 val isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked
-                IconButton(
-                    onClick = { viewModel.toggleLike(track) },
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (isLiked) "Hapus dari Disukai" else "Sukai Lagu",
-                        tint = if (isLiked) Color(0xFFE91E63) else TextSecondary,
-                        modifier = Modifier.size(28.dp)
-                    )
+                val isDownloaded = uiState.downloadedTrackIds.contains(track.id)
+                val downloadProgress = uiState.downloadingTrackIds[track.id]
+                val isDownloading = downloadProgress != null
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Download Button
+                    IconButton(
+                        onClick = { viewModel.downloadTrack(track) },
+                        enabled = !isDownloading && !isDownloaded,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        if (isDownloading) {
+                            CircularProgressIndicator(
+                                progress = { downloadProgress ?: 0f },
+                                modifier = Modifier.size(22.dp),
+                                color = AccentEmerald,
+                                strokeWidth = 2.5.dp
+                            )
+                        } else if (isDownloaded) {
+                            Icon(
+                                imageVector = Icons.Default.DownloadDone,
+                                contentDescription = "Sudah Diunduh",
+                                tint = AccentEmerald,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = "Unduh Lagu ke HP",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+
+                    // Like Button
+                    IconButton(
+                        onClick = { viewModel.toggleLike(track) },
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (isLiked) "Hapus dari Disukai" else "Sukai Lagu",
+                            tint = if (isLiked) Color(0xFFE91E63) else TextSecondary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
                 }
             }
 

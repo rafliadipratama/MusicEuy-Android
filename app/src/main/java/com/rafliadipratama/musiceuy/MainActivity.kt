@@ -1,6 +1,7 @@
 package com.rafliadipratama.musiceuy
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +37,7 @@ import com.rafliadipratama.musiceuy.ui.components.BottomNavBar
 import com.rafliadipratama.musiceuy.ui.components.MiniPlayer
 import com.rafliadipratama.musiceuy.ui.components.NavigationTab
 import com.rafliadipratama.musiceuy.ui.components.QueueBottomSheet
+import com.rafliadipratama.musiceuy.ui.components.SleepTimerBottomSheet
 import com.rafliadipratama.musiceuy.ui.components.TrackContextMenuBottomSheet
 import com.rafliadipratama.musiceuy.ui.screens.ArtistDetailScreen
 import com.rafliadipratama.musiceuy.ui.screens.HomeScreen
@@ -68,6 +71,17 @@ class MainActivity : ComponentActivity() {
 
                 BackHandler(enabled = uiState.selectedPlaylist == null && uiState.selectedArtist == null && uiState.isAddToPlaylistSheetVisible) {
                     viewModel.dismissAddToPlaylist()
+                }
+
+                BackHandler(enabled = uiState.isSleepTimerDialogVisible) {
+                    viewModel.hideSleepTimerDialog()
+                }
+
+                LaunchedEffect(uiState.downloadNotificationMessage) {
+                    uiState.downloadNotificationMessage?.let { msg ->
+                        Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                        viewModel.clearDownloadMessage()
+                    }
                 }
 
                 BackHandler(enabled = uiState.selectedPlaylist == null && uiState.selectedArtist == null && !uiState.isAddToPlaylistSheetVisible && uiState.trackForContextMenu != null) {
@@ -266,6 +280,7 @@ class MainActivity : ComponentActivity() {
                                     TrackContextMenuBottomSheet(
                                         track = track,
                                         isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked,
+                                        isDownloaded = uiState.downloadedTrackIds.contains(track.id),
                                         onPlayNow = {
                                             viewModel.playTrack(track)
                                             viewModel.dismissTrackContextMenu()
@@ -284,9 +299,42 @@ class MainActivity : ComponentActivity() {
                                             viewModel.dismissTrackContextMenu()
                                             viewModel.openArtistDetail(track.artist)
                                         },
+                                        onDownload = {
+                                            viewModel.dismissTrackContextMenu()
+                                            viewModel.downloadTrack(track)
+                                        },
                                         onDismiss = { viewModel.dismissTrackContextMenu() }
                                     )
                                 }
+                            }
+                        }
+                    }
+
+                    // Sleep Timer Bottom Sheet
+                    AnimatedVisibility(
+                        visible = uiState.isSleepTimerDialogVisible,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.6f))
+                                .clickable { viewModel.hideSleepTimerDialog() }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .clickable(enabled = false) {}
+                            ) {
+                                SleepTimerBottomSheet(
+                                    remainingSeconds = uiState.sleepTimerRemainingSeconds,
+                                    isEndOfTrack = uiState.isSleepTimerEndOfTrack,
+                                    onSetTimerMinutes = { mins -> viewModel.setSleepTimer(mins) },
+                                    onSetEndOfTrack = { viewModel.setSleepTimerEndOfTrack() },
+                                    onCancelTimer = { viewModel.cancelSleepTimer() },
+                                    onDismiss = { viewModel.hideSleepTimerDialog() }
+                                )
                             }
                         }
                     }

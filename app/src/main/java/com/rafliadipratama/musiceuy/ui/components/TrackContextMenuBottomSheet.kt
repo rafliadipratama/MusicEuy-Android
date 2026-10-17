@@ -45,16 +45,21 @@ import com.rafliadipratama.musiceuy.ui.theme.SurfaceContainer
 import com.rafliadipratama.musiceuy.ui.theme.TextPrimary
 import com.rafliadipratama.musiceuy.ui.theme.TextSecondary
 
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
+
 @Composable
 fun TrackContextMenuBottomSheet(
     track: Track,
     isLiked: Boolean,
+    isDownloaded: Boolean = false,
     onPlayNow: () -> Unit,
     onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onToggleLike: () -> Unit,
     onOpenArtist: () -> Unit,
+    onDownload: () -> Unit = {},
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -154,6 +159,14 @@ fun TrackContextMenuBottomSheet(
                 title = "Tambah ke Playlist",
                 subtitle = "Simpan ke playlist favoritmu",
                 onClick = onAddToPlaylist
+            )
+
+            ContextMenuItem(
+                icon = if (isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
+                iconTint = if (isDownloaded) BrandGreen else TextSecondary,
+                title = if (isDownloaded) "Sudah Diunduh" else "Unduh Musik",
+                subtitle = if (isDownloaded) "Tersimpan di folder Musik" else "Simpan ke penyimpanan lokal HP",
+                onClick = onDownload
             )
 
             ContextMenuItem(
