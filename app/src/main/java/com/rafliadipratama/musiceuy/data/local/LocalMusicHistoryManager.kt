@@ -28,6 +28,26 @@ class LocalMusicHistoryManager(context: Context) {
         private const val KEY_TRACKS = "played_tracks_json"
         private const val KEY_PLAYLISTS = "playlists_json"
         private const val KEY_LIKED_TRACKS = "liked_tracks_json"
+        private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
+        private const val KEY_ONBOARDING_ARTISTS = "onboarding_artists"
+    }
+
+    fun isOnboardingCompleted(): Boolean {
+        return prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
+    }
+
+    fun setOnboardingCompleted(completed: Boolean = true) {
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
+    }
+
+    fun getOnboardingArtists(): List<String> {
+        val str = prefs.getString(KEY_ONBOARDING_ARTISTS, "") ?: ""
+        if (str.isBlank()) return emptyList()
+        return str.split(",").map { it.trim() }.filter { it.isNotBlank() }
+    }
+
+    fun saveOnboardingArtists(artists: List<String>) {
+        prefs.edit().putString(KEY_ONBOARDING_ARTISTS, artists.distinct().joinToString(",")).apply()
     }
 
     fun getListeningStats(): ListeningStats {
@@ -154,10 +174,11 @@ class LocalMusicHistoryManager(context: Context) {
                     artistCounts[artist] = (artistCounts[artist] ?: 0) + count
                 }
             }
-            artistCounts.entries
+            val playedArtists = artistCounts.entries
                 .sortedByDescending { it.value }
-                .take(limit)
                 .map { it.key }
+            val onboarded = getOnboardingArtists()
+            (playedArtists + onboarded).distinct().take(limit)
         } catch (_: Exception) {
             emptyList()
         }

@@ -92,6 +92,8 @@ data class PlayerUiState(
     val isStorageDialogVisible: Boolean = false,
     val audioCacheSizeBytes: Long = 0L,
     val downloadedSizeBytes: Long = 0L,
+    val isOnboardingCompleted: Boolean = true,
+    val isCalibratingOnboarding: Boolean = false,
     val error: String? = null
 )
 
@@ -115,6 +117,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     init {
         com.rafliadipratama.musiceuy.audio.AudioEffectManager.initFromPrefs(application)
+        _uiState.update { it.copy(isOnboardingCompleted = historyManager.isOnboardingCompleted()) }
         com.rafliadipratama.musiceuy.widget.MusicWidgetProvider.playbackActionHandler = { action ->
             when (action) {
                 com.rafliadipratama.musiceuy.widget.MusicWidgetProvider.ACTION_PLAY_PAUSE -> togglePlayPause()
@@ -1183,6 +1186,54 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 downloadNotificationMessage = "Cache streaming audio berhasil dibersihkan."
             )
         }
+    }
+
+    fun completeOnboarding(selectedArtists: List<String>) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCalibratingOnboarding = true) }
+            withContext(Dispatchers.IO) {
+                historyManager.saveOnboardingArtists(selectedArtists)
+                historyManager.setOnboardingCompleted(true)
+            }
+
+            // Kalibrasi Beranda: Ambil lagu-lagu top dari musisi pilihan pengguna secara instan
+            val calibratedTracks = mutableListOf<Track>()
+            withContext(Dispatchers.IO) {
+                for (artist in selectedArtists.take(4)) {
+                    try {
+                        val tracks = streamSource.searchTracks(artist).take(3)
+                        calibratedTracks.addAll(tracks)
+                    } catch (e: Exception) {
+                        android.util.Log.e("MusicEuy", "Gagal kalibrasi artis $artist: ${e.message}")
+                    }
+                }
+            }
+
+            _uiState.update { current ->
+                val updatedMostPlayed = if (current.mostPlayedTracks.isEmpty()) calibratedTracks else current.mostPlayedTracks
+                val updatedTrending = if (calibratedTracks.isNotEmpty()) calibratedTracks + current.trendingTracks else current.trendingTracks
+                current.copy(
+                    isOnboardingCompleted = true,
+                    isCalibratingOnboarding = false,
+                    favoriteArtists = historyManager.getFavoriteArtists(),
+                    mostPlayedTracks = updatedMostPlayed,
+                    trendingTracks = updatedTrending
+                )
+            }
+        }
+    }
+
+    fun skipOnboarding() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                historyManager.setOnboardingCompleted(true)
+            }
+            _uiState.update { it.copy(isOnboardingCompleted = true) }
+        }
+    }
+
+    fun restartOnboarding() {
+        _uiState.update { it.copy(isOnboardingCompleted = false) }
     }
 
     override fun onCleared() {

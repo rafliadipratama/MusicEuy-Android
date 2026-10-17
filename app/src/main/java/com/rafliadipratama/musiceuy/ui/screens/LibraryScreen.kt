@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material.icons.filled.SettingsBackupRestore
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -472,6 +473,16 @@ fun LibraryScreen(
                                 imageVector = Icons.Default.SdStorage,
                                 contentDescription = "Penyimpanan & Cache",
                                 tint = Color(0xFF4FC3F7),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        // Personalisasi Musisi Favorit (Setup Awal)
+                        IconButton(onClick = { viewModel.restartOnboarding() }) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = "Personalisasi Musisi Favorit",
+                                tint = Color(0xFFFFB300),
                                 modifier = Modifier.size(22.dp)
                             )
                         }

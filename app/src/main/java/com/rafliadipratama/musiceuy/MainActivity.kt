@@ -44,6 +44,7 @@ import com.rafliadipratama.musiceuy.ui.screens.ArtistDetailScreen
 import com.rafliadipratama.musiceuy.ui.screens.DownloadedTracksScreen
 import com.rafliadipratama.musiceuy.ui.screens.HomeScreen
 import com.rafliadipratama.musiceuy.ui.screens.LibraryScreen
+import com.rafliadipratama.musiceuy.ui.screens.OnboardingScreen
 import com.rafliadipratama.musiceuy.ui.screens.PlayerScreen
 import com.rafliadipratama.musiceuy.ui.screens.PlaylistDetailScreen
 import com.rafliadipratama.musiceuy.ui.screens.PluginsScreen
@@ -118,16 +119,27 @@ class MainActivity : ComponentActivity() {
                     viewModel.closeDownloadedTracks()
                 }
 
-                BackHandler(enabled = !uiState.isPlayerExpanded && uiState.selectedArtist == null && uiState.selectedPlaylist == null && !uiState.isDownloadedScreenVisible && selectedTab != NavigationTab.HOME) {
-                    selectedTab = NavigationTab.HOME
+                BackHandler(enabled = !uiState.isOnboardingCompleted) {
+                    viewModel.skipOnboarding()
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(ObsidianBackground)
-                        .statusBarsPadding()
-                ) {
+                if (!uiState.isOnboardingCompleted) {
+                    OnboardingScreen(
+                        viewModel = viewModel,
+                        onComplete = { artists ->
+                            viewModel.completeOnboarding(artists)
+                        },
+                        onSkip = {
+                            viewModel.skipOnboarding()
+                        }
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(ObsidianBackground)
+                            .statusBarsPadding()
+                    ) {
                     // Main Tabs
                     when (selectedTab) {
                         NavigationTab.HOME -> HomeScreen(viewModel = viewModel)
@@ -398,4 +410,5 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
 }

@@ -6,7 +6,8 @@ Berkas APK resmi untuk aplikasi pemutar musik **MusicEuy Android**.
 
 | Berkas | Versi | Ukuran | Arsitektur | Keterangan |
 | :--- | :--- | :--- | :--- | :--- |
-| [`MusicEuy-v1.3.0.apk`](./MusicEuy-v1.3.0.apk) | 1.3.0 | ~16 MB | Universal (arm64-v8a, armeabi-v7a, x86_64) | Signed Release APK (Terbaru - Fitur Lengkap) |
+| [`MusicEuy-v1.4.0.apk`](./MusicEuy-v1.4.0.apk) | 1.4.0 | ~16 MB | Universal (arm64-v8a, armeabi-v7a, x86_64) | Signed Release APK (Terbaru - Onboarding Setup) |
+| [`MusicEuy-v1.3.0.apk`](./MusicEuy-v1.3.0.apk) | 1.3.0 | ~16 MB | Universal (arm64-v8a, armeabi-v7a, x86_64) | Signed Release APK (Versi Sebelumnya) |
 | [`MusicEuy-v1.1.0.apk`](./MusicEuy-v1.1.0.apk) | 1.1.0 | ~16 MB | Universal (arm64-v8a, armeabi-v7a, x86_64) | Signed Release APK (Versi Sebelumnya) |
 
 ---
@@ -14,7 +15,7 @@ Berkas APK resmi untuk aplikasi pemutar musik **MusicEuy Android**.
 ## Panduan Instalasi di Perangkat Android (Poco F3 / Xiaomi / HyperOS / MIUI)
 
 1. **Unduh Berkas APK**:
-   - Unduh langsung [`MusicEuy-v1.3.0.apk`](./MusicEuy-v1.3.0.apk) dari repositori ini atau melalui menu [GitHub Releases](https://github.com/rafliadipratama/MusicEuy-Android/releases).
+   - Unduh langsung [`MusicEuy-v1.4.0.apk`](./MusicEuy-v1.4.0.apk) dari repositori ini atau melalui menu [GitHub Releases](https://github.com/rafliadipratama/MusicEuy-Android/releases).
 2. **Izin Sumber Tidak Dikenal (*Install Unknown Apps*)**:
    - Jika muncul peringatan saat membuka APK di Chrome atau File Manager, masuk ke:
      `Setelan (Settings) -> Privasi & Keamanan -> Pasang Aplikasi yang Tidak Dikenal (Install Unknown Apps)`.
@@ -22,6 +23,18 @@ Berkas APK resmi untuk aplikasi pemutar musik **MusicEuy Android**.
 3. **Pasang & Buka**:
    - Ketuk **Instal**.
    - Buka aplikasi **MusicEuy**. Aplikasi langsung siap memutar lagu tanpa login akun apa pun!
+
+---
+
+## Pembaruan di Versi 1.4.0
+
+- **Setup Pengguna Baru (First-Run Onboarding Flow)**:
+  - **Layar Sambutan Modern**: Hero logo animasi dengan 3 kartu keunggulan MusicEuy (Bebas Iklan, Audio Caching Hemat Kuota, Lirik Realtime LRCLIB).
+  - **Pilih Musisi Favorit (Pick 3+ Artists)**: Menampilkan grid lingkaran foto musisi top Indonesia & global (*Hindia, Tulus, Sheila On 7, Bernadya, Mahalini, Denny Caknan, NIKI, Taylor Swift, Coldplay*, dll).
+  - **Pencarian Musisi di Onboarding**: Memudahkan pengguna mencari dan memilih musisi apa pun di luar daftar kurasi bawaan.
+  - **Kalibrasi Instan Beranda**: Lagu-lagu top dari musisi pilihan pengguna langsung otomatis diambil dan mengisi Beranda saat pertama kali dibuka.
+  - **Tombol Lewati (Skip)**: Pengguna yang ingin langsung menikmati lagu dapat melewati langkah setup kapan saja.
+  - **Personalisasi Kapan Saja**: Tombol penala (*Tune*) di tab Koleksi memungkinkan pengguna mengubah kembali musisi favoritnya kapan pun.
 
 ---
 
