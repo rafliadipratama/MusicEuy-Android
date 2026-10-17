@@ -594,11 +594,12 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 }
             }
             launch {
-                val albums = withContext(Dispatchers.IO) {
-                    streamSource.getArtistAlbums(artist.name)
+                val (fullArtist, albums) = withContext(Dispatchers.IO) {
+                    streamSource.getArtistProfileAndAlbums(artist.name)
                 }
                 _uiState.update {
                     it.copy(
+                        selectedArtist = fullArtist,
                         artistAlbums = albums,
                         isLoadingAlbums = false
                     )

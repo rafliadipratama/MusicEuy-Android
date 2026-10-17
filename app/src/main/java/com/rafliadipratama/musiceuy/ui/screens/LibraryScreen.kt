@@ -76,7 +76,6 @@ fun LibraryScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val curatedFavorites = remember { viewModel.streamSource.getCuratedIndonesianTracks() }
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var newPlaylistName by remember { mutableStateOf("") }
@@ -542,41 +541,42 @@ fun LibraryScreen(
                 }
             }
 
-            // ==================== Curated Indonesian Tracks ====================
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Lagu Indonesia Pilihan",
-                    color = TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            // ==================== Liked Tracks Section (if any) ====================
+            if (uiState.likedTracks.isNotEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Lagu Disukai Terbaru",
+                        color = TextPrimary,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
 
-            items(curatedFavorites, key = { it.id }) { track ->
-                val isActive = uiState.currentTrack?.id == track.id
-                val isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked
-                TrackItem(
-                    track = track,
-                    isPlaying = uiState.isPlaying,
-                    isActive = isActive,
-                    isLiked = isLiked,
-                    onClick = {
-                        viewModel.playTrack(track, curatedFavorites)
-                    },
-                    onArtistClick = { artist ->
-                        viewModel.openArtistDetail(artist)
-                    },
-                    onToggleLikeClick = {
-                        viewModel.toggleLike(track)
-                    },
-                    onLongClick = {
-                        viewModel.showTrackContextMenu(track)
-                    },
-                    onAddToPlaylistClick = {
-                        viewModel.showAddToPlaylist(track)
-                    }
-                )
+                items(uiState.likedTracks.take(8), key = { it.id }) { track ->
+                    val isActive = uiState.currentTrack?.id == track.id
+                    TrackItem(
+                        track = track,
+                        isPlaying = uiState.isPlaying,
+                        isActive = isActive,
+                        isLiked = true,
+                        onClick = {
+                            viewModel.playTrack(track, uiState.likedTracks)
+                        },
+                        onArtistClick = { artist ->
+                            viewModel.openArtistDetail(artist)
+                        },
+                        onToggleLikeClick = {
+                            viewModel.toggleLike(track)
+                        },
+                        onLongClick = {
+                            viewModel.showTrackContextMenu(track)
+                        },
+                        onAddToPlaylistClick = {
+                            viewModel.showAddToPlaylist(track)
+                        }
+                    )
+                }
             }
 
             item {

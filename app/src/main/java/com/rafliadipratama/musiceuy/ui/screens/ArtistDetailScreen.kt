@@ -1,6 +1,7 @@
 package com.rafliadipratama.musiceuy.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -68,6 +69,8 @@ fun ArtistDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    val currentArtist = uiState.selectedArtist ?: artist
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -77,63 +80,83 @@ fun ArtistDetailScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 200.dp)
         ) {
-            // Hero Header with Gradient & Artist Avatar
+            // Hero Header with Banner Image, Gradient & Artist Avatar
             item {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(280.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    BrandGreen.copy(alpha = 0.25f),
-                                    Color(0xFF161B22),
-                                    ObsidianBackground
+                        .height(300.dp)
+                ) {
+                    // 1. YouTube Music Banner
+                    if (!currentArtist.bannerUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = currentArtist.bannerUrl,
+                            contentDescription = "Banner ${currentArtist.name}",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    // 2. Dark Scrim & Gradient Overlay
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Black.copy(alpha = 0.45f),
+                                        Color(0xFF161B22).copy(alpha = 0.65f),
+                                        ObsidianBackground
+                                    )
                                 )
                             )
-                        )
-                ) {
-                    // Back Button
+                    )
+
+                    // 3. Back Button
                     IconButton(
                         onClick = onBackClick,
                         modifier = Modifier
                             .padding(16.dp)
                             .align(Alignment.TopStart)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.4f))
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali",
                             tint = TextPrimary,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(26.dp)
                         )
                     }
 
-                    // Artist Info in Center
+                    // 4. Artist Avatar & Info in Center
                     Column(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 20.dp),
+                            .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (!artist.avatarUrl.isNullOrBlank()) {
+                        if (!currentArtist.avatarUrl.isNullOrBlank()) {
                             AsyncImage(
-                                model = artist.avatarUrl,
-                                contentDescription = artist.name,
+                                model = currentArtist.avatarUrl,
+                                contentDescription = currentArtist.name,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
-                                    .size(110.dp)
+                                    .size(114.dp)
                                     .clip(CircleShape)
+                                    .border(3.dp, Color(0xFF161B22), CircleShape)
                             )
                         } else {
                             Box(
                                 modifier = Modifier
-                                    .size(110.dp)
+                                    .size(114.dp)
                                     .clip(CircleShape)
-                                    .background(BrandGreen.copy(alpha = 0.2f)),
+                                    .background(BrandGreen.copy(alpha = 0.25f))
+                                    .border(3.dp, Color(0xFF161B22), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = artist.name.take(1).uppercase(),
+                                    text = currentArtist.name.take(1).uppercase(),
                                     color = BrandGreen,
                                     fontSize = 44.sp,
                                     fontWeight = FontWeight.Bold
@@ -143,14 +166,19 @@ fun ArtistDetailScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
                             Text(
-                                text = artist.name,
+                                text = currentArtist.name,
                                 color = TextPrimary,
                                 fontSize = 24.sp,
-                                fontWeight = FontWeight.ExtraBold
+                                fontWeight = FontWeight.ExtraBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            if (artist.isVerified) {
+                            if (currentArtist.isVerified) {
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Icon(
                                     imageVector = Icons.Default.Verified,

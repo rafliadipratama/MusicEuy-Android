@@ -50,8 +50,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rafliadipratama.musiceuy.R
-import com.rafliadipratama.musiceuy.ui.components.FeaturedMix
-import com.rafliadipratama.musiceuy.ui.components.FeaturedMixCard
 import com.rafliadipratama.musiceuy.ui.components.MiniPlayer
 import com.rafliadipratama.musiceuy.ui.components.TrackItem
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreen
@@ -75,47 +73,6 @@ fun HomeScreen(
     var searchInput by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("Semua") }
     val keyboardController = LocalSoftwareKeyboardController.current
-
-    val featuredMixes = remember {
-        listOf(
-            FeaturedMix(
-                title = "Pop Indo Viral",
-                subtitle = "Bernadya, Nadin, Hindia",
-                coverUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500",
-                searchQuery = "Pop Indonesia Viral"
-            ),
-            FeaturedMix(
-                title = "Indie Pop Indo",
-                subtitle = "Hindia, Nadin, Sal Priadi",
-                coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500",
-                searchQuery = "Indie Pop Indonesia"
-            ),
-            FeaturedMix(
-                title = "Top Hits Global",
-                subtitle = "Coldplay, Bruno Mars, Taylor",
-                coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500",
-                searchQuery = "Coldplay Bruno Mars Hits"
-            ),
-            FeaturedMix(
-                title = "Akustik Senja",
-                subtitle = "Feby Putri, Fiersa Besari",
-                coverUrl = "https://images.unsplash.com/photo-1445985543470-41fdd6ce388d?w=500",
-                searchQuery = "Akustik Indonesia Senja Santai"
-            ),
-            FeaturedMix(
-                title = "Nostalgia 2000-an",
-                subtitle = "Sheila On 7, Dewa 19",
-                coverUrl = "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=500",
-                searchQuery = "Sheila On 7 Dewa 19"
-            ),
-            FeaturedMix(
-                title = "Lo-Fi Beats",
-                subtitle = "Relaksasi • Santai • Kopi",
-                coverUrl = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500",
-                searchQuery = "Lofi Hip Hop Chill Beats"
-            )
-        )
-    }
 
     val filterPills = listOf("Semua", "Sering Diputar", "Pop Indonesia", "Artis Terverifikasi", "Top Hits")
 
@@ -241,51 +198,7 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 200.dp)
             ) {
-                // If not in search mode, show Featured Mixes section
-                if (uiState.searchResults.isEmpty() && !uiState.isSearching) {
-                    item {
-                        Text(
-                            text = "Akses Cepat & Pilihan Tren",
-                            color = TextPrimary,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
-                        )
-                    }
 
-                    // 2x2 Grid of Featured Mixes
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            for (i in featuredMixes.indices step 2) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Box(modifier = Modifier.weight(1f)) {
-                                        FeaturedMixCard(
-                                            mix = featuredMixes[i],
-                                            onClick = {
-                                                viewModel.search(featuredMixes[i].searchQuery)
-                                            }
-                                        )
-                                    }
-                                    if (i + 1 < featuredMixes.size) {
-                                        Box(modifier = Modifier.weight(1f)) {
-                                            FeaturedMixCard(
-                                                mix = featuredMixes[i + 1],
-                                                onClick = {
-                                                    viewModel.search(featuredMixes[i + 1].searchQuery)
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    item { Spacer(modifier = Modifier.height(16.dp)) }
-                }
 
                 // Search Status or Loading
                 if (uiState.isSearching) {

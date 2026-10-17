@@ -137,6 +137,7 @@ class LocalMusicHistoryManager(context: Context) {
         val title = obj.optString("title", "")
         val artistName = obj.optString("artistName", "Artis")
         val artistAvatar = obj.optString("artistAvatar", "").takeIf { it.isNotBlank() }
+        val artistBanner = obj.optString("artistBanner", "").takeIf { it.isNotBlank() }
         val albumTitle = obj.optString("albumTitle", "").takeIf { it.isNotBlank() }
         val durationSec = obj.optInt("durationSec", 0)
         val audioUrl = obj.optString("audioUrl", "")
@@ -151,6 +152,7 @@ class LocalMusicHistoryManager(context: Context) {
                 id = "art_$artistName",
                 name = artistName,
                 avatarUrl = artistAvatar,
+                bannerUrl = artistBanner,
                 isVerified = isVerified
             ),
             albumTitle = albumTitle,
@@ -178,7 +180,7 @@ class LocalMusicHistoryManager(context: Context) {
     }
 
     fun getAllPlaylists(): List<Playlist> {
-        val jsonStr = prefs.getString(KEY_PLAYLISTS, null) ?: return defaultPlaylists()
+        val jsonStr = prefs.getString(KEY_PLAYLISTS, null) ?: return emptyList()
         return try {
             val arr = JSONArray(jsonStr)
             val list = mutableListOf<Playlist>()
@@ -206,9 +208,9 @@ class LocalMusicHistoryManager(context: Context) {
                     )
                 )
             }
-            if (list.isEmpty()) defaultPlaylists() else list
+            list
         } catch (_: Exception) {
-            defaultPlaylists()
+            emptyList()
         }
     }
 
@@ -269,6 +271,7 @@ class LocalMusicHistoryManager(context: Context) {
                         put("title", t.title)
                         put("artistName", t.artist.name)
                         put("artistAvatar", t.artist.avatarUrl ?: "")
+                        put("artistBanner", t.artist.bannerUrl ?: "")
                         put("albumTitle", t.albumTitle ?: "")
                         put("durationSec", t.durationSec)
                         put("audioUrl", t.audioUrl)
@@ -283,24 +286,6 @@ class LocalMusicHistoryManager(context: Context) {
             arr.put(obj)
         }
         prefs.edit().putString(KEY_PLAYLISTS, arr.toString()).apply()
-    }
-
-    private fun defaultPlaylists(): List<Playlist> {
-        val default1 = Playlist(
-            id = "pl_favorit_indo",
-            name = "Kompilasi Lagu Favorit",
-            description = "Daftar lagu santai dan terpopuler pilihan lokal",
-            coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500",
-            tracks = emptyList()
-        )
-        val default2 = Playlist(
-            id = "pl_senja",
-            name = "Akustik & Senja",
-            description = "Teman santai sore hari dan relaksasi",
-            coverUrl = "https://images.unsplash.com/photo-1445985543470-41fdd6ce388d?w=500",
-            tracks = emptyList()
-        )
-        return listOf(default1, default2)
     }
 
     // ==================== Liked Tracks Operations ====================

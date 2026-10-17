@@ -4,6 +4,7 @@ data class Artist(
     val id: String,
     val name: String,
     val avatarUrl: String? = null,
+    val bannerUrl: String? = null,
     val isVerified: Boolean = true
 )
 

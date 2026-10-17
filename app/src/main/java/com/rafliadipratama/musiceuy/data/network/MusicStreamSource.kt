@@ -269,8 +269,10 @@ class MusicStreamSource(
                                 val albumObj = item.optJSONObject("album")
                                 val albumTitle = albumObj?.optString("title", "")
                                 val coverUrl = albumObj?.optString("cover_big", "")
+                                    ?.takeIf { it.isNotBlank() }
                                     ?: albumObj?.optString("cover_medium", "")
-                                    ?: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500"
+                                    ?.takeIf { it.isNotBlank() }
+                                    ?: ""
 
                                 // Attempt to resolve clean stream with strict match
                                 val saavnMatches = fetchSaavn("$artistName $title", limit = 5).filter {
@@ -397,67 +399,8 @@ class MusicStreamSource(
         if (tracks.isNotEmpty()) {
             tracks
         } else {
-            getCuratedIndonesianTracks()
+            searchTracks("Top Hits Musik Indonesia").ifEmpty { emptyList() }
         }
-    }
-
-    fun getCuratedIndonesianTracks(): List<Track> {
-        return listOf(
-            Track(
-                id = "yt:z-XHpftdXEE",
-                title = "Satu Bulan",
-                artist = Artist("1", "Bernadya"),
-                albumTitle = "Sialnya, Hidup Harus Tetap Berjalan",
-                durationSec = 201,
-                audioUrl = "yt:z-XHpftdXEE",
-                coverUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500"
-            ),
-            Track(
-                id = "yt:hc-8aB0Dkkw",
-                title = "Untungnya, Hidup Harus Tetap Berjalan",
-                artist = Artist("2", "Bernadya"),
-                albumTitle = "Sialnya, Hidup Harus Tetap Berjalan",
-                durationSec = 183,
-                audioUrl = "yt:hc-8aB0Dkkw",
-                coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500"
-            ),
-            Track(
-                id = "yt:gala-bunga",
-                title = "Gala Bunga Matahari",
-                artist = Artist("3", "Sal Priadi"),
-                albumTitle = "MARKERS AND SUCH PENS FLASHDISKS",
-                durationSec = 210,
-                audioUrl = "yt:gala-bunga",
-                coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500"
-            ),
-            Track(
-                id = "yt:rumah-ke-rumah",
-                title = "Rumah ke Rumah",
-                artist = Artist("4", "Hindia"),
-                albumTitle = "Menari Dengan Bayangan",
-                durationSec = 287,
-                audioUrl = "yt:rumah-ke-rumah",
-                coverUrl = "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=500"
-            ),
-            Track(
-                id = "yt:rayuan-perempuan-gila",
-                title = "Rayuan Perempuan Gila",
-                artist = Artist("5", "Nadin Amizah"),
-                albumTitle = "Untuk Dunia, Cinta, dan Kotornya",
-                durationSec = 309,
-                audioUrl = "yt:rayuan-perempuan-gila",
-                coverUrl = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500"
-            ),
-            Track(
-                id = "yt:sheila-dan",
-                title = "Dan...",
-                artist = Artist("6", "Sheila On 7"),
-                albumTitle = "Sheila On 7 (1999)",
-                durationSec = 286,
-                audioUrl = "yt:sheila-dan",
-                coverUrl = "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=500"
-            )
-        )
     }
 
     fun decryptFullStreamUrl(encryptedMediaUrl: String?): String? {
@@ -509,12 +452,16 @@ class MusicStreamSource(
     }
 
     /**
-     * Fetches all official albums of an artist directly from YouTube Music InnerTube API.
+     * Fetches artist profile (avatar, banner, browseId) and all official albums from YouTube Music.
      */
-    suspend fun getArtistAlbums(artistName: String): List<Album> = withContext(Dispatchers.IO) {
+    suspend fun getArtistProfileAndAlbums(artistName: String): Pair<Artist, List<Album>> = withContext(Dispatchers.IO) {
         val albums = mutableListOf<Album>()
+        var artistBrowseId: String? = null
+        var artistAvatar: String? = null
+        var artistBanner: String? = null
+
         try {
-            // 1. Search artist to get their browseId
+            // 1. Search artist to get their browseId and avatar
             val searchUrl = "https://music.youtube.com/youtubei/v1/search"
             val searchPayload = JSONObject().apply {
                 put("query", artistName.trim())
@@ -534,7 +481,6 @@ class MusicStreamSource(
                 .post(searchPayload.toString().toRequestBody("application/json".toMediaType()))
                 .build()
 
-            var artistBrowseId: String? = null
             client.newCall(searchReq).execute().use { resp ->
                 if (resp.isSuccessful) {
                     val body = resp.body?.string()
@@ -553,6 +499,19 @@ class MusicStreamSource(
                             for (i in 0 until contents.length()) {
                                 val s = contents.optJSONObject(i) ?: continue
                                 val card = s.optJSONObject("musicCardShelfRenderer") ?: continue
+
+                                // Extract Artist Avatar from search card
+                                val cardThumbs = card.optJSONObject("thumbnail")
+                                    ?.optJSONObject("musicThumbnailRenderer")
+                                    ?.optJSONObject("thumbnail")
+                                    ?.optJSONArray("thumbnails")
+                                if (cardThumbs != null && cardThumbs.length() > 0) {
+                                    val rawAvatar = cardThumbs.optJSONObject(cardThumbs.length() - 1)?.optString("url", "") ?: ""
+                                    if (rawAvatar.isNotBlank()) {
+                                        artistAvatar = rawAvatar.replace(Regex("=w\\d+-h\\d+"), "=w500-h500")
+                                    }
+                                }
+
                                 val titleRuns = card.optJSONObject("title")?.optJSONArray("runs")
                                 if (titleRuns != null) {
                                     for (r in 0 until titleRuns.length()) {
@@ -574,10 +533,17 @@ class MusicStreamSource(
             }
 
             if (artistBrowseId.isNullOrBlank()) {
-                return@withContext emptyList()
+                val fallbackArtist = Artist(
+                    id = "art_$artistName",
+                    name = artistName,
+                    avatarUrl = artistAvatar,
+                    bannerUrl = null,
+                    isVerified = true
+                )
+                return@withContext Pair(fallbackArtist, emptyList())
             }
 
-            // 2. Browse artist page
+            // 2. Browse artist page to get banner, foreground avatar, and album carousel
             val browseUrl = "https://music.youtube.com/youtubei/v1/browse"
             val browsePayload = JSONObject().apply {
                 put("browseId", artistBrowseId)
@@ -606,6 +572,33 @@ class MusicStreamSource(
                     val body = resp.body?.string()
                     if (!body.isNullOrBlank()) {
                         val json = JSONObject(body)
+
+                        // Extract Header Banner & Foreground Avatar
+                        val header = json.optJSONObject("header")
+                        val hObj = header?.optJSONObject("musicImmersiveHeaderRenderer")
+                            ?: header?.optJSONObject("musicVisualHeaderRenderer")
+                        if (hObj != null) {
+                            val hThumbs = hObj.optJSONObject("thumbnail")
+                                ?.optJSONObject("musicThumbnailRenderer")
+                                ?.optJSONObject("thumbnail")
+                                ?.optJSONArray("thumbnails")
+                            if (hThumbs != null && hThumbs.length() > 0) {
+                                artistBanner = hThumbs.optJSONObject(hThumbs.length() - 1)?.optString("url", "") ?: ""
+                            }
+                            if (artistAvatar.isNullOrBlank()) {
+                                val fgThumbs = hObj.optJSONObject("foregroundThumbnail")
+                                    ?.optJSONObject("musicThumbnailRenderer")
+                                    ?.optJSONObject("thumbnail")
+                                    ?.optJSONArray("thumbnails")
+                                if (fgThumbs != null && fgThumbs.length() > 0) {
+                                    val rawFg = fgThumbs.optJSONObject(fgThumbs.length() - 1)?.optString("url", "") ?: ""
+                                    if (rawFg.isNotBlank()) {
+                                        artistAvatar = rawFg.replace(Regex("=w\\d+-h\\d+"), "=w500-h500")
+                                    }
+                                }
+                            }
+                        }
+
                         val secs = json.optJSONObject("contents")
                             ?.optJSONObject("singleColumnBrowseResultsRenderer")
                             ?.optJSONArray("tabs")
@@ -662,6 +655,7 @@ class MusicStreamSource(
                                             )
                                         }
                                     }
+                                    break
                                 }
                             }
                         }
@@ -747,7 +741,22 @@ class MusicStreamSource(
         } catch (e: Exception) {
             android.util.Log.e("MusicEuy", "Error fetching artist albums: ${e.message}", e)
         }
-        albums
+
+        val fullArtist = Artist(
+            id = artistBrowseId ?: "art_$artistName",
+            name = artistName,
+            avatarUrl = artistAvatar,
+            bannerUrl = artistBanner,
+            isVerified = true
+        )
+        Pair(fullArtist, albums)
+    }
+
+    /**
+     * Fetches all official albums of an artist directly from YouTube Music InnerTube API.
+     */
+    suspend fun getArtistAlbums(artistName: String): List<Album> = withContext(Dispatchers.IO) {
+        getArtistProfileAndAlbums(artistName).second
     }
 
     /**
