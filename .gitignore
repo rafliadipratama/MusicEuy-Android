@@ -10,4 +10,5 @@ captures/
 .externalNativeBuild/
 .cxx/
 *.apk
+!packages/*.apk
 output.json
