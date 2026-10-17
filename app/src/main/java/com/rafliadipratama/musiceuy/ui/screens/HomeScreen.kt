@@ -151,29 +151,6 @@ fun HomeScreen(
                         letterSpacing = (-0.5).sp
                     )
                 }
-
-                // Live Stream Badge
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50.dp))
-                        .background(SurfaceContainerHigh)
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(7.dp)
-                            .clip(CircleShape)
-                            .background(BrandGreen)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Koleksi Musik",
-                        color = BrandGreen,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
 
             // Search Bar
@@ -262,7 +239,7 @@ fun HomeScreen(
             // Scrollable Content
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 150.dp)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 200.dp)
             ) {
                 // If not in search mode, show Featured Mixes section
                 if (uiState.searchResults.isEmpty() && !uiState.isSearching) {
@@ -367,19 +344,27 @@ fun HomeScreen(
                 }
 
                 items(tracks, key = { it.id }) { track ->
+                    val isLiked = uiState.likedTrackIds.contains(track.id)
+                    val activeTrack = track.copy(isLiked = isLiked)
                     val isActive = uiState.currentTrack?.id == track.id
                     TrackItem(
-                        track = track,
+                        track = activeTrack,
                         isPlaying = uiState.isPlaying,
                         isActive = isActive,
                         onClick = {
-                            viewModel.playTrack(track, tracks)
+                            viewModel.playTrack(activeTrack, tracks)
+                        },
+                        onLongClick = {
+                            viewModel.showTrackContextMenu(activeTrack)
                         },
                         onArtistClick = { artist ->
                             viewModel.openArtistDetail(artist)
                         },
                         onAddToPlaylistClick = {
-                            viewModel.showAddToPlaylist(track)
+                            viewModel.showAddToPlaylist(activeTrack)
+                        },
+                        onToggleLikeClick = {
+                            viewModel.toggleLike(activeTrack)
                         }
                     )
                 }

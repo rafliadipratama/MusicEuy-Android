@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 import com.rafliadipratama.musiceuy.data.local.LocalMusicHistoryManager
+import com.rafliadipratama.musiceuy.data.model.Album
 import com.rafliadipratama.musiceuy.data.model.Artist
 import com.rafliadipratama.musiceuy.data.model.Playlist
 
@@ -54,9 +55,14 @@ data class PlayerUiState(
     val selectedPlaylist: Playlist? = null,
     val selectedArtist: Artist? = null,
     val artistTracks: List<Track> = emptyList(),
+    val artistAlbums: List<Album> = emptyList(),
     val isLoadingArtist: Boolean = false,
+    val isLoadingAlbums: Boolean = false,
     val isAddToPlaylistSheetVisible: Boolean = false,
     val trackToAddToPlaylist: Track? = null,
+    val trackForContextMenu: Track? = null,
+    val likedTracks: List<Track> = emptyList(),
+    val likedTrackIds: Set<String> = emptySet(),
     val isSearching: Boolean = false,
     val error: String? = null
 )
@@ -161,11 +167,17 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             val playlists = withContext(Dispatchers.IO) {
                 historyManager.getAllPlaylists()
             }
+            val liked = withContext(Dispatchers.IO) {
+                historyManager.getLikedTracks()
+            }
+            val likedIds = liked.map { it.id }.toSet()
             _uiState.update {
                 it.copy(
                     mostPlayedTracks = mostPlayed,
                     favoriteArtists = favArtists,
-                    playlists = playlists
+                    playlists = playlists,
+                    likedTracks = liked,
+                    likedTrackIds = likedIds
                 )
             }
 
@@ -206,10 +218,12 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     fun playTrack(track: Track, newQueue: List<Track>? = null) {
         val controller = mediaController ?: return
         val currentQueue = newQueue ?: _uiState.value.queue.ifEmpty { listOf(track) }
+        val isLiked = _uiState.value.likedTrackIds.contains(track.id)
+        val activeTrack = track.copy(isLiked = isLiked)
 
         _uiState.update {
             it.copy(
-                currentTrack = track,
+                currentTrack = activeTrack,
                 queue = currentQueue,
                 currentPositionMs = 0L,
                 lyrics = Lyrics(),
@@ -464,7 +478,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun openPlaylist(playlist: Playlist) {
-        _uiState.update { it.copy(selectedPlaylist = playlist) }
+        _uiState.update { it.copy(selectedPlaylist = playlist, isPlayerExpanded = false) }
     }
 
     fun closePlaylist() {
@@ -479,29 +493,149 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         _uiState.update { it.copy(isAddToPlaylistSheetVisible = false, trackToAddToPlaylist = null) }
     }
 
+    // ==================== Liked Tracks & Context Menu ====================
+
+    fun toggleLike(track: Track) {
+        viewModelScope.launch {
+            val isNowLiked = withContext(Dispatchers.IO) {
+                historyManager.toggleLikedTrack(track)
+            }
+            val updatedLiked = withContext(Dispatchers.IO) {
+                historyManager.getLikedTracks()
+            }
+            _uiState.update { state ->
+                val updatedIds = updatedLiked.map { it.id }.toSet()
+                val updatedCurrent = if (state.currentTrack?.id == track.id) {
+                    state.currentTrack.copy(isLiked = isNowLiked)
+                } else state.currentTrack
+                val updatedSelectedPlaylist = if (state.selectedPlaylist?.id == "liked_tracks_virtual") {
+                    state.selectedPlaylist.copy(
+                        description = "Koleksi ${updatedLiked.size} lagu favorit yang kamu sukai",
+                        coverUrl = updatedLiked.firstOrNull()?.coverUrl ?: "",
+                        tracks = updatedLiked
+                    )
+                } else state.selectedPlaylist
+                state.copy(
+                    likedTracks = updatedLiked,
+                    likedTrackIds = updatedIds,
+                    currentTrack = updatedCurrent,
+                    selectedPlaylist = updatedSelectedPlaylist
+                )
+            }
+        }
+    }
+
+    fun openLikedTracks() {
+        val liked = _uiState.value.likedTracks
+        _uiState.update {
+            it.copy(
+                isPlayerExpanded = false,
+                selectedPlaylist = Playlist(
+                    id = "liked_tracks_virtual",
+                    name = "Lagu Disukai",
+                    description = "Koleksi ${liked.size} lagu favorit yang kamu sukai",
+                    coverUrl = liked.firstOrNull()?.coverUrl ?: "",
+                    tracks = liked
+                )
+            )
+        }
+    }
+
+    fun showTrackContextMenu(track: Track) {
+        _uiState.update { it.copy(trackForContextMenu = track) }
+    }
+
+    fun dismissTrackContextMenu() {
+        _uiState.update { it.copy(trackForContextMenu = null) }
+    }
+
+    fun playNext(track: Track) {
+        _uiState.update { state ->
+            val currentQueue = state.queue.toMutableList()
+            val currentIndex = currentQueue.indexOfFirst { it.id == state.currentTrack?.id }
+            currentQueue.removeAll { it.id == track.id }
+            val insertPos = if (currentIndex >= 0 && currentIndex < currentQueue.size) currentIndex + 1 else currentQueue.size
+            currentQueue.add(insertPos, track)
+            state.copy(queue = currentQueue, trackForContextMenu = null)
+        }
+    }
+
+    fun addToQueue(track: Track) {
+        _uiState.update { state ->
+            val currentQueue = state.queue.toMutableList()
+            if (currentQueue.none { it.id == track.id }) {
+                currentQueue.add(track)
+            }
+            state.copy(queue = currentQueue, trackForContextMenu = null)
+        }
+    }
+
     fun openArtistDetail(artist: Artist) {
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     selectedArtist = artist,
                     artistTracks = emptyList(),
-                    isLoadingArtist = true
+                    artistAlbums = emptyList(),
+                    isLoadingArtist = true,
+                    isLoadingAlbums = true,
+                    isPlayerExpanded = false
                 )
             }
-            val results = withContext(Dispatchers.IO) {
-                pluginManager.search(artist.name).ifEmpty { streamSource.searchTracks(artist.name) }
+            launch {
+                val results = withContext(Dispatchers.IO) {
+                    pluginManager.search(artist.name).ifEmpty { streamSource.searchTracks(artist.name) }
+                }
+                _uiState.update {
+                    it.copy(
+                        artistTracks = results,
+                        isLoadingArtist = false
+                    )
+                }
             }
+            launch {
+                val albums = withContext(Dispatchers.IO) {
+                    streamSource.getArtistAlbums(artist.name)
+                }
+                _uiState.update {
+                    it.copy(
+                        artistAlbums = albums,
+                        isLoadingAlbums = false
+                    )
+                }
+            }
+        }
+    }
+
+    fun openAlbum(album: Album) {
+        viewModelScope.launch {
             _uiState.update {
                 it.copy(
-                    artistTracks = results,
-                    isLoadingArtist = false
+                    isPlayerExpanded = false,
+                    selectedPlaylist = Playlist(
+                        id = album.id,
+                        name = album.title,
+                        description = "Album • ${album.year.ifBlank { "YouTube Music" }} • ${album.artistName}",
+                        coverUrl = album.coverUrl,
+                        tracks = emptyList()
+                    )
                 )
+            }
+            val tracks = withContext(Dispatchers.IO) {
+                streamSource.getAlbumTracks(album.id, album.artistName)
+            }
+            _uiState.update { state ->
+                if (state.selectedPlaylist?.id == album.id) {
+                    state.copy(
+                        selectedPlaylist = state.selectedPlaylist.copy(tracks = tracks)
+                    )
+                } else state
             }
         }
     }
 
     fun closeArtistDetail() {
-        _uiState.update { it.copy(selectedArtist = null, artistTracks = emptyList()) }
+        _uiState.update { it.copy(selectedArtist = null, artistTracks = emptyList(), artistAlbums = emptyList()) }
     }
 
     override fun onCleared() {

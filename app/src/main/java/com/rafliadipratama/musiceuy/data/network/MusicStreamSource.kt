@@ -1,6 +1,7 @@
 package com.rafliadipratama.musiceuy.data.network
 
 import android.util.Base64
+import com.rafliadipratama.musiceuy.data.model.Album
 import com.rafliadipratama.musiceuy.data.model.Artist
 import com.rafliadipratama.musiceuy.data.model.Track
 import kotlinx.coroutines.Dispatchers
@@ -9,6 +10,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor
@@ -504,5 +506,360 @@ class MusicStreamSource(
             .replace("&#039;", "'")
             .replace("&lt;", "<")
             .replace("&gt;", ">")
+    }
+
+    /**
+     * Fetches all official albums of an artist directly from YouTube Music InnerTube API.
+     */
+    suspend fun getArtistAlbums(artistName: String): List<Album> = withContext(Dispatchers.IO) {
+        val albums = mutableListOf<Album>()
+        try {
+            // 1. Search artist to get their browseId
+            val searchUrl = "https://music.youtube.com/youtubei/v1/search"
+            val searchPayload = JSONObject().apply {
+                put("query", artistName.trim())
+                put("context", JSONObject().apply {
+                    put("client", JSONObject().apply {
+                        put("clientName", "WEB_REMIX")
+                        put("clientVersion", "1.20240318.01.00")
+                        put("hl", "id")
+                        put("gl", "ID")
+                    })
+                })
+            }
+            val searchReq = Request.Builder()
+                .url(searchUrl)
+                .header("Content-Type", "application/json")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .post(searchPayload.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            var artistBrowseId: String? = null
+            client.newCall(searchReq).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val json = JSONObject(body)
+                        val contents = json.optJSONObject("contents")
+                            ?.optJSONObject("tabbedSearchResultsRenderer")
+                            ?.optJSONArray("tabs")
+                            ?.optJSONObject(0)
+                            ?.optJSONObject("tabRenderer")
+                            ?.optJSONObject("content")
+                            ?.optJSONObject("sectionListRenderer")
+                            ?.optJSONArray("contents")
+
+                        if (contents != null) {
+                            for (i in 0 until contents.length()) {
+                                val s = contents.optJSONObject(i) ?: continue
+                                val card = s.optJSONObject("musicCardShelfRenderer") ?: continue
+                                val titleRuns = card.optJSONObject("title")?.optJSONArray("runs")
+                                if (titleRuns != null) {
+                                    for (r in 0 until titleRuns.length()) {
+                                        val b = titleRuns.optJSONObject(r)
+                                            ?.optJSONObject("navigationEndpoint")
+                                            ?.optJSONObject("browseEndpoint")
+                                            ?.optString("browseId")
+                                        if (!b.isNullOrBlank()) {
+                                            artistBrowseId = b
+                                            break
+                                        }
+                                    }
+                                }
+                                if (artistBrowseId != null) break
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (artistBrowseId.isNullOrBlank()) {
+                return@withContext emptyList()
+            }
+
+            // 2. Browse artist page
+            val browseUrl = "https://music.youtube.com/youtubei/v1/browse"
+            val browsePayload = JSONObject().apply {
+                put("browseId", artistBrowseId)
+                put("context", JSONObject().apply {
+                    put("client", JSONObject().apply {
+                        put("clientName", "WEB_REMIX")
+                        put("clientVersion", "1.20240318.01.00")
+                        put("hl", "id")
+                        put("gl", "ID")
+                    })
+                })
+            }
+            val browseReq = Request.Builder()
+                .url(browseUrl)
+                .header("Content-Type", "application/json")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .post(browsePayload.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            var discographyBrowseId: String? = null
+            var discographyParams: String? = null
+            val fallbackAlbums = mutableListOf<Album>()
+
+            client.newCall(browseReq).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val json = JSONObject(body)
+                        val secs = json.optJSONObject("contents")
+                            ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                            ?.optJSONArray("tabs")
+                            ?.optJSONObject(0)
+                            ?.optJSONObject("tabRenderer")
+                            ?.optJSONObject("content")
+                            ?.optJSONObject("sectionListRenderer")
+                            ?.optJSONArray("contents")
+
+                        if (secs != null) {
+                            for (i in 0 until secs.length()) {
+                                val s = secs.optJSONObject(i) ?: continue
+                                val carousel = s.optJSONObject("musicCarouselShelfRenderer") ?: continue
+                                val basicHeader = carousel.optJSONObject("header")
+                                    ?.optJSONObject("musicCarouselShelfBasicHeaderRenderer") ?: continue
+                                val headerTitle = basicHeader.optJSONObject("title")
+                                    ?.optJSONArray("runs")
+                                    ?.optJSONObject(0)
+                                    ?.optString("text", "") ?: ""
+
+                                if (headerTitle.equals("Album", ignoreCase = true) || headerTitle.contains("Album", ignoreCase = true)) {
+                                    val moreBtn = basicHeader.optJSONObject("moreContentButton")
+                                        ?.optJSONObject("buttonRenderer")
+                                        ?.optJSONObject("navigationEndpoint")
+                                        ?.optJSONObject("browseEndpoint")
+                                    if (moreBtn != null) {
+                                        discographyBrowseId = moreBtn.optString("browseId", "")
+                                        discographyParams = moreBtn.optString("params", "")
+                                    }
+
+                                    val items = carousel.optJSONArray("contents") ?: JSONArray()
+                                    for (j in 0 until items.length()) {
+                                        val twoRow = items.optJSONObject(j)?.optJSONObject("musicTwoRowItemRenderer") ?: continue
+                                        val title = twoRow.optJSONObject("title")?.optJSONArray("runs")?.optJSONObject(0)?.optString("text", "") ?: ""
+                                        val bId = twoRow.optJSONObject("navigationEndpoint")?.optJSONObject("browseEndpoint")?.optString("browseId", "") ?: ""
+                                        val subruns = twoRow.optJSONObject("subtitle")?.optJSONArray("runs")
+                                        val year = if ((subruns?.length() ?: 0) > 0) subruns?.optJSONObject(subruns.length() - 1)?.optString("text", "") ?: "" else ""
+                                        val thumbs = twoRow.optJSONObject("thumbnailRenderer")
+                                            ?.optJSONObject("musicThumbnailRenderer")
+                                            ?.optJSONObject("thumbnail")
+                                            ?.optJSONArray("thumbnails")
+                                        var cover = thumbs?.optJSONObject(thumbs.length() - 1)?.optString("url", "") ?: ""
+                                        cover = cover.replace(Regex("=w\\d+-h\\d+"), "=w500-h500")
+
+                                        if (title.isNotBlank() && bId.isNotBlank()) {
+                                            fallbackAlbums.add(
+                                                Album(
+                                                    id = bId,
+                                                    title = title,
+                                                    artistName = artistName,
+                                                    year = year.trim(),
+                                                    coverUrl = cover
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. If discography browseId exists, load full discography grid
+            if (!discographyBrowseId.isNullOrBlank()) {
+                val discoPayload = JSONObject().apply {
+                    put("browseId", discographyBrowseId)
+                    if (!discographyParams.isNullOrBlank()) {
+                        put("params", discographyParams)
+                    }
+                    put("context", JSONObject().apply {
+                        put("client", JSONObject().apply {
+                            put("clientName", "WEB_REMIX")
+                            put("clientVersion", "1.20240318.01.00")
+                            put("hl", "id")
+                            put("gl", "ID")
+                        })
+                    })
+                }
+                val discoReq = Request.Builder()
+                    .url(browseUrl)
+                    .header("Content-Type", "application/json")
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    .post(discoPayload.toString().toRequestBody("application/json".toMediaType()))
+                    .build()
+
+                client.newCall(discoReq).execute().use { resp ->
+                    if (resp.isSuccessful) {
+                        val body = resp.body?.string()
+                        if (!body.isNullOrBlank()) {
+                            val json = JSONObject(body)
+                            val items = json.optJSONObject("contents")
+                                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                                ?.optJSONArray("tabs")
+                                ?.optJSONObject(0)
+                                ?.optJSONObject("tabRenderer")
+                                ?.optJSONObject("content")
+                                ?.optJSONObject("sectionListRenderer")
+                                ?.optJSONArray("contents")
+                                ?.optJSONObject(0)
+                                ?.optJSONObject("gridRenderer")
+                                ?.optJSONArray("items")
+
+                            if (items != null) {
+                                for (i in 0 until items.length()) {
+                                    val twoRow = items.optJSONObject(i)?.optJSONObject("musicTwoRowItemRenderer") ?: continue
+                                    val title = twoRow.optJSONObject("title")?.optJSONArray("runs")?.optJSONObject(0)?.optString("text", "") ?: ""
+                                    val bId = twoRow.optJSONObject("navigationEndpoint")?.optJSONObject("browseEndpoint")?.optString("browseId", "") ?: ""
+                                    val subruns = twoRow.optJSONObject("subtitle")?.optJSONArray("runs")
+                                    val year = if ((subruns?.length() ?: 0) > 0) subruns?.optJSONObject(subruns.length() - 1)?.optString("text", "") ?: "" else ""
+                                    val thumbs = twoRow.optJSONObject("thumbnailRenderer")
+                                        ?.optJSONObject("musicThumbnailRenderer")
+                                        ?.optJSONObject("thumbnail")
+                                        ?.optJSONArray("thumbnails")
+                                    var cover = thumbs?.optJSONObject(thumbs.length() - 1)?.optString("url", "") ?: ""
+                                    cover = cover.replace(Regex("=w\\d+-h\\d+"), "=w500-h500")
+
+                                    if (title.isNotBlank() && bId.isNotBlank()) {
+                                        albums.add(
+                                            Album(
+                                                id = bId,
+                                                title = title,
+                                                artistName = artistName,
+                                                year = year.trim(),
+                                                coverUrl = cover
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (albums.isEmpty()) {
+                albums.addAll(fallbackAlbums)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MusicEuy", "Error fetching artist albums: ${e.message}", e)
+        }
+        albums
+    }
+
+    /**
+     * Fetches all tracks of an album from YouTube Music by album browseId.
+     */
+    suspend fun getAlbumTracks(albumId: String, artistName: String): List<Track> = withContext(Dispatchers.IO) {
+        val tracks = mutableListOf<Track>()
+        try {
+            val url = "https://music.youtube.com/youtubei/v1/browse"
+            val payload = JSONObject().apply {
+                put("browseId", albumId)
+                put("context", JSONObject().apply {
+                    put("client", JSONObject().apply {
+                        put("clientName", "WEB_REMIX")
+                        put("clientVersion", "1.20240318.01.00")
+                        put("hl", "id")
+                        put("gl", "ID")
+                    })
+                })
+            }
+            val req = Request.Builder()
+                .url(url)
+                .header("Content-Type", "application/json")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .post(payload.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val json = JSONObject(body)
+                        val twoCol = json.optJSONObject("contents")?.optJSONObject("twoColumnBrowseResultsRenderer")
+                        val secList = twoCol?.optJSONObject("secondaryContents")?.optJSONObject("sectionListRenderer")
+                        val contents = secList?.optJSONArray("contents")
+
+                        val tabs = twoCol?.optJSONArray("tabs")
+                        val tabContent = tabs?.optJSONObject(0)?.optJSONObject("tabRenderer")?.optJSONObject("content")
+                        val headerSec = tabContent?.optJSONObject("sectionListRenderer")
+                            ?.optJSONArray("contents")
+                            ?.optJSONObject(0)
+                            ?.optJSONObject("musicResponsiveHeaderRenderer")
+
+                        val albumTitle = headerSec?.optJSONObject("title")?.optJSONArray("runs")?.optJSONObject(0)?.optString("text", "") ?: ""
+                        val headerThumbs = headerSec?.optJSONObject("thumbnail")
+                            ?.optJSONObject("musicThumbnailRenderer")
+                            ?.optJSONObject("thumbnail")
+                            ?.optJSONArray("thumbnails")
+                        var defaultCover = headerThumbs?.optJSONObject(headerThumbs.length() - 1)?.optString("url", "") ?: ""
+                        defaultCover = defaultCover.replace(Regex("=w\\d+-h\\d+"), "=w500-h500")
+
+                        if (contents != null) {
+                            for (s in 0 until contents.length()) {
+                                val shelf = contents.optJSONObject(s)?.optJSONObject("musicShelfRenderer") ?: continue
+                                val items = shelf.optJSONArray("contents") ?: continue
+
+                                for (i in 0 until items.length()) {
+                                    val item = items.optJSONObject(i)?.optJSONObject("musicResponsiveListItemRenderer") ?: continue
+                                    val cols = item.optJSONArray("flexColumns") ?: continue
+                                    if (cols.length() < 1) continue
+
+                                    val titleRuns = cols.optJSONObject(0)
+                                        ?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")
+                                        ?.optJSONObject("text")
+                                        ?.optJSONArray("runs")
+                                    val title = titleRuns?.optJSONObject(0)?.optString("text", "") ?: ""
+                                    if (title.isBlank()) continue
+
+                                    var durationSec = 180
+                                    val fixedCols = item.optJSONArray("fixedColumns")
+                                    if (fixedCols != null && fixedCols.length() > 0) {
+                                        val durStr = fixedCols.optJSONObject(0)
+                                            ?.optJSONObject("musicResponsiveListItemFixedColumnRenderer")
+                                            ?.optJSONObject("text")
+                                            ?.optJSONArray("runs")
+                                            ?.optJSONObject(0)
+                                            ?.optString("text", "3:00") ?: "3:00"
+                                        durationSec = parseDurationToSeconds(durStr)
+                                    }
+
+                                    val playBtn = item.optJSONObject("overlay")
+                                        ?.optJSONObject("musicItemThumbnailOverlayRenderer")
+                                        ?.optJSONObject("content")
+                                        ?.optJSONObject("musicPlayButtonRenderer")
+                                    val videoId = playBtn?.optJSONObject("playNavigationEndpoint")
+                                        ?.optJSONObject("watchEndpoint")
+                                        ?.optString("videoId", "") ?: ""
+
+                                    if (videoId.isNotBlank()) {
+                                        tracks.add(
+                                            Track(
+                                                id = "yt:$videoId",
+                                                title = title,
+                                                artist = Artist(id = "art_$artistName", name = artistName, isVerified = true),
+                                                albumTitle = albumTitle,
+                                                durationSec = durationSec,
+                                                audioUrl = "yt:$videoId",
+                                                coverUrl = defaultCover,
+                                                isVerified = true,
+                                                sourceLabel = "YouTube Music"
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MusicEuy", "Error fetching album tracks: ${e.message}", e)
+        }
+        tracks
     }
 }

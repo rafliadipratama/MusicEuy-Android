@@ -1,6 +1,7 @@
 package com.rafliadipratama.musiceuy.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,16 +15,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +44,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -69,7 +75,7 @@ fun ArtistDetailScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 140.dp)
+            contentPadding = PaddingValues(bottom = 200.dp)
         ) {
             // Hero Header with Gradient & Artist Avatar
             item {
@@ -156,7 +162,7 @@ fun ArtistDetailScreen(
                         }
 
                         Text(
-                            text = "Artis Musik Terverifikasi",
+                            text = "Artis",
                             color = TextMuted,
                             fontSize = 13.sp
                         )
@@ -222,6 +228,114 @@ fun ArtistDetailScreen(
                 }
             }
 
+            // Albums & Discography Section
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Album & Diskografi",
+                        color = TextPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (uiState.artistAlbums.isNotEmpty()) {
+                        Text(
+                            text = "${uiState.artistAlbums.size} Album",
+                            color = TextMuted,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            if (uiState.isLoadingAlbums) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = BrandGreen,
+                            modifier = Modifier.size(28.dp),
+                            strokeWidth = 2.5.dp
+                        )
+                    }
+                }
+            } else if (uiState.artistAlbums.isNotEmpty()) {
+                item {
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(uiState.artistAlbums, key = { it.id }) { album ->
+                            Card(
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = SurfaceContainerHigh),
+                                modifier = Modifier
+                                    .width(136.dp)
+                                    .clickable { viewModel.openAlbum(album) }
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    if (!album.coverUrl.isNullOrBlank()) {
+                                        AsyncImage(
+                                            model = album.coverUrl,
+                                            contentDescription = album.title,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(116.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(116.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(Color(0xFF222730)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.LibraryMusic,
+                                                contentDescription = null,
+                                                tint = BrandGreen,
+                                                modifier = Modifier.size(36.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Text(
+                                        text = album.title,
+                                        color = TextPrimary,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+
+                                    Spacer(modifier = Modifier.height(2.dp))
+
+                                    Text(
+                                        text = if (album.year.isNotBlank()) "Album • ${album.year}" else "Album",
+                                        color = TextMuted,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+
             // Popular Tracks Header
             item {
                 Text(
@@ -247,13 +361,21 @@ fun ArtistDetailScreen(
             } else {
                 items(uiState.artistTracks, key = { it.id }) { track ->
                     val isActive = uiState.currentTrack?.id == track.id
+                    val isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked
                     Box(modifier = Modifier.padding(horizontal = 12.dp)) {
                         TrackItem(
                             track = track,
                             isPlaying = uiState.isPlaying,
                             isActive = isActive,
+                            isLiked = isLiked,
                             onClick = {
                                 viewModel.playTrack(track, uiState.artistTracks)
+                            },
+                            onToggleLikeClick = {
+                                viewModel.toggleLike(track)
+                            },
+                            onLongClick = {
+                                viewModel.showTrackContextMenu(track)
                             },
                             onAddToPlaylistClick = {
                                 viewModel.showAddToPlaylist(track)

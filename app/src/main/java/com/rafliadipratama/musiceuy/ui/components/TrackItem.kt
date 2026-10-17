@@ -1,7 +1,9 @@
 package com.rafliadipratama.musiceuy.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Icon
@@ -40,15 +44,20 @@ import com.rafliadipratama.musiceuy.ui.theme.TextPrimary
 import com.rafliadipratama.musiceuy.ui.theme.TextSecondary
 import com.rafliadipratama.musiceuy.ui.theme.VerifiedBadge
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TrackItem(
     track: Track,
     isPlaying: Boolean,
     isActive: Boolean,
+    isLiked: Boolean = false,
     onClick: () -> Unit,
+    onLongClick: ((Track) -> Unit)? = null,
     onArtistClick: ((Artist) -> Unit)? = null,
-    onAddToPlaylistClick: ((Track) -> Unit)? = null
+    onAddToPlaylistClick: ((Track) -> Unit)? = null,
+    onToggleLikeClick: ((Track) -> Unit)? = null
 ) {
+    val effectiveLiked = isLiked || track.isLiked
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -62,7 +71,10 @@ fun TrackItem(
             modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(8.dp))
-                .clickable(onClick = onClick)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = if (onLongClick != null) { { onLongClick(track) } } else null
+                )
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -152,17 +164,32 @@ fun TrackItem(
             )
         }
 
+        // Trailing Like Action Button
+        if (onToggleLikeClick != null) {
+            IconButton(
+                onClick = { onToggleLikeClick(track) },
+                modifier = Modifier.size(38.dp)
+            ) {
+                Icon(
+                    imageVector = if (effectiveLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = if (effectiveLiked) "Hapus dari Disukai" else "Sukai",
+                    tint = if (effectiveLiked) BrandGreen else TextSecondary.copy(alpha = 0.6f),
+                    modifier = Modifier.size(19.dp)
+                )
+            }
+        }
+
         // Trailing Add to Playlist Action Button
         if (onAddToPlaylistClick != null) {
             IconButton(
                 onClick = { onAddToPlaylistClick(track) },
-                modifier = Modifier.size(42.dp)
+                modifier = Modifier.size(38.dp)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
                     contentDescription = "Tambah ke Playlist",
                     tint = TextSecondary,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }

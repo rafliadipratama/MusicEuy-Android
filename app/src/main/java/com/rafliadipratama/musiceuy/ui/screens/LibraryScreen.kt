@@ -163,7 +163,7 @@ fun LibraryScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 150.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 200.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Header
@@ -215,7 +215,9 @@ fun LibraryScreen(
                     Card(
                         shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(containerColor = SurfaceContainerHigh),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { viewModel.openLikedTracks() }
                     ) {
                         Column(
                             modifier = Modifier
@@ -244,7 +246,7 @@ fun LibraryScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "${curatedFavorites.size} lagu",
+                                text = "${uiState.likedTracks.size} lagu",
                                 color = TextMuted,
                                 fontSize = 12.sp
                             )
@@ -553,15 +555,23 @@ fun LibraryScreen(
 
             items(curatedFavorites, key = { it.id }) { track ->
                 val isActive = uiState.currentTrack?.id == track.id
+                val isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked
                 TrackItem(
                     track = track,
                     isPlaying = uiState.isPlaying,
                     isActive = isActive,
+                    isLiked = isLiked,
                     onClick = {
                         viewModel.playTrack(track, curatedFavorites)
                     },
                     onArtistClick = { artist ->
                         viewModel.openArtistDetail(artist)
+                    },
+                    onToggleLikeClick = {
+                        viewModel.toggleLike(track)
+                    },
+                    onLongClick = {
+                        viewModel.showTrackContextMenu(track)
                     },
                     onAddToPlaylistClick = {
                         viewModel.showAddToPlaylist(track)

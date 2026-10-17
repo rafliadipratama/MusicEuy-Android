@@ -19,6 +19,7 @@ class LocalMusicHistoryManager(context: Context) {
     companion object {
         private const val KEY_TRACKS = "played_tracks_json"
         private const val KEY_PLAYLISTS = "playlists_json"
+        private const val KEY_LIKED_TRACKS = "liked_tracks_json"
     }
 
     /**
@@ -300,5 +301,59 @@ class LocalMusicHistoryManager(context: Context) {
             tracks = emptyList()
         )
         return listOf(default1, default2)
+    }
+
+    // ==================== Liked Tracks Operations ====================
+
+    fun toggleLikedTrack(track: Track): Boolean {
+        val currentList = getLikedTracks().toMutableList()
+        val index = currentList.indexOfFirst { it.id == track.id }
+        val isNowLiked = if (index >= 0) {
+            currentList.removeAt(index)
+            false
+        } else {
+            currentList.add(0, track.copy(isLiked = true))
+            true
+        }
+        saveLikedTracks(currentList)
+        return isNowLiked
+    }
+
+    fun isTrackLiked(trackId: String): Boolean {
+        return getLikedTracks().any { it.id == trackId }
+    }
+
+    fun getLikedTracks(): List<Track> {
+        val jsonStr = prefs.getString(KEY_LIKED_TRACKS, null) ?: return emptyList()
+        return try {
+            val arr = JSONArray(jsonStr)
+            val list = mutableListOf<Track>()
+            for (i in 0 until arr.length()) {
+                list.add(jsonToTrack(arr.getJSONObject(i)).copy(isLiked = true))
+            }
+            list
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun saveLikedTracks(tracks: List<Track>) {
+        val arr = JSONArray()
+        for (t in tracks) {
+            val tObj = JSONObject().apply {
+                put("id", t.id)
+                put("title", t.title)
+                put("artistName", t.artist.name)
+                put("artistAvatar", t.artist.avatarUrl ?: "")
+                put("albumTitle", t.albumTitle ?: "")
+                put("durationSec", t.durationSec)
+                put("audioUrl", t.audioUrl)
+                put("coverUrl", t.coverUrl)
+                put("isVerified", t.isVerified)
+                put("sourceLabel", t.sourceLabel)
+            }
+            arr.put(tObj)
+        }
+        prefs.edit().putString(KEY_LIKED_TRACKS, arr.toString()).apply()
     }
 }

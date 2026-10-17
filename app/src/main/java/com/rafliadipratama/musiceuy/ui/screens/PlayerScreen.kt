@@ -24,6 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
@@ -238,50 +240,61 @@ fun PlayerScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // Track Details
-            Column(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.Start
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = track.title,
-                    color = TextPrimary,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable { viewModel.openArtistDetail(track.artist) }
-                        .padding(vertical = 2.dp)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.Start
                 ) {
                     Text(
-                        text = track.artist.name,
-                        color = TextSecondary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
+                        text = track.title,
+                        color = TextPrimary,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (track.artist.isVerified || track.isVerified) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.Default.Verified,
-                            contentDescription = "Artis Terverifikasi",
-                            tint = AccentEmerald,
-                            modifier = Modifier.size(18.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { viewModel.openArtistDetail(track.artist) }
+                            .padding(vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = track.artist.name,
+                            color = TextSecondary,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+                        if (track.artist.isVerified || track.isVerified) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.Verified,
+                                contentDescription = "Artis Terverifikasi",
+                                tint = AccentEmerald,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
-                Text(
-                    text = track.sourceLabel,
-                    color = AccentEmerald.copy(alpha = 0.8f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
+
+                val isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked
+                IconButton(
+                    onClick = { viewModel.toggleLike(track) },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (isLiked) "Hapus dari Disukai" else "Sukai Lagu",
+                        tint = if (isLiked) Color(0xFFE91E63) else TextSecondary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(14.dp))

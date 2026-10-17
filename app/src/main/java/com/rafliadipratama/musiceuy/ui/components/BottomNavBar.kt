@@ -58,14 +58,7 @@ fun BottomNavBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        SurfaceContainer.copy(alpha = 0.98f),
-                        ObsidianBackground
-                    )
-                )
-            )
+            .background(SurfaceContainer)
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
         Row(

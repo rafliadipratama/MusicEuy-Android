@@ -69,7 +69,7 @@ fun PlaylistDetailScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 140.dp)
+            contentPadding = PaddingValues(bottom = 200.dp)
         ) {
             // Header with Gradient
             item {
@@ -104,16 +104,18 @@ fun PlaylistDetailScreen(
                             )
                         }
 
-                        IconButton(onClick = {
-                            viewModel.deletePlaylist(currentPlaylist.id)
-                            onBackClick()
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteOutline,
-                                contentDescription = "Hapus Playlist",
-                                tint = Color(0xFFFF5252),
-                                modifier = Modifier.size(24.dp)
-                            )
+                        if (uiState.playlists.any { it.id == currentPlaylist.id }) {
+                            IconButton(onClick = {
+                                viewModel.deletePlaylist(currentPlaylist.id)
+                                onBackClick()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteOutline,
+                                    contentDescription = "Hapus Playlist",
+                                    tint = Color(0xFFFF5252),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
                     }
 
@@ -272,16 +274,27 @@ fun PlaylistDetailScreen(
             } else {
                 items(currentPlaylist.tracks, key = { it.id }) { track ->
                     val isActive = uiState.currentTrack?.id == track.id
+                    val isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked
                     Box(modifier = Modifier.padding(horizontal = 12.dp)) {
                         TrackItem(
                             track = track,
                             isPlaying = uiState.isPlaying,
                             isActive = isActive,
+                            isLiked = isLiked,
                             onClick = {
                                 viewModel.playTrack(track, currentPlaylist.tracks)
                             },
                             onArtistClick = { artist ->
                                 viewModel.openArtistDetail(artist)
+                            },
+                            onToggleLikeClick = {
+                                viewModel.toggleLike(track)
+                            },
+                            onLongClick = {
+                                viewModel.showTrackContextMenu(track)
+                            },
+                            onAddToPlaylistClick = {
+                                viewModel.showAddToPlaylist(track)
                             }
                         )
                     }

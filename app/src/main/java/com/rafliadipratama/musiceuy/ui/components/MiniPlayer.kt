@@ -26,7 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -36,8 +35,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.rafliadipratama.musiceuy.data.model.Track
 import com.rafliadipratama.musiceuy.ui.theme.AccentEmerald
-import com.rafliadipratama.musiceuy.ui.theme.AccentPurple
-import com.rafliadipratama.musiceuy.ui.theme.DarkSurfaceVariant
 import com.rafliadipratama.musiceuy.ui.theme.TextPrimary
 import com.rafliadipratama.musiceuy.ui.theme.TextSecondary
 
@@ -58,16 +55,8 @@ fun MiniPlayer(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        DarkSurfaceVariant.copy(alpha = 0.95f),
-                        Color(0xFF13101E)
-                    )
-                )
-            )
-            .clickable(onClick = onClick)
+            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+            .background(Color(0xFF1A1F29))
     ) {
         Column {
             // Tiny progress line at the very top
@@ -75,86 +64,103 @@ fun MiniPlayer(
                 progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(2.dp),
+                    .height(2.5.dp),
                 color = AccentEmerald,
-                trackColor = Color.Transparent
+                trackColor = Color(0xFF252B38)
             )
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Artwork
-                AsyncImage(
-                    model = track.coverUrl,
-                    contentDescription = track.title,
-                    contentScale = ContentScale.Crop,
+                // Tappable song info area that opens PlayerScreen
+                Row(
                     modifier = Modifier
-                        .size(46.dp)
+                        .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // Track details
-                Column(
-                    modifier = Modifier.weight(1f)
+                        .clickable(onClick = onClick)
+                        .padding(vertical = 2.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = track.title,
-                        color = TextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                    // Artwork
+                    AsyncImage(
+                        model = track.coverUrl,
+                        contentDescription = track.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(8.dp))
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    // Track details
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = track.artist.name,
-                            color = TextSecondary,
-                            fontSize = 12.sp,
+                            text = track.title,
+                            color = TextPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (track.artist.isVerified || track.isVerified) {
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Default.Verified,
-                                contentDescription = "Verified",
-                                tint = AccentEmerald,
-                                modifier = Modifier.size(13.dp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = track.artist.name,
+                                color = TextSecondary,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
+                            if (track.artist.isVerified || track.isVerified) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Verified,
+                                    contentDescription = "Verified",
+                                    tint = AccentEmerald,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
                         }
                     }
                 }
 
-                // Controls
-                IconButton(onClick = onQueueClick) {
+                // Dedicated Controls
+                IconButton(
+                    onClick = onQueueClick,
+                    modifier = Modifier.size(40.dp)
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                         contentDescription = "Antrean Musik",
                         tint = TextSecondary,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
-                IconButton(onClick = onPlayPause) {
+                IconButton(
+                    onClick = onPlayPause,
+                    modifier = Modifier.size(40.dp)
+                ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = "Play/Pause",
-                        tint = TextPrimary,
+                        tint = AccentEmerald,
                         modifier = Modifier.size(28.dp)
                     )
                 }
 
-                IconButton(onClick = onNext) {
+                IconButton(
+                    onClick = onNext,
+                    modifier = Modifier.size(40.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
                         contentDescription = "Next",
                         tint = TextSecondary,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }

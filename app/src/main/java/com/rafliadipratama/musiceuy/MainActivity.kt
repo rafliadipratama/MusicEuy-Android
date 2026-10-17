@@ -15,9 +15,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +35,7 @@ import com.rafliadipratama.musiceuy.ui.components.BottomNavBar
 import com.rafliadipratama.musiceuy.ui.components.MiniPlayer
 import com.rafliadipratama.musiceuy.ui.components.NavigationTab
 import com.rafliadipratama.musiceuy.ui.components.QueueBottomSheet
+import com.rafliadipratama.musiceuy.ui.components.TrackContextMenuBottomSheet
 import com.rafliadipratama.musiceuy.ui.screens.ArtistDetailScreen
 import com.rafliadipratama.musiceuy.ui.screens.HomeScreen
 import com.rafliadipratama.musiceuy.ui.screens.LibraryScreen
@@ -67,6 +70,10 @@ class MainActivity : ComponentActivity() {
                     viewModel.dismissAddToPlaylist()
                 }
 
+                BackHandler(enabled = uiState.selectedPlaylist == null && uiState.selectedArtist == null && !uiState.isAddToPlaylistSheetVisible && uiState.trackForContextMenu != null) {
+                    viewModel.dismissTrackContextMenu()
+                }
+
                 BackHandler(enabled = uiState.selectedPlaylist == null && uiState.selectedArtist == null && !uiState.isAddToPlaylistSheetVisible && uiState.isQueueVisible) {
                     viewModel.dismissQueue()
                 }
@@ -95,36 +102,44 @@ class MainActivity : ComponentActivity() {
                         NavigationTab.PLUGINS -> PluginsScreen(viewModel = viewModel)
                     }
 
-                    // Floating MiniPlayer + Bottom Navigation Bar
-                    Column(
+                    // Bottom Navigation Bar + MiniPlayer Dock
+                    Surface(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .navigationBarsPadding()
+                            .fillMaxWidth(),
+                        color = Color(0xFF161B22),
+                        shadowElevation = 12.dp
                     ) {
-                        AnimatedVisibility(
-                            visible = uiState.currentTrack != null,
-                            enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
-                            exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
                         ) {
-                            uiState.currentTrack?.let { track ->
-                                MiniPlayer(
-                                    track = track,
-                                    isPlaying = uiState.isPlaying,
-                                    currentPosMs = uiState.currentPositionMs,
-                                    durationMs = uiState.durationMs,
-                                    onPlayPause = { viewModel.togglePlayPause() },
-                                    onNext = { viewModel.nextTrack() },
-                                    onQueueClick = { viewModel.toggleQueue() },
-                                    onClick = { viewModel.expandPlayer() },
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
+                            AnimatedVisibility(
+                                visible = uiState.currentTrack != null,
+                                enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
+                                exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
+                            ) {
+                                uiState.currentTrack?.let { track ->
+                                    MiniPlayer(
+                                        track = track,
+                                        isPlaying = uiState.isPlaying,
+                                        currentPosMs = uiState.currentPositionMs,
+                                        durationMs = uiState.durationMs,
+                                        onPlayPause = { viewModel.togglePlayPause() },
+                                        onNext = { viewModel.nextTrack() },
+                                        onQueueClick = { viewModel.toggleQueue() },
+                                        onClick = { viewModel.expandPlayer() },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
                             }
-                        }
 
-                        BottomNavBar(
-                            selectedTab = selectedTab,
-                            onTabSelected = { selectedTab = it }
-                        )
+                            BottomNavBar(
+                                selectedTab = selectedTab,
+                                onTabSelected = { selectedTab = it }
+                            )
+                        }
                     }
 
                     // Artist Detail Screen Overlay
@@ -224,6 +239,52 @@ class MainActivity : ComponentActivity() {
                                             viewModel.createPlaylist(name, desc, track)
                                         },
                                         onDismiss = { viewModel.dismissAddToPlaylist() }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Track Context Menu Bottom Sheet (Long Press shortcut)
+                    AnimatedVisibility(
+                        visible = uiState.trackForContextMenu != null,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.6f))
+                                .clickable { viewModel.dismissTrackContextMenu() }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .clickable(enabled = false) {}
+                            ) {
+                                uiState.trackForContextMenu?.let { track ->
+                                    TrackContextMenuBottomSheet(
+                                        track = track,
+                                        isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked,
+                                        onPlayNow = {
+                                            viewModel.playTrack(track)
+                                            viewModel.dismissTrackContextMenu()
+                                        },
+                                        onPlayNext = { viewModel.playNext(track) },
+                                        onAddToQueue = { viewModel.addToQueue(track) },
+                                        onAddToPlaylist = {
+                                            viewModel.dismissTrackContextMenu()
+                                            viewModel.showAddToPlaylist(track)
+                                        },
+                                        onToggleLike = {
+                                            viewModel.toggleLike(track)
+                                            viewModel.dismissTrackContextMenu()
+                                        },
+                                        onOpenArtist = {
+                                            viewModel.dismissTrackContextMenu()
+                                            viewModel.openArtistDetail(track.artist)
+                                        },
+                                        onDismiss = { viewModel.dismissTrackContextMenu() }
                                     )
                                 }
                             }
