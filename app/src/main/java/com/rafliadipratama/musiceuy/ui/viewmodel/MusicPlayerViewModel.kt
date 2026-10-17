@@ -49,7 +49,8 @@ data class PlayerUiState(
 
 class MusicPlayerViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val streamSource = MusicStreamSource()
+    val streamSource = MusicStreamSource()
+    val pluginManager = com.rafliadipratama.musiceuy.plugin.PluginManager(application, streamSource)
     private val lrcClient = LrcLibClient()
 
     private val _uiState = MutableStateFlow(PlayerUiState())
@@ -121,7 +122,9 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         if (query.isBlank()) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSearching = true, error = null) }
-            val results = streamSource.searchTracks(query)
+            val results = withContext(Dispatchers.IO) {
+                pluginManager.search(query).ifEmpty { streamSource.searchTracks(query) }
+            }
             _uiState.update {
                 it.copy(
                     searchResults = results,
@@ -162,35 +165,23 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             var activeAudioUri = track.audioUrl
 
-            android.util.Log.d("MusicEuy", "playTrack initial: title=${track.title}, artist=${track.artist.name}, audioUrl=${track.audioUrl}")
+            android.util.Log.d("MusicEuy", "playTrack: title=${track.title}, artist=${track.artist.name}, initialUrl=${track.audioUrl}")
 
-            // If audioUrl is a YouTube placeholder, resolve via NewPipeExtractor
-            if (activeAudioUri.startsWith("yt:") || !activeAudioUri.startsWith("http")) {
-                val videoId = track.id.removePrefix("yt:")
-                val stream = withContext(Dispatchers.IO) {
-                    streamSource.resolveYouTubeAudioStream(videoId)
+            // If audioUrl is a placeholder (e.g. yt:ID), resolve via active plugins
+            if (!activeAudioUri.startsWith("http")) {
+                val resolvedStream = withContext(Dispatchers.IO) {
+                    pluginManager.resolveStream(track)
                 }
-                if (!stream.isNullOrBlank()) {
-                    activeAudioUri = stream
-                    android.util.Log.d("MusicEuy", "Resolved via YouTube/NewPipe: $activeAudioUri")
+                if (!resolvedStream.isNullOrBlank() && resolvedStream.startsWith("http")) {
+                    activeAudioUri = resolvedStream
+                    android.util.Log.d("MusicEuy", "Resolved via PluginManager: $activeAudioUri")
                 } else {
-                    android.util.Log.w("MusicEuy", "YouTube stream resolution failed, attempting strictly verified fallback for ${track.title}")
-                    val cleanMatch = withContext(Dispatchers.IO) {
-                        val candidates = streamSource.fetchSaavn("${track.artist.name} ${track.title}", limit = 5)
-                        candidates.firstOrNull { candidate ->
-                            streamSource.isStrictMatch(
-                                expectedTitle = track.title,
-                                expectedArtist = track.artist.name,
-                                candidateTitle = candidate.title,
-                                candidateArtist = candidate.artist.name
-                            )
-                        }
+                    android.util.Log.w("MusicEuy", "PluginManager resolution failed, trying fallback streamSource for ${track.title}")
+                    val fallbackStream = withContext(Dispatchers.IO) {
+                        streamSource.resolveYouTubeAudioStream(track.id.removePrefix("yt:"))
                     }
-                    if (cleanMatch != null && cleanMatch.audioUrl.startsWith("http")) {
-                        android.util.Log.d("MusicEuy", "Verified fallback matched Saavn: title=${cleanMatch.title}, artist=${cleanMatch.artist.name}")
-                        activeAudioUri = cleanMatch.audioUrl
-                    } else {
-                        android.util.Log.e("MusicEuy", "No verified matching stream found for ${track.title} - ${track.artist.name}")
+                    if (!fallbackStream.isNullOrBlank()) {
+                        activeAudioUri = fallbackStream
                     }
                 }
             }

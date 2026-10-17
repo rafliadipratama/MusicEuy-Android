@@ -125,9 +125,7 @@ fun HomeScreen(
             .background(ObsidianBackground)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = if (uiState.currentTrack != null) 72.dp else 0.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
             // Header: MusicEuy Brand Logo & Live Badge
             Row(
@@ -263,7 +261,7 @@ fun HomeScreen(
             // Scrollable Content
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 150.dp)
             ) {
                 // If not in search mode, show Featured Mixes section
                 if (uiState.searchResults.isEmpty() && !uiState.isSearching) {
@@ -369,20 +367,6 @@ fun HomeScreen(
                     )
                 }
             }
-        }
-
-        // Docked MiniPlayer
-        uiState.currentTrack?.let { track ->
-            MiniPlayer(
-                track = track,
-                isPlaying = uiState.isPlaying,
-                currentPosMs = uiState.currentPositionMs,
-                durationMs = uiState.durationMs,
-                onPlayPause = { viewModel.togglePlayPause() },
-                onNext = { viewModel.nextTrack() },
-                onClick = { viewModel.expandPlayer() },
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
         }
     }
 }
