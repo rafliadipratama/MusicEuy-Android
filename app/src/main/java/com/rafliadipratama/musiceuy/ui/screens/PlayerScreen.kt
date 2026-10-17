@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Pause
@@ -137,13 +138,23 @@ fun PlayerScreen(
                     letterSpacing = 1.5.sp
                 )
 
-                IconButton(onClick = { viewModel.toggleLyrics() }) {
-                    Icon(
-                        imageVector = Icons.Default.Lyrics,
-                        contentDescription = "Lirik",
-                        tint = if (uiState.isLyricsVisible) AccentEmerald else TextSecondary,
-                        modifier = Modifier.size(26.dp)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { viewModel.toggleLyrics() }) {
+                        Icon(
+                            imageVector = Icons.Default.Lyrics,
+                            contentDescription = "Lirik",
+                            tint = if (uiState.isLyricsVisible) AccentEmerald else TextSecondary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                    IconButton(onClick = { viewModel.toggleQueue() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                            contentDescription = "Antrean Musik",
+                            tint = if (uiState.isQueueVisible) AccentEmerald else TextSecondary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
                 }
             }
 

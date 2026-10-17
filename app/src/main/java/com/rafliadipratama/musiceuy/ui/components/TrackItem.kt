@@ -124,19 +124,11 @@ fun TrackItem(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Duration or Official badge
-        Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text = track.durationFormatted,
-                color = TextMuted,
-                fontSize = 12.sp
-            )
-            Text(
-                text = "Resmi",
-                color = BrandGreen.copy(alpha = 0.8f),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
+        // Duration
+        Text(
+            text = track.durationFormatted,
+            color = TextMuted,
+            fontSize = 12.sp
+        )
     }
 }

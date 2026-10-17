@@ -28,6 +28,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import com.rafliadipratama.musiceuy.data.local.LocalMusicHistoryManager
+
 enum class RepeatMode { OFF, ALL, ONE }
 
 data class PlayerUiState(
@@ -41,8 +43,11 @@ data class PlayerUiState(
     val lyrics: Lyrics = Lyrics(),
     val isPlayerExpanded: Boolean = false,
     val isLyricsVisible: Boolean = false,
+    val isQueueVisible: Boolean = false,
     val searchResults: List<Track> = emptyList(),
     val trendingTracks: List<Track> = emptyList(),
+    val mostPlayedTracks: List<Track> = emptyList(),
+    val favoriteArtists: List<String> = emptyList(),
     val isSearching: Boolean = false,
     val error: String? = null
 )
@@ -51,6 +56,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     val streamSource = MusicStreamSource()
     val pluginManager = com.rafliadipratama.musiceuy.plugin.PluginManager(application, streamSource)
+    val historyManager = LocalMusicHistoryManager(application)
     private val lrcClient = LrcLibClient()
 
     private val _uiState = MutableStateFlow(PlayerUiState())
@@ -63,7 +69,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     init {
         initMediaController()
-        loadTrending()
+        loadInitialData()
     }
 
     private fun initMediaController() {
@@ -135,24 +141,45 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun loadInitialData() {
+        viewModelScope.launch {
+            val mostPlayed = withContext(Dispatchers.IO) {
+                historyManager.getMostPlayedTracks()
+            }
+            val favArtists = withContext(Dispatchers.IO) {
+                historyManager.getFavoriteArtists()
+            }
+            _uiState.update { it.copy(mostPlayedTracks = mostPlayed, favoriteArtists = favArtists) }
+
+            // If user has listening history, prioritize their favorite / most played songs
+            // Otherwise, fetch curated trending Indonesian tracks so startup is never random
+            if (mostPlayed.isNotEmpty()) {
+                _uiState.update { it.copy(trendingTracks = mostPlayed) }
+            } else {
+                val trending = withContext(Dispatchers.IO) { streamSource.fetchTrending() }
+                _uiState.update { it.copy(trendingTracks = trending) }
+            }
+        }
+    }
+
     fun loadTrending() {
         viewModelScope.launch {
-            val trending = streamSource.fetchTrending()
+            _uiState.update { it.copy(searchResults = emptyList(), error = null) }
+            val trending = withContext(Dispatchers.IO) { streamSource.fetchTrending() }
             _uiState.update { it.copy(trendingTracks = trending) }
         }
     }
 
-    fun loadSpotifyTop50() {
+    fun showMostPlayed() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isSearching = true, error = null) }
-            val results = withContext(Dispatchers.IO) {
-                pluginManager.spotifySource.getTop50Indonesia()
+            val mostPlayed = withContext(Dispatchers.IO) {
+                historyManager.getMostPlayedTracks()
             }
             _uiState.update {
                 it.copy(
-                    searchResults = results,
+                    searchResults = mostPlayed,
                     isSearching = false,
-                    error = if (results.isEmpty()) "Gagal memuat Spotify Top 50. Periksa koneksi internet." else null
+                    error = if (mostPlayed.isEmpty()) "Belum ada lagu yang sering diputar. Mulai dengarkan lagu favoritmu!" else null
                 )
             }
         }
@@ -170,6 +197,19 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 lyrics = Lyrics(),
                 error = null
             )
+        }
+
+        // Record locally for offline recommendation & history
+        viewModelScope.launch(Dispatchers.IO) {
+            historyManager.recordTrackPlayed(track)
+            val updatedMostPlayed = historyManager.getMostPlayedTracks()
+            val updatedFavArtists = historyManager.getFavoriteArtists()
+            _uiState.update {
+                it.copy(
+                    mostPlayedTracks = updatedMostPlayed,
+                    favoriteArtists = updatedFavArtists
+                )
+            }
         }
 
         // Fetch synchronized lyrics in background
@@ -310,6 +350,32 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun toggleLyrics() {
         _uiState.update { it.copy(isLyricsVisible = !it.isLyricsVisible) }
+    }
+
+    fun toggleQueue() {
+        _uiState.update { it.copy(isQueueVisible = !it.isQueueVisible) }
+    }
+
+    fun dismissQueue() {
+        _uiState.update { it.copy(isQueueVisible = false) }
+    }
+
+    fun playFromQueue(track: Track) {
+        playTrack(track, _uiState.value.queue)
+    }
+
+    fun removeFromQueue(trackId: String) {
+        _uiState.update { state ->
+            val updated = state.queue.filterNot { it.id == trackId }
+            state.copy(queue = updated)
+        }
+    }
+
+    fun clearQueue() {
+        _uiState.update { state ->
+            val current = state.currentTrack
+            state.copy(queue = if (current != null) listOf(current) else emptyList())
+        }
     }
 
     override fun onCleared() {

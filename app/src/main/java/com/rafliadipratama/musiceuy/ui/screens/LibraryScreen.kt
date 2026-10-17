@@ -150,13 +150,13 @@ fun LibraryScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Spotify Top 50 Official Daily Chart Card
+                // Sering Diputar Quick Tile
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = SurfaceContainerHigh),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { viewModel.loadSpotifyTop50() }
+                        .clickable { viewModel.showMostPlayed() }
                 ) {
                     Row(
                         modifier = Modifier
@@ -168,13 +168,13 @@ fun LibraryScreen(
                             modifier = Modifier
                                 .size(46.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFF1DB954).copy(alpha = 0.2f)),
+                                .background(BrandGreen.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                                 contentDescription = null,
-                                tint = Color(0xFF1DB954),
+                                tint = BrandGreen,
                                 modifier = Modifier.size(26.dp)
                             )
                         }
@@ -183,13 +183,16 @@ fun LibraryScreen(
 
                         Column {
                             Text(
-                                text = "Spotify Top 50 Indonesia",
+                                text = "Sering Diputar",
                                 color = TextPrimary,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Putar tangga lagu resmi Spotify harian",
+                                text = if (uiState.mostPlayedTracks.isNotEmpty())
+                                    "${uiState.mostPlayedTracks.size} lagu paling sering kamu dengar"
+                                else
+                                    "Otomatis tersimpan saat kamu mendengarkan lagu",
                                 color = TextMuted,
                                 fontSize = 12.sp
                             )

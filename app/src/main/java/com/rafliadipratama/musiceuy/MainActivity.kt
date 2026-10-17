@@ -29,6 +29,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rafliadipratama.musiceuy.ui.components.BottomNavBar
 import com.rafliadipratama.musiceuy.ui.components.MiniPlayer
 import com.rafliadipratama.musiceuy.ui.components.NavigationTab
+import com.rafliadipratama.musiceuy.ui.components.QueueBottomSheet
 import com.rafliadipratama.musiceuy.ui.screens.HomeScreen
 import com.rafliadipratama.musiceuy.ui.screens.LibraryScreen
 import com.rafliadipratama.musiceuy.ui.screens.PlayerScreen
@@ -49,11 +50,15 @@ class MainActivity : ComponentActivity() {
                 val uiState by viewModel.uiState.collectAsState()
                 var selectedTab by remember { mutableStateOf(NavigationTab.HOME) }
 
-                BackHandler(enabled = uiState.isPlayerExpanded) {
+                BackHandler(enabled = uiState.isQueueVisible) {
+                    viewModel.dismissQueue()
+                }
+
+                BackHandler(enabled = !uiState.isQueueVisible && uiState.isPlayerExpanded) {
                     viewModel.collapsePlayer()
                 }
 
-                BackHandler(enabled = !uiState.isPlayerExpanded && selectedTab != NavigationTab.HOME) {
+                BackHandler(enabled = !uiState.isQueueVisible && !uiState.isPlayerExpanded && selectedTab != NavigationTab.HOME) {
                     selectedTab = NavigationTab.HOME
                 }
 
@@ -87,6 +92,7 @@ class MainActivity : ComponentActivity() {
                                     durationMs = uiState.durationMs,
                                     onPlayPause = { viewModel.togglePlayPause() },
                                     onNext = { viewModel.nextTrack() },
+                                    onQueueClick = { viewModel.toggleQueue() },
                                     onClick = { viewModel.expandPlayer() },
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
@@ -105,6 +111,24 @@ class MainActivity : ComponentActivity() {
                         exit = slideOutVertically(targetOffsetY = { it })
                     ) {
                         PlayerScreen(viewModel = viewModel)
+                    }
+
+                    // Queue Bottom Sheet
+                    AnimatedVisibility(
+                        visible = uiState.isQueueVisible,
+                        enter = slideInVertically(initialOffsetY = { it }),
+                        exit = slideOutVertically(targetOffsetY = { it }),
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    ) {
+                        QueueBottomSheet(
+                            currentTrack = uiState.currentTrack,
+                            queue = uiState.queue,
+                            isPlaying = uiState.isPlaying,
+                            onTrackClick = { track -> viewModel.playFromQueue(track) },
+                            onRemoveTrack = { trackId -> viewModel.removeFromQueue(trackId) },
+                            onClearQueue = { viewModel.clearQueue() },
+                            onDismiss = { viewModel.dismissQueue() }
+                        )
                     }
                 }
             }

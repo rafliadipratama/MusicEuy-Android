@@ -10,8 +10,7 @@ import kotlinx.coroutines.flow.update
 
 class PluginManager(
     private val context: Context,
-    private val streamSource: MusicStreamSource = MusicStreamSource(),
-    val spotifySource: com.rafliadipratama.musiceuy.data.network.SpotifyPublicSource = com.rafliadipratama.musiceuy.data.network.SpotifyPublicSource()
+    private val streamSource: MusicStreamSource = MusicStreamSource()
 ) {
 
     private val prefs = context.getSharedPreferences("musiceuy_plugins", Context.MODE_PRIVATE)
@@ -29,11 +28,6 @@ class PluginManager(
             isEnabled = prefs.getBoolean("plugin_enabled_ytmusic", true)
         )
 
-        val spotifyPlugin = SpotifyMetadataPlugin(
-            spotifySource = spotifySource,
-            isEnabled = prefs.getBoolean("plugin_enabled_spotify_public", true)
-        )
-
         val saavnPlugin = JioSaavnPlugin(
             streamSource = streamSource,
             isEnabled = prefs.getBoolean("plugin_enabled_jiosaavn", true)
@@ -42,7 +36,7 @@ class PluginManager(
         val spotubeBridgePlugin = CustomScriptPlugin(
             id = "spotube_bridge",
             name = "Spotube Bridge Resolver",
-            description = "Protokol resolver kompatibel format Spotube .smplug untuk sinkronisasi metadata Spotify",
+            description = "Protokol resolver kompatibel format Spotube .smplug untuk sinkronisasi audio eksternal",
             version = "1.0.1",
             author = "Audion & Spotube Spec",
             endpointUrl = "",
@@ -50,7 +44,7 @@ class PluginManager(
             isBuiltIn = true
         )
 
-        _plugins.value = listOf(ytPlugin, spotifyPlugin, saavnPlugin, spotubeBridgePlugin)
+        _plugins.value = listOf(ytPlugin, saavnPlugin, spotubeBridgePlugin)
     }
 
     fun togglePlugin(pluginId: String, isEnabled: Boolean) {

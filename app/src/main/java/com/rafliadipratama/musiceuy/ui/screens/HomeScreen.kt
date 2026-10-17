@@ -79,10 +79,10 @@ fun HomeScreen(
     val featuredMixes = remember {
         listOf(
             FeaturedMix(
-                title = "Spotify Top 50",
-                subtitle = "Tangga Lagu Resmi Indonesia",
-                coverUrl = "https://charts-images.scdn.co/assets/locale_en/regional/daily/region_id_default.jpg",
-                searchQuery = "spotify:top50"
+                title = "Pop Indo Viral",
+                subtitle = "Bernadya, Nadin, Hindia",
+                coverUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500",
+                searchQuery = "Pop Indonesia Viral"
             ),
             FeaturedMix(
                 title = "Indie Pop Indo",
@@ -97,10 +97,10 @@ fun HomeScreen(
                 searchQuery = "Coldplay Bruno Mars Hits"
             ),
             FeaturedMix(
-                title = "Pop Indo Terkini",
-                subtitle = "Bernadya, Feby, Tulus",
-                coverUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500",
-                searchQuery = "Bernadya Pop Indonesia"
+                title = "Akustik Senja",
+                subtitle = "Feby Putri, Fiersa Besari",
+                coverUrl = "https://images.unsplash.com/photo-1445985543470-41fdd6ce388d?w=500",
+                searchQuery = "Akustik Indonesia Senja Santai"
             ),
             FeaturedMix(
                 title = "Nostalgia 2000-an",
@@ -117,7 +117,7 @@ fun HomeScreen(
         )
     }
 
-    val filterPills = listOf("Semua", "Spotify Top 50", "Musik Resmi", "Artis Terverifikasi", "Top Hits Global")
+    val filterPills = listOf("Semua", "Sering Diputar", "Pop Indonesia", "Artis Terverifikasi", "Top Hits")
 
     Box(
         modifier = modifier
@@ -168,7 +168,7 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Audio Resmi",
+                        text = "Koleksi Musik",
                         color = BrandGreen,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
@@ -239,10 +239,10 @@ fun HomeScreen(
                                 selectedFilter = pill
                                 when (pill) {
                                     "Semua" -> viewModel.loadTrending()
-                                    "Spotify Top 50" -> viewModel.loadSpotifyTop50()
-                                    "Musik Resmi" -> viewModel.search("Pop Indonesia Hits")
+                                    "Sering Diputar" -> viewModel.showMostPlayed()
+                                    "Pop Indonesia" -> viewModel.search("Pop Indonesia Hits")
                                     "Artis Terverifikasi" -> viewModel.search("Bernadya Hindia Tulus Nadin")
-                                    "Top Hits Global" -> viewModel.search("Coldplay Bruno Mars Hits")
+                                    "Top Hits" -> viewModel.search("Top Hits Musik Indonesia")
                                 }
                             }
                             .padding(horizontal = 16.dp, vertical = 7.dp)
@@ -288,11 +288,7 @@ fun HomeScreen(
                                         FeaturedMixCard(
                                             mix = featuredMixes[i],
                                             onClick = {
-                                                if (featuredMixes[i].searchQuery == "spotify:top50") {
-                                                    viewModel.loadSpotifyTop50()
-                                                } else {
-                                                    viewModel.search(featuredMixes[i].searchQuery)
-                                                }
+                                                viewModel.search(featuredMixes[i].searchQuery)
                                             }
                                         )
                                     }
@@ -301,11 +297,7 @@ fun HomeScreen(
                                             FeaturedMixCard(
                                                 mix = featuredMixes[i + 1],
                                                 onClick = {
-                                                    if (featuredMixes[i + 1].searchQuery == "spotify:top50") {
-                                                        viewModel.loadSpotifyTop50()
-                                                    } else {
-                                                        viewModel.search(featuredMixes[i + 1].searchQuery)
-                                                    }
+                                                    viewModel.search(featuredMixes[i + 1].searchQuery)
                                                 }
                                             )
                                         }
@@ -345,7 +337,13 @@ fun HomeScreen(
 
                 // Section Title for Tracks
                 val tracks = if (uiState.searchResults.isNotEmpty()) uiState.searchResults else uiState.trendingTracks
-                val title = if (uiState.searchResults.isNotEmpty()) "Hasil Pencarian Terverifikasi" else "Lagu Populer & Resmi"
+                val title = if (uiState.searchResults.isNotEmpty()) {
+                    if (selectedFilter == "Sering Diputar") "Lagu Sering Kamu Putar" else "Hasil Pencarian Musik"
+                } else if (uiState.mostPlayedTracks.isNotEmpty()) {
+                    "Rekomendasi Untuk Kamu"
+                } else {
+                    "Lagu Populer Indonesia"
+                }
 
                 item {
                     Row(
