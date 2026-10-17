@@ -27,6 +27,12 @@ class MusicService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true) // pause when headphones disconnected
             .build()
 
+        player?.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                android.util.Log.e("MusicEuy", "ExoPlayer Error [${error.errorCodeName} / ${error.errorCode}]: ${error.message}", error)
+            }
+        })
+
         val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             this,

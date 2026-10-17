@@ -162,6 +162,8 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             var activeAudioUri = track.audioUrl
 
+            android.util.Log.d("MusicEuy", "playTrack initial: title=${track.title}, artist=${track.artist.name}, audioUrl=${track.audioUrl}")
+
             // If audioUrl is a YouTube placeholder, resolve via NewPipeExtractor
             if (activeAudioUri.startsWith("yt:") || !activeAudioUri.startsWith("http")) {
                 val videoId = track.id.removePrefix("yt:")
@@ -170,16 +172,36 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 }
                 if (!stream.isNullOrBlank()) {
                     activeAudioUri = stream
+                    android.util.Log.d("MusicEuy", "Resolved via YouTube/NewPipe: $activeAudioUri")
                 } else {
-                    // Fallback to high quality direct stream
+                    android.util.Log.w("MusicEuy", "YouTube stream resolution failed, attempting strictly verified fallback for ${track.title}")
                     val cleanMatch = withContext(Dispatchers.IO) {
-                        streamSource.fetchSaavn("${track.artist.name} ${track.title}", limit = 1).firstOrNull()
+                        val candidates = streamSource.fetchSaavn("${track.artist.name} ${track.title}", limit = 5)
+                        candidates.firstOrNull { candidate ->
+                            streamSource.isStrictMatch(
+                                expectedTitle = track.title,
+                                expectedArtist = track.artist.name,
+                                candidateTitle = candidate.title,
+                                candidateArtist = candidate.artist.name
+                            )
+                        }
                     }
                     if (cleanMatch != null && cleanMatch.audioUrl.startsWith("http")) {
+                        android.util.Log.d("MusicEuy", "Verified fallback matched Saavn: title=${cleanMatch.title}, artist=${cleanMatch.artist.name}")
                         activeAudioUri = cleanMatch.audioUrl
+                    } else {
+                        android.util.Log.e("MusicEuy", "No verified matching stream found for ${track.title} - ${track.artist.name}")
                     }
                 }
             }
+
+            if (!activeAudioUri.startsWith("http")) {
+                android.util.Log.e("MusicEuy", "Cannot play track: activeAudioUri is invalid ($activeAudioUri)")
+                _uiState.update { it.copy(isPlaying = false, error = "Stream audio belum tersedia untuk '${track.title}'. Coba lagu lain.") }
+                return@launch
+            }
+
+            android.util.Log.d("MusicEuy", "Setting MediaItem URI: $activeAudioUri")
 
             val metadata = MediaMetadata.Builder()
                 .setTitle(track.title)

@@ -52,6 +52,45 @@ class MusicStreamSource(
     }
 
     /**
+     * Ensures candidate audio stream matches requested song title and artist.
+     * Prevents mismatched audio streams from playing under wrong titles.
+     */
+    fun isStrictMatch(expectedTitle: String, expectedArtist: String, candidateTitle: String, candidateArtist: String): Boolean {
+        fun normalize(s: String) = s.lowercase()
+            .replace(Regex("\\(.*\\)|\\[.*\\]"), "") // remove (feat. ...), [Official Video]
+            .replace(Regex("[^a-z0-9]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+
+        val normExpT = normalize(expectedTitle)
+        val normCandT = normalize(candidateTitle)
+        val normExpA = normalize(expectedArtist)
+        val normCandA = normalize(candidateArtist)
+
+        if (normExpT.isBlank() || normCandT.isBlank()) return false
+
+        // Check title match
+        val titleMatch = normExpT == normCandT ||
+                normExpT.contains(normCandT) || normCandT.contains(normExpT) ||
+                run {
+                    val expWords = normExpT.split(" ").filter { it.length > 2 }
+                    val candWords = normCandT.split(" ").filter { it.length > 2 }
+                    (expWords.isNotEmpty() && expWords.all { candWords.contains(it) }) ||
+                    (candWords.isNotEmpty() && candWords.all { expWords.contains(it) })
+                }
+
+        if (!titleMatch) return false
+
+        // Check artist match
+        val artistMatch = normExpA.isBlank() || normCandA.isBlank() ||
+                normExpA == normCandA ||
+                normExpA.contains(normCandA) || normCandA.contains(normExpA) ||
+                normExpA.split(" ").filter { it.length > 2 }.any { normCandA.contains(it) }
+
+        return artistMatch
+    }
+
+    /**
      * Resolves a YouTube video ID into an active, high-bitrate direct audio stream URL
      * using NewPipeExtractor (the gold standard open-source Android extractor).
      */
@@ -60,8 +99,11 @@ class MusicStreamSource(
             val extractor = ServiceList.YouTube.getStreamExtractor("https://www.youtube.com/watch?v=$videoId") as? YoutubeStreamExtractor ?: return null
             extractor.fetchPage()
             val audioStreams = extractor.audioStreams
-            audioStreams.maxByOrNull { it.bitrate }?.content
-        } catch (_: Exception) {
+            val stream = audioStreams.maxByOrNull { it.bitrate }?.content
+            android.util.Log.d("MusicEuy", "resolveYouTubeAudioStream for $videoId: success, streamUrl=$stream")
+            stream
+        } catch (e: Exception) {
+            android.util.Log.e("MusicEuy", "resolveYouTubeAudioStream error for $videoId: ${e.javaClass.simpleName} - ${e.message}", e)
             null
         }
     }
@@ -228,15 +270,17 @@ class MusicStreamSource(
                                     ?: albumObj?.optString("cover_medium", "")
                                     ?: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500"
 
-                                // Attempt to resolve clean stream
-                                val saavnMatches = fetchSaavn("$artistName $title", limit = 3).ifEmpty {
-                                    fetchSaavn(title, limit = 3)
+                                // Attempt to resolve clean stream with strict match
+                                val saavnMatches = fetchSaavn("$artistName $title", limit = 5).filter {
+                                    isStrictMatch(expectedTitle = title, expectedArtist = artistName, candidateTitle = it.title, candidateArtist = it.artist.name)
                                 }
 
                                 if (saavnMatches.isNotEmpty()) {
                                     val matched = saavnMatches.first()
                                     results.add(
                                         matched.copy(
+                                            title = title,
+                                            artist = Artist(id = id, name = artistName, avatarUrl = artistAvatar),
                                             coverUrl = if (matched.coverUrl.isNotBlank()) matched.coverUrl else coverUrl,
                                             albumTitle = if (matched.albumTitle.isNullOrBlank()) albumTitle else matched.albumTitle
                                         )

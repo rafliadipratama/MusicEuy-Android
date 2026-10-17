@@ -31,10 +31,27 @@ class NewPipeDownloader private constructor(private val client: OkHttpClient) : 
         val dataToSend = request.dataToSend()
 
         val okHeadersBuilder = Headers.Builder()
+        var hasUserAgent = false
+        var hasCookie = false
+        var hasAcceptLanguage = false
+
         for ((key, values) in headers) {
+            if (key.equals("User-Agent", ignoreCase = true)) hasUserAgent = true
+            if (key.equals("Cookie", ignoreCase = true)) hasCookie = true
+            if (key.equals("Accept-Language", ignoreCase = true)) hasAcceptLanguage = true
             for (value in values) {
                 okHeadersBuilder.add(key, value)
             }
+        }
+
+        if (!hasUserAgent) {
+            okHeadersBuilder.add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36")
+        }
+        if (!hasAcceptLanguage) {
+            okHeadersBuilder.add("Accept-Language", "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7")
+        }
+        if (!hasCookie) {
+            okHeadersBuilder.add("Cookie", "SOCS=CAESEwgDEgk2OTg1NTA0NjEaAmVuIAEaBgiA_LyaBg; CONSENT=PENDING+999; PREF=hl=id&gl=ID")
         }
         val okHeaders = okHeadersBuilder.build()
 
