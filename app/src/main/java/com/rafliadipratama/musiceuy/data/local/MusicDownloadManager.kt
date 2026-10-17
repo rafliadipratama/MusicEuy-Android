@@ -56,6 +56,7 @@ class MusicDownloadManager(
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val safeName = getSafeFileName(track)
+            android.util.Log.d("MusicDownloadManager", "Starting download: $safeName from $directAudioUrl")
 
             val request = Request.Builder()
                 .url(directAudioUrl)
@@ -64,11 +65,13 @@ class MusicDownloadManager(
 
             val response = client.newCall(request).execute()
             if (!response.isSuccessful) {
+                android.util.Log.e("MusicDownloadManager", "Download failed with HTTP ${response.code}")
                 return@withContext Result.failure(Exception("Gagal mengunduh audio (HTTP ${response.code})"))
             }
 
             val body = response.body ?: return@withContext Result.failure(Exception("Body respons kosong"))
             val contentLength = body.contentLength()
+            android.util.Log.d("MusicDownloadManager", "Content-Length: $contentLength bytes")
             val inputStream = body.byteStream()
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -77,6 +80,7 @@ class MusicDownloadManager(
                 saveToLegacyStorage(track, safeName, inputStream, contentLength, onProgress)
             }
         } catch (e: Exception) {
+            android.util.Log.e("MusicDownloadManager", "Exception in downloadTrack", e)
             Result.failure(e)
         }
     }
@@ -103,17 +107,24 @@ class MusicDownloadManager(
             ?: return Result.failure(Exception("Gagal membuat entri penyimpanan MediaStore"))
 
         try {
+            android.util.Log.d("MusicDownloadManager", "Created MediaStore URI: $uri")
             resolver.openOutputStream(uri)?.use { outputStream ->
                 copyStreamWithProgress(inputStream, outputStream, contentLength, onProgress)
             } ?: return Result.failure(Exception("Gagal membuka stream output MediaStore"))
 
             contentValues.clear()
             contentValues.put(MediaStore.Audio.Media.IS_PENDING, 0)
-            resolver.update(uri, contentValues, null, null)
+            val updated = resolver.update(uri, contentValues, null, null)
+            android.util.Log.d("MusicDownloadManager", "Cleared IS_PENDING, updated rows: $updated")
 
             return Result.success("Music/MusicEuy/$fileName")
         } catch (e: Exception) {
-            resolver.delete(uri, null, null)
+            android.util.Log.e("MusicDownloadManager", "Error saving to MediaStore URI: $uri", e)
+            try {
+                resolver.delete(uri, null, null)
+            } catch (delEx: Exception) {
+                android.util.Log.e("MusicDownloadManager", "Failed to cleanup URI", delEx)
+            }
             return Result.failure(e)
         }
     }
@@ -144,22 +155,20 @@ class MusicDownloadManager(
         totalBytes: Long,
         onProgress: (Float) -> Unit
     ) {
-        val buffer = ByteArray(8 * 1024)
+        val buffer = ByteArray(16 * 1024)
         var bytesCopied = 0L
         var read: Int
 
         input.use { inStream ->
-            output.use { outStream ->
-                while (inStream.read(buffer).also { read = it } != -1) {
-                    outStream.write(buffer, 0, read)
-                    bytesCopied += read
-                    if (totalBytes > 0) {
-                        val progress = (bytesCopied.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
-                        onProgress(progress)
-                    }
+            while (inStream.read(buffer).also { read = it } != -1) {
+                output.write(buffer, 0, read)
+                bytesCopied += read
+                if (totalBytes > 0) {
+                    val progress = (bytesCopied.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
+                    onProgress(progress)
                 }
-                outStream.flush()
             }
+            output.flush()
         }
     }
 
