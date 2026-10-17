@@ -145,6 +145,7 @@ class MainActivity : ComponentActivity() {
                                         isPlaying = uiState.isPlaying,
                                         currentPosMs = uiState.currentPositionMs,
                                         durationMs = uiState.durationMs,
+                                        dominantColor = uiState.dominantColor,
                                         onPlayPause = { viewModel.togglePlayPause() },
                                         onNext = { viewModel.nextTrack() },
                                         onQueueClick = { viewModel.toggleQueue() },

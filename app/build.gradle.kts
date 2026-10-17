@@ -68,4 +68,7 @@ dependencies {
 
     // NewPipeExtractor for native YouTube stream extraction
     implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.5")
+
+    // Dynamic Palette from album cover
+    implementation("androidx.palette:palette-ktx:1.0.0")
 }

@@ -43,6 +43,32 @@
             </intent-filter>
         </service>
 
+        <!-- Home Screen Music Widget -->
+        <receiver
+            android:name=".widget.MusicWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.rafliadipratama.musiceuy.ACTION_PLAY_PAUSE" />
+                <action android:name="com.rafliadipratama.musiceuy.ACTION_NEXT" />
+                <action android:name="com.rafliadipratama.musiceuy.ACTION_PREV" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/music_widget_info" />
+        </receiver>
+
+        <!-- FileProvider for Sharing Story Cards and Backup JSON -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
     </application>
 
 </manifest>

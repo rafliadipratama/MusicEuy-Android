@@ -25,11 +25,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
@@ -37,10 +39,12 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Verified
+import com.rafliadipratama.musiceuy.ui.components.EqualizerBottomSheet
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -103,13 +107,16 @@ fun PlayerScreen(
         }
     }
 
+    val dominantColor = uiState.dominantColor?.let { Color(it.toInt()) } ?: DarkSurface
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        DarkSurface,
+                        dominantColor.copy(alpha = 0.65f),
+                        DarkBackground.copy(alpha = 0.95f),
                         DarkBackground
                     )
                 )
@@ -118,14 +125,14 @@ fun PlayerScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 20.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Top Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp),
+                    .padding(top = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -141,43 +148,77 @@ fun PlayerScreen(
                 Text(
                     text = "SEDANG MEMUTAR",
                     color = TextSecondary,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.5.sp
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val isTimerActive = uiState.sleepTimerRemainingSeconds != null || uiState.isSleepTimerEndOfTrack
-                    IconButton(onClick = { viewModel.showSleepTimerDialog() }) {
+                    IconButton(
+                        onClick = { viewModel.showSleepTimerDialog() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Bedtime,
                             contentDescription = "Pengatur Waktu Tidur",
                             tint = if (isTimerActive) AccentEmerald else TextSecondary,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
-                    IconButton(onClick = { viewModel.showAddToPlaylist(track) }) {
+                    IconButton(
+                        onClick = { viewModel.showEqualizer() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.GraphicEq,
+                            contentDescription = "Equalizer & Efek Suara",
+                            tint = if (uiState.isEqualizerSheetVisible) AccentEmerald else TextSecondary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { viewModel.shareCurrentTrackStory() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Bagikan Story Card",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { viewModel.showAddToPlaylist(track) },
+                        modifier = Modifier.size(36.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
                             contentDescription = "Tambah ke Playlist",
                             tint = TextSecondary,
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
-                    IconButton(onClick = { viewModel.toggleLyrics() }) {
+                    IconButton(
+                        onClick = { viewModel.toggleLyrics() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Lyrics,
                             contentDescription = "Lirik",
                             tint = if (uiState.isLyricsVisible) AccentEmerald else TextSecondary,
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
-                    IconButton(onClick = { viewModel.toggleQueue() }) {
+                    IconButton(
+                        onClick = { viewModel.toggleQueue() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                             contentDescription = "Antrean Musik",
                             tint = if (uiState.isQueueVisible) AccentEmerald else TextSecondary,
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
@@ -489,7 +530,38 @@ fun PlayerScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Autoplay / Radio Otomatis Pill
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(if (uiState.isAutoplayEnabled) AccentEmerald.copy(alpha = 0.15f) else DarkSurface)
+                    .clickable { viewModel.toggleAutoplay() }
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AllInclusive,
+                    contentDescription = null,
+                    tint = if (uiState.isAutoplayEnabled) AccentEmerald else TextMuted,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (uiState.isAutoplayEnabled) "Radio Otomatis Aktif" else "Radio Otomatis Mati",
+                    color = if (uiState.isAutoplayEnabled) AccentEmerald else TextMuted,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+        }
+
+        // Equalizer & Audio Effects Sheet
+        if (uiState.isEqualizerSheetVisible) {
+            EqualizerBottomSheet(onDismiss = { viewModel.dismissEqualizer() })
         }
     }
 }

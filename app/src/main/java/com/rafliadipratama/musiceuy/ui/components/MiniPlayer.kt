@@ -44,6 +44,7 @@ fun MiniPlayer(
     isPlaying: Boolean,
     currentPosMs: Long,
     durationMs: Long,
+    dominantColor: Long? = null,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onQueueClick: () -> Unit = {},
@@ -52,11 +53,24 @@ fun MiniPlayer(
 ) {
     val progress = if (durationMs > 0) (currentPosMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
 
+    val bgModifier = if (dominantColor != null) {
+        Modifier.background(
+            androidx.compose.ui.graphics.Brush.horizontalGradient(
+                listOf(
+                    Color(dominantColor.toInt()).copy(alpha = 0.38f),
+                    Color(0xFF141A24)
+                )
+            )
+        )
+    } else {
+        Modifier.background(Color(0xFF1A1F29))
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-            .background(Color(0xFF1A1F29))
+            .then(bgModifier)
     ) {
         Column {
             // Tiny progress line at the very top

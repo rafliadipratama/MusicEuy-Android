@@ -32,10 +32,21 @@ class MusicService : MediaSessionService() {
             .build()
 
         player?.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                if (audioSessionId != androidx.media3.common.C.AUDIO_SESSION_ID_UNSET) {
+                    com.rafliadipratama.musiceuy.audio.AudioEffectManager.attachAudioSession(this@MusicService, audioSessionId)
+                }
+            }
+
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 android.util.Log.e("MusicEuy", "ExoPlayer Error [${error.errorCodeName} / ${error.errorCode}]: ${error.message}", error)
             }
         })
+
+        val initialSessionId = player?.audioSessionId ?: 0
+        if (initialSessionId != 0 && initialSessionId != androidx.media3.common.C.AUDIO_SESSION_ID_UNSET) {
+            com.rafliadipratama.musiceuy.audio.AudioEffectManager.attachAudioSession(this, initialSessionId)
+        }
 
         val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
@@ -81,6 +92,7 @@ class MusicService : MediaSessionService() {
             mediaSession = null
         }
         player = null
+        com.rafliadipratama.musiceuy.audio.AudioEffectManager.releaseEffects()
         super.onDestroy()
     }
 }

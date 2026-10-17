@@ -341,4 +341,72 @@ class LocalMusicHistoryManager(context: Context) {
         }
         prefs.edit().putString(KEY_LIKED_TRACKS, arr.toString()).apply()
     }
+
+    // ==================== Backup & Restore ====================
+
+    fun exportBackupJson(): String {
+        val root = JSONObject().apply {
+            put("app", "MusicEuy")
+            put("version", 1)
+            put("exportedAt", System.currentTimeMillis())
+            put("playlists", JSONArray(prefs.getString(KEY_PLAYLISTS, "[]") ?: "[]"))
+            put("likedTracks", JSONArray(prefs.getString(KEY_LIKED_TRACKS, "[]") ?: "[]"))
+        }
+        return root.toString(2)
+    }
+
+    fun importBackupJson(jsonString: String): Boolean {
+        return try {
+            val root = JSONObject(jsonString)
+            if (!root.has("playlists") && !root.has("likedTracks")) {
+                return false
+            }
+
+            if (root.has("playlists")) {
+                val incomingPlaylists = root.getJSONArray("playlists")
+                val existingPlaylists = getAllPlaylists().toMutableList()
+                for (i in 0 until incomingPlaylists.length()) {
+                    val pObj = incomingPlaylists.getJSONObject(i)
+                    val pId = pObj.optString("id", "")
+                    if (existingPlaylists.none { it.id == pId }) {
+                        val tracksList = mutableListOf<Track>()
+                        val tArr = pObj.optJSONArray("tracks") ?: JSONArray()
+                        for (j in 0 until tArr.length()) {
+                            tracksList.add(jsonToTrack(tArr.getJSONObject(j)))
+                        }
+                        existingPlaylists.add(
+                            Playlist(
+                                id = pId.ifBlank { "pl_${System.currentTimeMillis()}_$i" },
+                                name = pObj.optString("name", "Playlist Impor"),
+                                description = pObj.optString("description", ""),
+                                coverUrl = if (pObj.optString("coverUrl", "").isNotBlank()) pObj.optString("coverUrl") else null,
+                                createdAt = pObj.optLong("createdAt", System.currentTimeMillis()),
+                                tracks = tracksList
+                            )
+                        )
+                    }
+                }
+                savePlaylists(existingPlaylists)
+            }
+
+            if (root.has("likedTracks")) {
+                val incomingLiked = root.getJSONArray("likedTracks")
+                val existingLiked = getLikedTracks().toMutableList()
+                val existingIds = existingLiked.map { it.id }.toSet()
+                for (i in 0 until incomingLiked.length()) {
+                    val t = jsonToTrack(incomingLiked.getJSONObject(i))
+                    if (!existingIds.contains(t.id)) {
+                        existingLiked.add(t.copy(isLiked = true))
+                    }
+                }
+                saveLikedTracks(existingLiked)
+            }
+
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("MusicEuy", "Error importing backup: ${e.message}", e)
+            false
+        }
+    }
 }
+

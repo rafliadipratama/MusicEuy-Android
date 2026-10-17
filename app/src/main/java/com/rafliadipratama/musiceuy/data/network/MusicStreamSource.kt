@@ -106,16 +106,32 @@ class MusicStreamSource(
     }
 
     /**
-     * Resolves a YouTube video ID into an active, high-bitrate direct audio stream URL
-     * using NewPipeExtractor (the gold standard open-source Android extractor).
+     * Resolves a YouTube video ID into an active direct audio stream URL
+     * based on user's selected AudioQuality bitrate preference.
      */
-    fun resolveYouTubeAudioStream(videoId: String): String? {
+    fun resolveYouTubeAudioStream(
+        videoId: String,
+        preferredQuality: com.rafliadipratama.musiceuy.audio.AudioQuality? = null
+    ): String? {
         return try {
             val extractor = ServiceList.YouTube.getStreamExtractor("https://www.youtube.com/watch?v=$videoId") as? YoutubeStreamExtractor ?: return null
             extractor.fetchPage()
             val audioStreams = extractor.audioStreams
-            val stream = audioStreams.maxByOrNull { it.bitrate }?.content
-            android.util.Log.d("MusicEuy", "resolveYouTubeAudioStream for $videoId: success, streamUrl=$stream")
+            if (audioStreams.isNullOrEmpty()) return null
+
+            val selectedStream = when (preferredQuality) {
+                com.rafliadipratama.musiceuy.audio.AudioQuality.HEMAT -> {
+                    audioStreams.minByOrNull { it.bitrate } ?: audioStreams.firstOrNull()
+                }
+                com.rafliadipratama.musiceuy.audio.AudioQuality.STANDAR -> {
+                    audioStreams.minByOrNull { kotlin.math.abs(it.bitrate - 128000) } ?: audioStreams.maxByOrNull { it.bitrate }
+                }
+                com.rafliadipratama.musiceuy.audio.AudioQuality.TINGGI, null -> {
+                    audioStreams.maxByOrNull { it.bitrate }
+                }
+            }
+            val stream = selectedStream?.content ?: audioStreams.maxByOrNull { it.bitrate }?.content
+            android.util.Log.d("MusicEuy", "resolveYouTubeAudioStream for $videoId (quality=$preferredQuality, bitrate=${selectedStream?.bitrate}): streamUrl=$stream")
             stream
         } catch (e: Exception) {
             android.util.Log.e("MusicEuy", "resolveYouTubeAudioStream error for $videoId: ${e.javaClass.simpleName} - ${e.message}", e)

@@ -24,19 +24,26 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.SettingsBackupRestore
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -156,6 +163,129 @@ fun LibraryScreen(
         )
     }
 
+    if (uiState.isBackupRestoreDialogVisible) {
+        val context = LocalContext.current
+        var importText by remember { mutableStateOf("") }
+        var isImportMode by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissBackupRestoreDialog() },
+            containerColor = SurfaceContainerHigh,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.SettingsBackupRestore,
+                        contentDescription = null,
+                        tint = BrandGreen,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (isImportMode) "Pulihkan Koleksi" else "Cadangkan & Pulihkan",
+                        color = TextPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (!isImportMode) {
+                        Text(
+                            text = "Amankan playlist dan lagu yang kamu sukai dalam format file/teks JSON yang dapat dipulihkan kapan saja.",
+                            color = TextSecondary,
+                            fontSize = 13.sp
+                        )
+
+                        Button(
+                            onClick = {
+                                val jsonStr = viewModel.exportBackupJson()
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, jsonStr)
+                                    putExtra(Intent.EXTRA_TITLE, "Backup-MusicEuy.json")
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "Simpan / Bagikan Backup JSON"))
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(imageVector = Icons.Default.Upload, contentDescription = null, tint = Color(0xFF0C0E11))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Ekspor / Cadangkan JSON", color = Color(0xFF0C0E11), fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = { isImportMode = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = SurfaceContainer),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(imageVector = Icons.Default.Download, contentDescription = null, tint = TextPrimary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Impor dari Teks JSON", color = TextPrimary)
+                        }
+                    } else {
+                        Text(
+                            text = "Tempel (paste) kode JSON cadangan kamu di bawah ini:",
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+
+                        OutlinedTextField(
+                            value = importText,
+                            onValueChange = { importText = it },
+                            placeholder = { Text("Tempel JSON cadangan di sini...", color = TextMuted, fontSize = 12.sp) },
+                            maxLines = 6,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(140.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = BrandGreen,
+                                unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            )
+                        )
+
+                        Button(
+                            onClick = {
+                                if (importText.isNotBlank()) {
+                                    val success = viewModel.importBackupJson(importText.trim())
+                                    if (success) {
+                                        Toast.makeText(context, "Koleksi berhasil dipulihkan!", Toast.LENGTH_SHORT).show()
+                                        viewModel.dismissBackupRestoreDialog()
+                                    } else {
+                                        Toast.makeText(context, "Format JSON tidak valid!", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            enabled = importText.isNotBlank(),
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Pulihkan Sekarang", color = Color(0xFF0C0E11), fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    if (uiState.backupRestoreMessage != null) {
+                        Text(
+                            text = uiState.backupRestoreMessage ?: "",
+                            color = BrandGreen,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissBackupRestoreDialog() }) {
+                    Text("Tutup", color = TextSecondary)
+                }
+            }
+        )
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -170,36 +300,49 @@ fun LibraryScreen(
             item {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(BrandGreen.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LibraryMusic,
-                            contentDescription = null,
-                            tint = BrandGreen,
-                            modifier = Modifier.size(24.dp)
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(BrandGreen.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LibraryMusic,
+                                contentDescription = null,
+                                tint = BrandGreen,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "Koleksi Saya",
+                                color = TextPrimary,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Playlist, genre, lagu favorit & riwayat",
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Text(
-                            text = "Koleksi Saya",
-                            color = TextPrimary,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Playlist, genre, lagu favorit & riwayat",
-                            color = TextSecondary,
-                            fontSize = 12.sp
+                    // Backup & Restore Action Button
+                    IconButton(onClick = { viewModel.showBackupRestoreDialog() }) {
+                        Icon(
+                            imageVector = Icons.Default.SettingsBackupRestore,
+                            contentDescription = "Cadangkan & Pulihkan",
+                            tint = BrandGreen,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }

@@ -79,6 +79,12 @@ data class PlayerUiState(
     val downloadedTracks: List<Track> = emptyList(),
     val isDownloadedScreenVisible: Boolean = false,
     val downloadNotificationMessage: String? = null,
+    val dominantColor: Long? = null,
+    val isAutoplayEnabled: Boolean = true,
+    val crossfadeSeconds: Int = 0,
+    val isEqualizerSheetVisible: Boolean = false,
+    val isBackupRestoreDialogVisible: Boolean = false,
+    val backupRestoreMessage: String? = null,
     val error: String? = null
 )
 
@@ -100,6 +106,14 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     private var progressJob: Job? = null
 
     init {
+        com.rafliadipratama.musiceuy.audio.AudioEffectManager.initFromPrefs(application)
+        com.rafliadipratama.musiceuy.widget.MusicWidgetProvider.playbackActionHandler = { action ->
+            when (action) {
+                com.rafliadipratama.musiceuy.widget.MusicWidgetProvider.ACTION_PLAY_PAUSE -> togglePlayPause()
+                com.rafliadipratama.musiceuy.widget.MusicWidgetProvider.ACTION_NEXT -> nextTrack()
+                com.rafliadipratama.musiceuy.widget.MusicWidgetProvider.ACTION_PREV -> previousTrack()
+            }
+        }
         initMediaController()
         loadInitialData()
     }
@@ -121,6 +135,11 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         mediaController?.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _uiState.update { it.copy(isPlaying = isPlaying) }
+                com.rafliadipratama.musiceuy.widget.MusicWidgetProvider.updateWidget(
+                    getApplication(),
+                    _uiState.value.currentTrack,
+                    isPlaying
+                )
                 if (isPlaying) {
                     startProgressTracker()
                 } else {
@@ -329,8 +348,9 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                     android.util.Log.d("MusicEuy", "Resolved via PluginManager: $activeAudioUri")
                 } else {
                     android.util.Log.w("MusicEuy", "PluginManager resolution failed, trying fallback streamSource for ${track.title}")
+                    val quality = com.rafliadipratama.musiceuy.audio.AudioEffectManager.getAudioQuality(getApplication())
                     val fallbackStream = withContext(Dispatchers.IO) {
-                        streamSource.resolveYouTubeAudioStream(track.id.removePrefix("yt:"))
+                        streamSource.resolveYouTubeAudioStream(track.id.removePrefix("yt:"), quality)
                     }
                     if (!fallbackStream.isNullOrBlank()) {
                         activeAudioUri = fallbackStream
@@ -345,6 +365,16 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             }
 
             android.util.Log.d("MusicEuy", "Setting MediaItem URI: $activeAudioUri")
+
+            // Extract dynamic palette color from cover artwork
+            extractPaletteColor(track.coverUrl)
+
+            // Update Home Screen Widget
+            com.rafliadipratama.musiceuy.widget.MusicWidgetProvider.updateWidget(
+                getApplication(),
+                activeTrack,
+                true
+            )
 
             val artworkUri = if (track.coverUrl.isNotBlank()) {
                 try { Uri.parse(track.coverUrl) } catch (_: Exception) { null }
@@ -365,7 +395,21 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
             controller.setMediaItem(mediaItem)
             controller.prepare()
-            controller.play()
+
+            // Smooth crossfade transition if enabled
+            if (_uiState.value.crossfadeSeconds > 0) {
+                controller.volume = 0.2f
+                controller.play()
+                viewModelScope.launch {
+                    delay(250)
+                    controller.volume = 0.6f
+                    delay(250)
+                    controller.volume = 1.0f
+                }
+            } else {
+                controller.volume = 1.0f
+                controller.play()
+            }
         }
     }
 
@@ -428,12 +472,41 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 val currentIndex = state.queue.indexOfFirst { it.id == state.currentTrack?.id }
                 if (currentIndex < state.queue.size - 1) {
                     nextTrack()
+                } else if (state.isAutoplayEnabled && state.currentTrack != null) {
+                    triggerAutoplay(state.currentTrack)
                 } else {
                     mediaController?.pause()
                     seekTo(0)
                 }
             }
         }
+    }
+
+    fun triggerAutoplay(endedTrack: Track) {
+        viewModelScope.launch {
+            val related = withContext(Dispatchers.IO) {
+                streamSource.searchTracks(endedTrack.artist.name)
+            }
+            val existingIds = _uiState.value.queue.map { it.id }.toSet()
+            val candidate = related.firstOrNull { !existingIds.contains(it.id) && it.id != endedTrack.id }
+                ?: related.firstOrNull { it.id != endedTrack.id }
+
+            if (candidate != null) {
+                _uiState.update { it.copy(queue = it.queue + candidate) }
+                playTrack(candidate)
+            } else {
+                mediaController?.pause()
+                seekTo(0)
+            }
+        }
+    }
+
+    fun toggleAutoplay() {
+        _uiState.update { it.copy(isAutoplayEnabled = !it.isAutoplayEnabled) }
+    }
+
+    fun setCrossfade(seconds: Int) {
+        _uiState.update { it.copy(crossfadeSeconds = seconds) }
     }
 
     fun toggleRepeatMode() {
@@ -734,10 +807,15 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             while (remaining > 0 && isActive) {
                 delay(1000)
                 remaining--
+                if (remaining <= 60) {
+                    val vol = (remaining / 60f).coerceIn(0f, 1f)
+                    mediaController?.volume = vol
+                }
                 _uiState.update { it.copy(sleepTimerRemainingSeconds = remaining) }
             }
             if (isActive) {
                 mediaController?.pause()
+                mediaController?.volume = 1f
                 _uiState.update {
                     it.copy(
                         sleepTimerRemainingSeconds = null,
@@ -748,23 +826,24 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun cancelSleepTimer() {
+        sleepTimerJob?.cancel()
+        mediaController?.volume = 1f
+        _uiState.update {
+            it.copy(
+                sleepTimerRemainingSeconds = null,
+                isSleepTimerEndOfTrack = false,
+                isSleepTimerDialogVisible = false
+            )
+        }
+    }
+
     fun setSleepTimerEndOfTrack() {
         sleepTimerJob?.cancel()
         _uiState.update {
             it.copy(
                 sleepTimerRemainingSeconds = null,
                 isSleepTimerEndOfTrack = true,
-                isSleepTimerDialogVisible = false
-            )
-        }
-    }
-
-    fun cancelSleepTimer() {
-        sleepTimerJob?.cancel()
-        _uiState.update {
-            it.copy(
-                sleepTimerRemainingSeconds = null,
-                isSleepTimerEndOfTrack = false,
                 isSleepTimerDialogVisible = false
             )
         }
@@ -905,6 +984,81 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun clearDownloadMessage() {
         _uiState.update { it.copy(downloadNotificationMessage = null) }
+    }
+
+    // ==================== Dynamic Palette Color ====================
+
+    private fun extractPaletteColor(coverUrl: String) {
+        if (coverUrl.isBlank()) {
+            _uiState.update { it.copy(dominantColor = null) }
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val loader = coil.ImageLoader(getApplication())
+                val req = coil.request.ImageRequest.Builder(getApplication())
+                    .data(coverUrl)
+                    .allowHardware(false)
+                    .build()
+                val result = (loader.execute(req) as? coil.request.SuccessResult)?.drawable
+                val bmp = (result as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                if (bmp != null) {
+                    val palette = androidx.palette.graphics.Palette.from(bmp).generate()
+                    val swatch = palette.darkVibrantSwatch ?: palette.dominantSwatch ?: palette.vibrantSwatch
+                    val colorVal = swatch?.rgb?.toLong()
+                    _uiState.update { it.copy(dominantColor = colorVal) }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("MusicEuy", "Palette extraction failed: ${e.message}")
+            }
+        }
+    }
+
+    // ==================== Equalizer & Audio Effects ====================
+
+    fun showEqualizer() {
+        _uiState.update { it.copy(isEqualizerSheetVisible = true) }
+    }
+
+    fun dismissEqualizer() {
+        _uiState.update { it.copy(isEqualizerSheetVisible = false) }
+    }
+
+    // ==================== Share Song as Story Card ====================
+
+    fun shareCurrentTrackStory() {
+        val track = _uiState.value.currentTrack ?: return
+        viewModelScope.launch {
+            com.rafliadipratama.musiceuy.util.StoryCardGenerator.generateAndShareStoryCard(
+                getApplication(),
+                track
+            )
+        }
+    }
+
+    // ==================== Backup & Restore ====================
+
+    fun showBackupRestoreDialog() {
+        _uiState.update { it.copy(isBackupRestoreDialogVisible = true, backupRestoreMessage = null) }
+    }
+
+    fun dismissBackupRestoreDialog() {
+        _uiState.update { it.copy(isBackupRestoreDialogVisible = false, backupRestoreMessage = null) }
+    }
+
+    fun exportBackupJson(): String {
+        return historyManager.exportBackupJson()
+    }
+
+    fun importBackupJson(jsonStr: String): Boolean {
+        val success = historyManager.importBackupJson(jsonStr)
+        if (success) {
+            loadInitialData()
+            _uiState.update { it.copy(backupRestoreMessage = "✓ Berhasil memulihkan playlist dan lagu disukai!") }
+        } else {
+            _uiState.update { it.copy(backupRestoreMessage = "Gagal memulihkan. Format JSON tidak sesuai.") }
+        }
+        return success
     }
 
     override fun onCleared() {
