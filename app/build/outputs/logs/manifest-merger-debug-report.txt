@@ -1,0 +1,408 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:2:1-45:12
+INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:2:1-45:12
+INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:2:1-45:12
+INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:2:1-45:12
+MERGED from [androidx.activity:activity:1.9.3] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/dd2fcc7b5e46320bed393de958e1d0f5/transformed/activity-1.9.3/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.material3:material3-android:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1a5d42fdc98b4a81ecfddc6a100e4329/transformed/material3-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1b665c2669941d4ac6fe70352beb287e/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9cddc1a0cd1fee944b6f1c16cd5f1111/transformed/savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [io.coil-kt:coil-compose:2.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/63836e37f429e12655e3c94f2e9cdc3d/transformed/coil-compose-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [io.coil-kt:coil-compose-base:2.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/fb609f9ab88c19fb2d0d8119a1e2ff28/transformed/coil-compose-base-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [io.coil-kt:coil:2.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/45dd0f8650da80ed8a8753d0baca9a23/transformed/coil-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [io.coil-kt:coil-base:2.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/d9011084dab7dfe0e7598322a2c60cbf/transformed/coil-base-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.media3:media3-session:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/018794d43684f8ca6687d9feb21df318/transformed/media3-session-1.5.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-ui:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2b275c03acffa8dae2216bf56c51c7a7/transformed/media3-ui-1.5.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-extractor:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2a150c1a1c66a15482ec0b7668c7b004/transformed/media3-extractor-1.5.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-container:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/4f71784854bbd5f4fc01bbcfdc9c65f3/transformed/media3-container-1.5.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-datasource:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/f9e94b734f0d96903a4ac2b65d815258/transformed/media3-datasource-1.5.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-decoder:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/63f6622079ff386dbc65dfcef86dad14/transformed/media3-decoder-1.5.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-database:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/13229380757c2551e4d1301b09f17c16/transformed/media3-database-1.5.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-common:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9a7615c41dacbbed4bb17d4f0eddb01f/transformed/media3-common-1.5.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.media3:media3-exoplayer:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/de2c5cecc5753df77136f9489bfe44e3/transformed/media3-exoplayer-1.5.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.media:media:1.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1e28fc17a6d9ccfdaedfcae93c081cde/transformed/media-1.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.recyclerview:recyclerview:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/d84d159dc1edc8fc6d6dca298b5d84bd/transformed/recyclerview-1.3.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.animation:animation-core-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/84ef52d04dae3b85e9c85595dfd0d025/transformed/animation-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-ripple-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/ccb390fecc2eb92ae5afb6c7f8c790f4/transformed/material-ripple-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/db29789fd1c2712e0298b3b0fd9d3c50/transformed/animation-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2d1366d0f3bc4b4fb2e999ee87189487/transformed/foundation-layout-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/3f0fe6d7584a85a647a3fd0ad943e81f/transformed/foundation-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-unit-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2e09f4c9eb56e1aaf44e2ac1e0a74551/transformed/ui-unit-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-geometry-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/e372678227903a82cd2133bfd928a9fa/transformed/ui-geometry-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-util-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/4ca0385d17c4bfc9f69e4aba27b74307/transformed/ui-util-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-text-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/53a6c13ea60434e628f39957efeb6a1a/transformed/ui-text-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b19b81dae7ab2279a323fce3ebca31f/transformed/ui-tooling-preview-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.ui:ui-graphics-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1ce654db0a05aba29784160b5b01bcce/transformed/ui-graphics-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.customview:customview:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/bbdcc919304c4cb20cc3eff97a20eb0f/transformed/customview-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.autofill:autofill:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/4df186174b7721d91849d0ebb6647aad/transformed/autofill-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.graphics:graphics-path:1.0.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/bfeadc820a3883f19fda8de8736b2c0e/transformed/graphics-path-1.0.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/fc9d1486256e0e05ac0cad8a4456e2bc/transformed/appcompat-resources-1.6.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/b8031287c560083dd945e42469f68f14/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/ed914ce4b97a5b75370c3d4fc6b2304e/transformed/vectordrawable-1.1.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/542d653b84b1a86bf564c900fc082f97/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:17:1-23:12
+MERGED from [androidx.core:core-ktx:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/92ef448cccbc6598e841b566025e8aca/transformed/core-ktx-1.13.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/374717310c09fd8f9a80a19ac79ca36d/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1f9110abb4b422412c1e9c0dafc3224b/transformed/lifecycle-runtime-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/11094416d6a600947704e242f038e235/transformed/lifecycle-livedata-core-2.8.7/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/48146946131bab3ad081f8007937be21/transformed/lifecycle-runtime-ktx-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/a26f38493a310582b220890ece4f535a/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/33086340372a4fe5204d3c8b4c29a9c4/transformed/lifecycle-viewmodel-savedstate-2.8.7/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1484cfc5e14c8107bb2f38be29f6229c/transformed/lifecycle-viewmodel-ktx-2.8.7/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/254b0e89250002e8d4bbd01775c11f56/transformed/lifecycle-runtime-compose-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9a6c11779bddb03fba382af65035f39a/transformed/lifecycle-viewmodel-compose-release/AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/0aff42c2426a6ea73513f784cca38edc/transformed/accompanist-drawablepainter-0.32.0/AndroidManifest.xml:17:1-23:12
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/bc1a03d682021e5a24a2c0a2b4349cb3/transformed/material-icons-extended-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/a74de55f100472857119d4f8f6828ad4/transformed/material-icons-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/fdf6da71fb638bbc48c98eaeac56c1f6/transformed/ui-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity-ktx:1.9.3] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/fcd20009b87b90c9daaebb7dae225f9e/transformed/activity-ktx-1.9.3/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity-compose:1.9.3] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/dbc52e5cea50127967e642875df467c8/transformed/activity-compose-1.9.3/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/e73b1acf377c845c4b24fe91a6900dce/transformed/runtime-saveable-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/dfe986b70984ae5dfd162439877f0494/transformed/runtime-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.annotation:annotation-experimental:1.4.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2b40f471cf25c7af487a14d76a545ab8/transformed/annotation-experimental-1.4.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/6a69d09509c79735ad13c7626c7063bc/transformed/startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.tracing:tracing:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/3bbfb337b3c8692e426181d15d1d840c/transformed/tracing-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.exifinterface:exifinterface:1.3.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/c4831b9fef2605c2fbde2cb74ffdabab/transformed/exifinterface-1.3.7/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/574646e35d0a6548939849154c7b61fa/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2986d2cdd18579d5579ac35c92a4f5de/transformed/core-runtime-2.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/993ab39c2dd68ee6ec864b6b6cba2468/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
+	package
+		INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml
+	android:versionName
+		INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml
+	xmlns:tools
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:3:5-51
+	android:versionCode
+		INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:2:11-69
+uses-permission#android.permission.INTERNET
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:5:5-67
+	android:name
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:5:22-64
+uses-permission#android.permission.ACCESS_NETWORK_STATE
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:6:5-79
+MERGED from [androidx.media3:media3-common:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9a7615c41dacbbed4bb17d4f0eddb01f/transformed/media3-common-1.5.0/AndroidManifest.xml:22:5-79
+MERGED from [androidx.media3:media3-common:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9a7615c41dacbbed4bb17d4f0eddb01f/transformed/media3-common-1.5.0/AndroidManifest.xml:22:5-79
+MERGED from [androidx.media3:media3-exoplayer:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/de2c5cecc5753df77136f9489bfe44e3/transformed/media3-exoplayer-1.5.0/AndroidManifest.xml:22:5-79
+MERGED from [androidx.media3:media3-exoplayer:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/de2c5cecc5753df77136f9489bfe44e3/transformed/media3-exoplayer-1.5.0/AndroidManifest.xml:22:5-79
+	android:name
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:6:22-76
+uses-permission#android.permission.FOREGROUND_SERVICE
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:7:5-77
+	android:name
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:7:22-74
+uses-permission#android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:8:5-92
+	android:name
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:8:22-89
+uses-permission#android.permission.WAKE_LOCK
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:9:5-68
+	android:name
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:9:22-65
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:10:5-77
+	android:name
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:10:22-74
+application
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:12:5-43:19
+INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:12:5-43:19
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:28:5-89
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/374717310c09fd8f9a80a19ac79ca36d/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/374717310c09fd8f9a80a19ac79ca36d/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/6a69d09509c79735ad13c7626c7063bc/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/6a69d09509c79735ad13c7626c7063bc/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/574646e35d0a6548939849154c7b61fa/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/574646e35d0a6548939849154c7b61fa/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+	android:extractNativeLibs
+		INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:28:18-86
+	android:supportsRtl
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:17:9-35
+	android:label
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:15:9-33
+	android:roundIcon
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:16:9-60
+	tools:targetApi
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:20:9-29
+	android:icon
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:14:9-55
+	android:allowBackup
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:13:9-35
+	android:theme
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:18:9-66
+	android:usesCleartextTraffic
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:19:9-44
+activity#com.rafliadipratama.musiceuy.MainActivity
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:22:9-31:20
+	android:windowSoftInputMode
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:26:13-55
+	android:exported
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:24:13-36
+	android:theme
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:25:13-70
+	android:name
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:23:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:27:13-30:29
+action#android.intent.action.MAIN
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:28:17-69
+	android:name
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:28:25-66
+category#android.intent.category.LAUNCHER
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:29:17-77
+	android:name
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:29:27-74
+service#com.rafliadipratama.musiceuy.service.MusicService
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:33:9-41:19
+	android:enabled
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:35:13-35
+	android:exported
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:36:13-36
+	android:foregroundServiceType
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:37:13-58
+	android:name
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:34:13-49
+intent-filter#action:name:androidx.media3.session.MediaSessionService
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:38:13-40:29
+action#androidx.media3.session.MediaSessionService
+ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:39:17-86
+	android:name
+		ADDED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml:39:25-83
+uses-sdk
+INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml
+INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml
+MERGED from [androidx.activity:activity:1.9.3] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/dd2fcc7b5e46320bed393de958e1d0f5/transformed/activity-1.9.3/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.9.3] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/dd2fcc7b5e46320bed393de958e1d0f5/transformed/activity-1.9.3/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material3:material3-android:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1a5d42fdc98b4a81ecfddc6a100e4329/transformed/material3-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material3:material3-android:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1a5d42fdc98b4a81ecfddc6a100e4329/transformed/material3-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1b665c2669941d4ac6fe70352beb287e/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1b665c2669941d4ac6fe70352beb287e/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9cddc1a0cd1fee944b6f1c16cd5f1111/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9cddc1a0cd1fee944b6f1c16cd5f1111/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [io.coil-kt:coil-compose:2.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/63836e37f429e12655e3c94f2e9cdc3d/transformed/coil-compose-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil-compose:2.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/63836e37f429e12655e3c94f2e9cdc3d/transformed/coil-compose-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil-compose-base:2.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/fb609f9ab88c19fb2d0d8119a1e2ff28/transformed/coil-compose-base-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil-compose-base:2.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/fb609f9ab88c19fb2d0d8119a1e2ff28/transformed/coil-compose-base-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil:2.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/45dd0f8650da80ed8a8753d0baca9a23/transformed/coil-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil:2.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/45dd0f8650da80ed8a8753d0baca9a23/transformed/coil-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil-base:2.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/d9011084dab7dfe0e7598322a2c60cbf/transformed/coil-base-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil-base:2.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/d9011084dab7dfe0e7598322a2c60cbf/transformed/coil-base-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.media3:media3-session:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/018794d43684f8ca6687d9feb21df318/transformed/media3-session-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-session:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/018794d43684f8ca6687d9feb21df318/transformed/media3-session-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-ui:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2b275c03acffa8dae2216bf56c51c7a7/transformed/media3-ui-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-ui:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2b275c03acffa8dae2216bf56c51c7a7/transformed/media3-ui-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-extractor:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2a150c1a1c66a15482ec0b7668c7b004/transformed/media3-extractor-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-extractor:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2a150c1a1c66a15482ec0b7668c7b004/transformed/media3-extractor-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-container:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/4f71784854bbd5f4fc01bbcfdc9c65f3/transformed/media3-container-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-container:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/4f71784854bbd5f4fc01bbcfdc9c65f3/transformed/media3-container-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-datasource:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/f9e94b734f0d96903a4ac2b65d815258/transformed/media3-datasource-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-datasource:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/f9e94b734f0d96903a4ac2b65d815258/transformed/media3-datasource-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-decoder:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/63f6622079ff386dbc65dfcef86dad14/transformed/media3-decoder-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-decoder:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/63f6622079ff386dbc65dfcef86dad14/transformed/media3-decoder-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-database:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/13229380757c2551e4d1301b09f17c16/transformed/media3-database-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-database:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/13229380757c2551e4d1301b09f17c16/transformed/media3-database-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-common:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9a7615c41dacbbed4bb17d4f0eddb01f/transformed/media3-common-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-common:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9a7615c41dacbbed4bb17d4f0eddb01f/transformed/media3-common-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-exoplayer:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/de2c5cecc5753df77136f9489bfe44e3/transformed/media3-exoplayer-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-exoplayer:1.5.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/de2c5cecc5753df77136f9489bfe44e3/transformed/media3-exoplayer-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.media:media:1.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1e28fc17a6d9ccfdaedfcae93c081cde/transformed/media-1.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.media:media:1.7.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1e28fc17a6d9ccfdaedfcae93c081cde/transformed/media-1.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/d84d159dc1edc8fc6d6dca298b5d84bd/transformed/recyclerview-1.3.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/d84d159dc1edc8fc6d6dca298b5d84bd/transformed/recyclerview-1.3.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/84ef52d04dae3b85e9c85595dfd0d025/transformed/animation-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/84ef52d04dae3b85e9c85595dfd0d025/transformed/animation-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/ccb390fecc2eb92ae5afb6c7f8c790f4/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/ccb390fecc2eb92ae5afb6c7f8c790f4/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/db29789fd1c2712e0298b3b0fd9d3c50/transformed/animation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/db29789fd1c2712e0298b3b0fd9d3c50/transformed/animation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2d1366d0f3bc4b4fb2e999ee87189487/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2d1366d0f3bc4b4fb2e999ee87189487/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/3f0fe6d7584a85a647a3fd0ad943e81f/transformed/foundation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/3f0fe6d7584a85a647a3fd0ad943e81f/transformed/foundation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2e09f4c9eb56e1aaf44e2ac1e0a74551/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2e09f4c9eb56e1aaf44e2ac1e0a74551/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/e372678227903a82cd2133bfd928a9fa/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/e372678227903a82cd2133bfd928a9fa/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/4ca0385d17c4bfc9f69e4aba27b74307/transformed/ui-util-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/4ca0385d17c4bfc9f69e4aba27b74307/transformed/ui-util-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/53a6c13ea60434e628f39957efeb6a1a/transformed/ui-text-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/53a6c13ea60434e628f39957efeb6a1a/transformed/ui-text-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b19b81dae7ab2279a323fce3ebca31f/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b19b81dae7ab2279a323fce3ebca31f/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1ce654db0a05aba29784160b5b01bcce/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1ce654db0a05aba29784160b5b01bcce/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.customview:customview:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/bbdcc919304c4cb20cc3eff97a20eb0f/transformed/customview-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/bbdcc919304c4cb20cc3eff97a20eb0f/transformed/customview-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.autofill:autofill:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/4df186174b7721d91849d0ebb6647aad/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.autofill:autofill:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/4df186174b7721d91849d0ebb6647aad/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.graphics:graphics-path:1.0.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/bfeadc820a3883f19fda8de8736b2c0e/transformed/graphics-path-1.0.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.graphics:graphics-path:1.0.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/bfeadc820a3883f19fda8de8736b2c0e/transformed/graphics-path-1.0.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/fc9d1486256e0e05ac0cad8a4456e2bc/transformed/appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/fc9d1486256e0e05ac0cad8a4456e2bc/transformed/appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/b8031287c560083dd945e42469f68f14/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/b8031287c560083dd945e42469f68f14/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/ed914ce4b97a5b75370c3d4fc6b2304e/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/ed914ce4b97a5b75370c3d4fc6b2304e/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/542d653b84b1a86bf564c900fc082f97/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/542d653b84b1a86bf564c900fc082f97/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.core:core-ktx:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/92ef448cccbc6598e841b566025e8aca/transformed/core-ktx-1.13.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/92ef448cccbc6598e841b566025e8aca/transformed/core-ktx-1.13.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/374717310c09fd8f9a80a19ac79ca36d/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/374717310c09fd8f9a80a19ac79ca36d/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1f9110abb4b422412c1e9c0dafc3224b/transformed/lifecycle-runtime-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1f9110abb4b422412c1e9c0dafc3224b/transformed/lifecycle-runtime-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/11094416d6a600947704e242f038e235/transformed/lifecycle-livedata-core-2.8.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/11094416d6a600947704e242f038e235/transformed/lifecycle-livedata-core-2.8.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/48146946131bab3ad081f8007937be21/transformed/lifecycle-runtime-ktx-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/48146946131bab3ad081f8007937be21/transformed/lifecycle-runtime-ktx-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/a26f38493a310582b220890ece4f535a/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/a26f38493a310582b220890ece4f535a/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/33086340372a4fe5204d3c8b4c29a9c4/transformed/lifecycle-viewmodel-savedstate-2.8.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/33086340372a4fe5204d3c8b4c29a9c4/transformed/lifecycle-viewmodel-savedstate-2.8.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1484cfc5e14c8107bb2f38be29f6229c/transformed/lifecycle-viewmodel-ktx-2.8.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/1484cfc5e14c8107bb2f38be29f6229c/transformed/lifecycle-viewmodel-ktx-2.8.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/254b0e89250002e8d4bbd01775c11f56/transformed/lifecycle-runtime-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/254b0e89250002e8d4bbd01775c11f56/transformed/lifecycle-runtime-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9a6c11779bddb03fba382af65035f39a/transformed/lifecycle-viewmodel-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose-android:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9a6c11779bddb03fba382af65035f39a/transformed/lifecycle-viewmodel-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/0aff42c2426a6ea73513f784cca38edc/transformed/accompanist-drawablepainter-0.32.0/AndroidManifest.xml:21:5-44
+MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/0aff42c2426a6ea73513f784cca38edc/transformed/accompanist-drawablepainter-0.32.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/bc1a03d682021e5a24a2c0a2b4349cb3/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/bc1a03d682021e5a24a2c0a2b4349cb3/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/a74de55f100472857119d4f8f6828ad4/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/a74de55f100472857119d4f8f6828ad4/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/fdf6da71fb638bbc48c98eaeac56c1f6/transformed/ui-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/fdf6da71fb638bbc48c98eaeac56c1f6/transformed/ui-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.9.3] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/fcd20009b87b90c9daaebb7dae225f9e/transformed/activity-ktx-1.9.3/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.9.3] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/fcd20009b87b90c9daaebb7dae225f9e/transformed/activity-ktx-1.9.3/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.9.3] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/dbc52e5cea50127967e642875df467c8/transformed/activity-compose-1.9.3/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.9.3] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/dbc52e5cea50127967e642875df467c8/transformed/activity-compose-1.9.3/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/e73b1acf377c845c4b24fe91a6900dce/transformed/runtime-saveable-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/e73b1acf377c845c4b24fe91a6900dce/transformed/runtime-saveable-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/dfe986b70984ae5dfd162439877f0494/transformed/runtime-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.7.6] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/dfe986b70984ae5dfd162439877f0494/transformed/runtime-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2b40f471cf25c7af487a14d76a545ab8/transformed/annotation-experimental-1.4.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2b40f471cf25c7af487a14d76a545ab8/transformed/annotation-experimental-1.4.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:21:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/6a69d09509c79735ad13c7626c7063bc/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/6a69d09509c79735ad13c7626c7063bc/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.tracing:tracing:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/3bbfb337b3c8692e426181d15d1d840c/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.tracing:tracing:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/3bbfb337b3c8692e426181d15d1d840c/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.exifinterface:exifinterface:1.3.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/c4831b9fef2605c2fbde2cb74ffdabab/transformed/exifinterface-1.3.7/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.exifinterface:exifinterface:1.3.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/c4831b9fef2605c2fbde2cb74ffdabab/transformed/exifinterface-1.3.7/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/574646e35d0a6548939849154c7b61fa/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/574646e35d0a6548939849154c7b61fa/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2986d2cdd18579d5579ac35c92a4f5de/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/2986d2cdd18579d5579ac35c92a4f5de/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/993ab39c2dd68ee6ec864b6b6cba2468/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/993ab39c2dd68ee6ec864b6b6cba2468/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+	android:targetSdkVersion
+		INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /home/rafliadipratama/MusicEuy-Android/app/src/main/AndroidManifest.xml
+provider#androidx.startup.InitializationProvider
+ADDED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/374717310c09fd8f9a80a19ac79ca36d/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/374717310c09fd8f9a80a19ac79ca36d/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/6a69d09509c79735ad13c7626c7063bc/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/6a69d09509c79735ad13c7626c7063bc/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+	tools:node
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:28:13-31
+	android:authorities
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:26:13-68
+	android:exported
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:27:13-37
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:25:13-67
+meta-data#androidx.emoji2.text.EmojiCompatInitializer
+ADDED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/9b65c6f54962a85891b666e10f24ca61/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:23:9-81
+permission#com.rafliadipratama.musiceuy.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
+uses-permission#com.rafliadipratama.musiceuy.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.13.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/01d5721c9db3089b3acb8757b9c52aa5/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
+meta-data#androidx.lifecycle.ProcessLifecycleInitializer
+ADDED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/374717310c09fd8f9a80a19ac79ca36d/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/374717310c09fd8f9a80a19ac79ca36d/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/374717310c09fd8f9a80a19ac79ca36d/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:30:17-78
+meta-data#androidx.profileinstaller.ProfileInstallerInitializer
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:30:17-85
+receiver#androidx.profileinstaller.ProfileInstallReceiver
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:34:9-52:20
+	android:enabled
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:37:13-35
+	android:exported
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:38:13-36
+	android:permission
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:39:13-57
+	android:directBootAware
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:36:13-44
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:35:13-76
+intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:40:13-42:29
+action#androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:17-91
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:25-88
+intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:43:13-45:29
+action#androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:17-85
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:25-82
+intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:46:13-48:29
+action#androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:17-88
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:25-85
+intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:49:13-51:29
+action#androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:17-95
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/rafliadipratama/.gradle/caches/9.3.1/transforms/78da210f1db559e2fe233114d27cc67b/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:25-92
