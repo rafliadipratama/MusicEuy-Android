@@ -129,14 +129,10 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    val homeFilterPills = remember(uiState.favoriteArtists, uiState.mostPlayedTracks, uiState.likedTracks) {
-        val userTopSongTitles = (uiState.mostPlayedTracks.map { it.title } + uiState.likedTracks.map { it.title })
-            .filter { it.isNotBlank() }
-            .distinct()
-            .take(3)
-        val userFavs = uiState.favoriteArtists.take(3)
-        val defaultPills = listOf("Pop", "Santai", "Fokus", "Indie")
-        (listOf("Semua") + userTopSongTitles + userFavs + defaultPills).distinct()
+    val homeFilterPills = remember(uiState.favoriteArtists) {
+        val userFavs = uiState.favoriteArtists.take(4)
+        val defaultPills = listOf("Pop Indonesia", "Indie", "Santai & Chill", "Fokus / Belajar", "Rock", "Dangdut", "Workout")
+        (listOf("Semua") + userFavs + defaultPills).distinct()
     }
 
     val officialCharts = remember {
