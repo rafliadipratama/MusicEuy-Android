@@ -1,8 +1,10 @@
 package com.rafliadipratama.musiceuy.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,17 +26,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Leaderboard
-import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Nightlife
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
@@ -63,12 +71,12 @@ import androidx.compose.ui.platform.LocalContext
 import com.rafliadipratama.musiceuy.recognition.RecognitionState
 import com.rafliadipratama.musiceuy.recognition.ShazamRecognitionService
 import kotlinx.coroutines.launch
-import com.rafliadipratama.musiceuy.ui.components.AccountSyncBottomSheet
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -79,6 +87,8 @@ import coil.compose.AsyncImage
 import com.rafliadipratama.musiceuy.R
 import com.rafliadipratama.musiceuy.data.model.Album
 import com.rafliadipratama.musiceuy.data.model.Artist
+import com.rafliadipratama.musiceuy.data.model.Track
+import com.rafliadipratama.musiceuy.ui.components.PlayingIndicator
 import com.rafliadipratama.musiceuy.ui.components.SmoothCornerShape
 import com.rafliadipratama.musiceuy.ui.components.TrackItem
 import com.rafliadipratama.musiceuy.ui.components.press3D
@@ -100,6 +110,13 @@ private data class OfficialChart(
     val gradientColors: List<Color>
 )
 
+private data class TopCategory(
+    val title: String,
+    val filterPill: String,
+    val icon: ImageVector,
+    val gradient: List<Color>
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -113,14 +130,26 @@ fun HomeScreen(
 
     val officialCharts = remember {
         listOf(
-            OfficialChart("Top 50 Indonesia", "Charts Resmi • YouTube Music", "VLPL4fGSI1pDJn5QPpj0R4vVgRWk8sSq549G", listOf(Color(0xFF007991), Color(0xFF78FFD6))),
-            OfficialChart("Top 50 Global", "Charts Global • YouTube Music", "VLPLOHoVaTp8R7dqEEhhaOG7yfDoj_y2BrZ4", listOf(Color(0xFF8A2387), Color(0xFFE94057))),
-            OfficialChart("Viral Hits Indonesia", "Trending Viral • YouTube Music", "VLOLAK5uy_n7Ig_LAUbKE6_ZeQ1pwHmJcEhwX7BekBo", listOf(Color(0xFF11998E), Color(0xFF38EF7D))),
-            OfficialChart("Rilisan Baru 2026", "Rilis Terbaru • YouTube Music", "VLPL4fGSI1pDJn4lW6MJA2q37CfnraqAizqE", listOf(Color(0xFFFF416C), Color(0xFFFF4B2B)))
+            OfficialChart("Top 50 Indonesia", "Charts Resmi Indonesia", "VLPL4fGSI1pDJn5QPpj0R4vVgRWk8sSq549G", listOf(Color(0xFF007991), Color(0xFF78FFD6))),
+            OfficialChart("Top 50 Global", "Charts Global Terpopuler", "VLPLOHoVaTp8R7dqEEhhaOG7yfDoj_y2BrZ4", listOf(Color(0xFF8A2387), Color(0xFFE94057))),
+            OfficialChart("Viral Hits Indonesia", "Trending Viral Indonesia", "VLOLAK5uy_n7Ig_LAUbKE6_ZeQ1pwHmJcEhwX7BekBo", listOf(Color(0xFF11998E), Color(0xFF38EF7D))),
+            OfficialChart("Rilisan Baru 2026", "Rilisan Musik Terbaru", "VLPL4fGSI1pDJn4lW6MJA2q37CfnraqAizqE", listOf(Color(0xFFFF416C), Color(0xFFFF4B2B)))
         )
     }
 
-    var isAccountSyncVisible by remember { mutableStateOf(false) }
+    val topCategories = remember {
+        listOf(
+            TopCategory("Santai & Chill", "Santai & Chill", Icons.Default.SelfImprovement, listOf(Color(0xFF134E5E), Color(0xFF71B280))),
+            TopCategory("Fokus & Belajar", "Fokus / Belajar", Icons.Default.School, listOf(Color(0xFF1E3C72), Color(0xFF2A5298))),
+            TopCategory("Workout & Energi", "Workout", Icons.Default.FitnessCenter, listOf(Color(0xFFFF416C), Color(0xFFFF4B2B))),
+            TopCategory("Pesta & Dance", "Pesta", Icons.Default.Celebration, listOf(Color(0xFF8A2387), Color(0xFFE94057))),
+            TopCategory("Pop Indonesia", "Pop Indonesia", Icons.Default.Headphones, listOf(Color(0xFF007991), Color(0xFF78FFD6))),
+            TopCategory("Indie Vibe", "Indie", Icons.Default.Nightlife, listOf(Color(0xFF4A00E0), Color(0xFF8E2DE2))),
+            TopCategory("Rock Alternatif", "Rock", Icons.Default.Whatshot, listOf(Color(0xFFE65C00), Color(0xFFF9D423))),
+            TopCategory("Dangdut Koplo", "Dangdut", Icons.Default.Celebration, listOf(Color(0xFFD31027), Color(0xFFEA384D)))
+        )
+    }
+
     var isShazamDialogVisible by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -158,71 +187,22 @@ fun HomeScreen(
                     )
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Shazam In-App Music Recognition Button (Official Icon)
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(SurfaceContainerHigh)
+                        .pressBounce(pressedScale = 0.90f)
+                        .clickable { isShazamDialogVisible = true },
+                    contentAlignment = Alignment.Center
                 ) {
-                    // 1. Shazam In-App Music Recognition Button
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(SurfaceContainerHigh)
-                            .clickable { isShazamDialogVisible = true },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Mic,
-                            contentDescription = "Kenali Lagu",
-                            tint = Color(0xFF00C9FF),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    // 2. Apple Style Account & Sync Badge
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50.dp))
-                            .background(SurfaceContainerHigh)
-                            .clickable { isAccountSyncVisible = true }
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Sync,
-                            contentDescription = "Sync Akun",
-                            tint = BrandGreen,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Akun",
-                            color = TextPrimary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    // 3. Dedicated User Profile Avatar Button (Musicfy Style)
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(BrandGreen, Color(0xFF00C9FF))
-                                )
-                            )
-                            .clickable { viewModel.openProfile() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = uiState.userProfile.name.take(1).uppercase(),
-                            color = Color.Black,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Black
-                        )
-                    }
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_shazam),
+                        contentDescription = "Kenali Lagu",
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
@@ -450,23 +430,7 @@ fun HomeScreen(
                             }
                         }
                     } else {
-                        // ==================== ONLINE YOUTUBE MUSIC LAYOUT ====================
-                        // Hero Carousel Editorial Banner (Musicfy Style)
-                        item {
-                            HeroCarouselCard(
-                                title = "Top Hits 2026 Lossless",
-                                subtitle = "Koleksi Terpopuler Audio Fidelitas Tinggi",
-                                gradient = listOf(Color(0xFF8A2387), Color(0xFFE94057), Color(0xFFF27121)),
-                                onPlayClick = {
-                                    if (officialCharts.isNotEmpty()) {
-                                        val chart = officialCharts[0]
-                                        viewModel.openOfficialChart(chart.title, chart.browseId, chart.subtitle)
-                                    }
-                                }
-                            )
-                            Spacer(modifier = Modifier.height(14.dp))
-                        }
-
+                        // ==================== ONLINE YOUTUBE MUSIC & MUSICFY STYLE LAYOUT ====================
                         // 0. Tangga Lagu & Charts Resmi
                         item {
                             SectionHeader(title = stringResource(id = R.string.home_top_50), icon = Icons.Default.Leaderboard)
@@ -532,49 +496,86 @@ fun HomeScreen(
                             }
                             Spacer(modifier = Modifier.height(18.dp))
                         }
+
+                        // 1. Kategori Teratas (YouTube Music Style)
+                        item {
+                            SectionHeader(title = "Kategori Teratas", icon = Icons.Default.Category)
+                            LazyRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(topCategories) { category ->
+                                    val isSelected = uiState.selectedHomeFilter == category.filterPill
+                                    Box(
+                                        modifier = Modifier
+                                            .size(width = 145.dp, height = 70.dp)
+                                            .clip(SmoothCornerShape(16.dp))
+                                            .background(Brush.linearGradient(category.gradient))
+                                            .border(
+                                                width = if (isSelected) 2.dp else 0.dp,
+                                                color = if (isSelected) BrandGreenBright else Color.Transparent,
+                                                shape = SmoothCornerShape(16.dp)
+                                            )
+                                            .press3D(maxTilt = 6f, pressedScale = 0.95f)
+                                            .clickable {
+                                                viewModel.selectHomeFilter(if (isSelected) "Semua" else category.filterPill)
+                                            }
+                                            .padding(horizontal = 14.dp, vertical = 12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxSize(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = category.title,
+                                                color = Color.White,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Icon(
+                                                imageVector = category.icon,
+                                                contentDescription = null,
+                                                tint = Color.White.copy(alpha = 0.9f),
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(18.dp))
+                        }
                     }
 
-                    // 1. Putar Cepat / Favoritmu (Jika ada history dengar, aktif online maupun offline)
+                    // 2. Putar Cepat Favoritmu (Swipe ke kiri 4-lagu per kolom style Musicfy & YouTube Music)
                     if (uiState.mostPlayedTracks.isNotEmpty()) {
                         item {
                             SectionHeader(title = "Putar Cepat Favoritmu", icon = Icons.AutoMirrored.Filled.TrendingUp)
-                        }
-
-                        val quickPicks = uiState.mostPlayedTracks.take(4)
-                        items(quickPicks, key = { "quick_${it.id}" }) { track ->
-                            val isLiked = uiState.likedTrackIds.contains(track.id)
-                            val activeTrack = track.copy(isLiked = isLiked)
-                            val isActive = uiState.currentTrack?.id == track.id
-                            TrackItem(
-                                track = activeTrack,
+                            Spacer(modifier = Modifier.height(6.dp))
+                            HorizontalSongColumns(
+                                tracks = uiState.mostPlayedTracks.take(16),
+                                currentTrackId = uiState.currentTrack?.id,
                                 isPlaying = uiState.isPlaying,
-                                isActive = isActive,
-                                onClick = {
-                                    viewModel.playTrack(activeTrack, uiState.mostPlayedTracks)
+                                onTrackClick = { track, allTracks ->
+                                    viewModel.playTrack(track, allTracks)
                                 },
-                                onLongClick = {
-                                    viewModel.showTrackContextMenu(activeTrack)
-                                },
-                                onArtistClick = { artist ->
-                                    viewModel.openArtistDetail(artist)
-                                },
-                                onAddToPlaylistClick = {
-                                    viewModel.showAddToPlaylist(activeTrack)
-                                },
-                                onToggleLikeClick = {
-                                    viewModel.toggleLike(activeTrack)
+                                onTrackLongClick = { track ->
+                                    viewModel.showTrackContextMenu(track)
                                 }
                             )
-                        }
-
-                        item {
                             Spacer(modifier = Modifier.height(18.dp))
                         }
                     }
 
                     // Online-Only Sections
                     if (uiState.isOnline) {
-                        // 2. Artis Populer Untukmu (Carousel Avatar Lingkaran Musisi Top)
+                        // 3. Artis Populer Untukmu (Carousel Avatar Lingkaran Musisi Top)
                         if (uiState.popularArtists.isNotEmpty()) {
                             item {
                                 SectionHeader(title = stringResource(id = R.string.home_popular_artists), icon = Icons.Default.Person)
@@ -595,7 +596,7 @@ fun HomeScreen(
                             }
                         }
 
-                        // 3. Album & Single Rilisan Terbaru (Carousel Cover Persegi)
+                        // 4. Album & Single Rilisan Terbaru (Carousel Cover Persegi)
                         if (uiState.newReleases.isNotEmpty()) {
                             item {
                                 SectionHeader(title = stringResource(id = R.string.home_albums_singles), icon = Icons.Default.Album)
@@ -616,48 +617,28 @@ fun HomeScreen(
                             }
                         }
 
-                        // 4. Top Trending di Indonesia (Lagu-lagu Hits Terpopuler)
+                        // 5. Top Trending di Indonesia (Swipe ke kiri 4-lagu per kolom style Musicfy & YouTube Music)
                         if (uiState.trendingTracks.isNotEmpty()) {
                             item {
                                 SectionHeader(title = "Top Trending di Indonesia", icon = Icons.Default.Whatshot)
-                            }
-
-                            items(uiState.trendingTracks, key = { it.id }) { track ->
-                                val isLiked = uiState.likedTrackIds.contains(track.id)
-                                val activeTrack = track.copy(isLiked = isLiked)
-                                val isActive = uiState.currentTrack?.id == track.id
-                                TrackItem(
-                                    track = activeTrack,
+                                Spacer(modifier = Modifier.height(6.dp))
+                                HorizontalSongColumns(
+                                    tracks = uiState.trendingTracks,
+                                    currentTrackId = uiState.currentTrack?.id,
                                     isPlaying = uiState.isPlaying,
-                                    isActive = isActive,
-                                    onClick = {
-                                        viewModel.playTrack(activeTrack, uiState.trendingTracks)
+                                    onTrackClick = { track, allTracks ->
+                                        viewModel.playTrack(track, allTracks)
                                     },
-                                    onLongClick = {
-                                        viewModel.showTrackContextMenu(activeTrack)
-                                    },
-                                    onArtistClick = { artist ->
-                                        viewModel.openArtistDetail(artist)
-                                    },
-                                    onAddToPlaylistClick = {
-                                        viewModel.showAddToPlaylist(activeTrack)
-                                    },
-                                    onToggleLikeClick = {
-                                        viewModel.toggleLike(activeTrack)
+                                    onTrackLongClick = { track ->
+                                        viewModel.showTrackContextMenu(track)
                                     }
                                 )
+                                Spacer(modifier = Modifier.height(18.dp))
                             }
                         }
                     }
                 }
             }
-        }
-
-        if (isAccountSyncVisible) {
-            AccountSyncBottomSheet(
-                viewModel = viewModel,
-                onDismiss = { isAccountSyncVisible = false }
-            )
         }
 
         if (isShazamDialogVisible) {
@@ -668,8 +649,13 @@ fun HomeScreen(
                 },
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Mic, contentDescription = null, tint = Color(0xFF00C9FF))
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_shazam),
+                            contentDescription = null,
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
                         Text("Pengenal Musik Shazam", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     }
                 },
@@ -913,104 +899,135 @@ private fun AlbumSearchCard(
 }
 
 @Composable
-private fun HeroCarouselCard(
-    title: String,
-    subtitle: String,
-    gradient: List<Color>,
-    onPlayClick: () -> Unit
+private fun HorizontalSongColumns(
+    tracks: List<Track>,
+    currentTrackId: String?,
+    isPlaying: Boolean,
+    onTrackClick: (Track, List<Track>) -> Unit,
+    onTrackLongClick: (Track) -> Unit
 ) {
-    Box(
+    val chunked = remember(tracks) { tracks.chunked(4) }
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+    ) {
+        items(chunked) { columnTracks ->
+            Column(
+                modifier = Modifier.width(310.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                columnTracks.forEach { track ->
+                    val isActive = currentTrackId == track.id
+                    CompactTrackItem(
+                        track = track,
+                        isPlaying = isPlaying,
+                        isActive = isActive,
+                        onClick = { onTrackClick(track, tracks) },
+                        onLongClick = { onTrackLongClick(track) },
+                        onMoreClick = { onTrackLongClick(track) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CompactTrackItem(
+    track: Track,
+    isPlaying: Boolean,
+    isActive: Boolean,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    onMoreClick: (() -> Unit)? = null
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(170.dp)
-            .clip(SmoothCornerShape(20.dp))
-            .background(Brush.linearGradient(gradient))
-            .press3D(maxTilt = 5f, pressedScale = 0.97f)
-            .clickable { onPlayClick() }
-            .padding(18.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isActive) SurfaceContainerHigh else SurfaceContainer.copy(alpha = 0.45f))
+            .pressBounce(pressedScale = 0.98f)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+            .padding(vertical = 6.dp, horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
+        // Thumbnail
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(SurfaceContainer)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            AsyncImage(
+                model = track.coverUrl,
+                contentDescription = track.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            if (isActive) {
                 Box(
                     modifier = Modifier
-                        .clip(SmoothCornerShape(6.dp))
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "FEATURED SPOTLIGHT",
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(SmoothCornerShape(6.dp))
-                        .background(Color.White.copy(alpha = 0.2f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "Hi-Res FLAC",
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = subtitle,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontSize = 12.sp,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .pressBounce(pressedScale = 0.88f)
-                        .clickable { onPlayClick() },
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.55f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Putar",
-                        tint = Color.Black,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    if (isPlaying) {
+                        PlayingIndicator(
+                            color = BrandGreenBright,
+                            isPlaying = true,
+                            bars = 3,
+                            barWidth = 2.dp,
+                            maxHeight = 14.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = BrandGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Title and Artist
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = track.title,
+                color = if (isActive) BrandGreen else TextPrimary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "${track.artist.name} • ${track.durationFormatted}",
+                color = TextSecondary,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        IconButton(
+            onClick = { onMoreClick?.invoke() ?: onLongClick?.invoke() },
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "Opsi",
+                tint = TextMuted,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }

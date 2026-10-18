@@ -162,4 +162,10 @@
     <string name="offline_track_requires_internet">Lagu ini memerlukan koneksi internet. Hubungkan ke jaringan atau putar lagu terunduh.</string>
     <string name="offline_back_online">Terhubung kembali online</string>
     <string name="offline_songs_count">%d lagu offline</string>
+
+    <!-- Notification & Media3 Playback -->
+    <string name="music_player">Pemutar Musik</string>
+    <string name="music_player_notification_desc">Notifikasi pemutaran audio latar belakang MusicEuy</string>
+    <string name="playing_status">Sedang Memutar</string>
+    <string name="paused_status">Dijeda</string>
 </resources>

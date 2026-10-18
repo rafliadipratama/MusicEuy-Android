@@ -94,7 +94,7 @@ data class PlayerUiState(
     val isStorageDialogVisible: Boolean = false,
     val audioCacheSizeBytes: Long = 0L,
     val downloadedSizeBytes: Long = 0L,
-    val isOnboardingCompleted: Boolean = true,
+    val isOnboardingCompleted: Boolean = false,
     val isCalibratingOnboarding: Boolean = false,
     val isRefreshingHome: Boolean = false,
     val notInterestedTrackIds: Set<String> = emptySet(),
@@ -124,7 +124,11 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     private val lrcClient = LrcLibClient(cacheDir = application.filesDir)
     private var sleepTimerJob: Job? = null
 
-    private val _uiState = MutableStateFlow(PlayerUiState())
+    private val _uiState = MutableStateFlow(
+        PlayerUiState(
+            isOnboardingCompleted = historyManager.isOnboardingCompleted()
+        )
+    )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     private var controllerFuture: ListenableFuture<MediaController>? = null

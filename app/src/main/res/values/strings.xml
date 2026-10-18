@@ -162,4 +162,10 @@
     <string name="offline_track_requires_internet">This track requires an internet connection. Connect to internet or play downloaded music.</string>
     <string name="offline_back_online">Connected back online</string>
     <string name="offline_songs_count">%d offline songs</string>
+
+    <!-- Notification & Media3 Playback -->
+    <string name="music_player">Music Player</string>
+    <string name="music_player_notification_desc">MusicEuy background playback notification</string>
+    <string name="playing_status">Playing</string>
+    <string name="paused_status">Paused</string>
 </resources>

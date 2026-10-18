@@ -96,9 +96,7 @@ import com.rafliadipratama.musiceuy.ui.viewmodel.MusicPlayerViewModel
 
 private enum class OnboardingStep {
     WELCOME,
-    CONNECT_ACCOUNT,
-    SELECT_ARTISTS,
-    PROFILE_SETUP
+    SELECT_ARTISTS
 }
 
 private data class OnboardingArtistItem(
@@ -117,7 +115,6 @@ fun OnboardingScreen(
     val uiState by viewModel.uiState.collectAsState()
     var currentStep by remember { mutableStateOf(OnboardingStep.WELCOME) }
     val selectedArtists = remember { mutableStateListOf<String>() }
-    var usernameInput by remember { mutableStateOf("Sobat MusicEuy") }
 
     // Curated Verified Artists (500x500 CDN)
     val curatedArtists = remember {
@@ -166,15 +163,8 @@ fun OnboardingScreen(
             when (step) {
                 OnboardingStep.WELCOME -> {
                     AppleWelcomeContent(
-                        onStart = { currentStep = OnboardingStep.CONNECT_ACCOUNT },
+                        onStart = { currentStep = OnboardingStep.SELECT_ARTISTS },
                         onSkip = onSkip
-                    )
-                }
-                OnboardingStep.CONNECT_ACCOUNT -> {
-                    AppleConnectAccountContent(
-                        viewModel = viewModel,
-                        onNext = { currentStep = OnboardingStep.SELECT_ARTISTS },
-                        onBack = { currentStep = OnboardingStep.WELCOME }
                     )
                 }
                 OnboardingStep.SELECT_ARTISTS -> {
@@ -188,20 +178,10 @@ fun OnboardingScreen(
                                 selectedArtists.add(name)
                             }
                         },
-                        onNext = { currentStep = OnboardingStep.PROFILE_SETUP },
-                        onBack = { currentStep = OnboardingStep.CONNECT_ACCOUNT }
-                    )
-                }
-                OnboardingStep.PROFILE_SETUP -> {
-                    AppleProfileSetupContent(
-                        username = usernameInput,
-                        onUsernameChange = { usernameInput = it },
-                        selectedArtistsCount = selectedArtists.size,
-                        isCalibrating = uiState.isCalibratingOnboarding,
-                        onComplete = {
+                        onNext = {
                             onComplete(selectedArtists.toList())
                         },
-                        onBack = { currentStep = OnboardingStep.SELECT_ARTISTS }
+                        onBack = { currentStep = OnboardingStep.WELCOME }
                     )
                 }
             }
@@ -638,7 +618,7 @@ private fun AppleSelectArtistsContent(
                 .height(54.dp)
         ) {
             Text(
-                text = if (canProceed) "Lanjutkan" else "Pilih ${3 - selectedArtists.size} Artis Lagi",
+                text = if (canProceed) "Selesai & Masuk Beranda" else "Pilih ${3 - selectedArtists.size} Artis Lagi",
                 color = if (canProceed) Color(0xFF0C0E11) else TextMuted,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold

@@ -181,11 +181,37 @@ class MusicService : MediaLibraryService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        // Setup Dedicated Playback Notification Channel & Musicfy-Style Notification Provider
+        val channel = android.app.NotificationChannel(
+            CHANNEL_ID,
+            getString(com.rafliadipratama.musiceuy.R.string.music_player),
+            android.app.NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = getString(com.rafliadipratama.musiceuy.R.string.music_player_notification_desc)
+            setShowBadge(false)
+        }
+        val notificationManager = getSystemService(android.app.NotificationManager::class.java)
+        notificationManager?.createNotificationChannel(channel)
+
+        setMediaNotificationProvider(
+            MusicEuyNotificationProvider(
+                this,
+                { NOTIFICATION_ID },
+                CHANNEL_ID,
+                com.rafliadipratama.musiceuy.R.string.music_player
+            ).setSmallIcon(com.rafliadipratama.musiceuy.R.drawable.ic_musiceuy_notification)
+        )
+
         player?.let { exo ->
             mediaLibrarySession = MediaLibrarySession.Builder(this, exo, libraryCallback)
                 .setSessionActivity(pendingIntent)
                 .build()
         }
+    }
+
+    companion object {
+        const val NOTIFICATION_ID = 1001
+        const val CHANNEL_ID = "musiceuy_playback_channel"
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {

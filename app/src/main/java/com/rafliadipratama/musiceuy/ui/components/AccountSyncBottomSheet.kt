@@ -142,7 +142,7 @@ fun AccountSyncBottomSheet(
                         title = "YouTube Music / Google Account",
                         subtitle = "Sinkronkan riwayat putar, likes, dan playlist akun Google",
                         gradient = listOf(Color(0xFFFF0000), Color(0xFF990000)),
-                        iconText = "YT",
+                        iconResId = com.rafliadipratama.musiceuy.R.drawable.ic_youtube_music,
                         onClick = { currentTab = SyncViewTab.YOUTUBE_WEBVIEW }
                     )
 
@@ -153,7 +153,7 @@ fun AccountSyncBottomSheet(
                         title = "Spotify Playlist Importer",
                         subtitle = "Impor playlist publik atau Liked Songs Spotify ke MusicEuy",
                         gradient = listOf(Color(0xFF1DB954), Color(0xFF137535)),
-                        iconText = "SP",
+                        iconResId = com.rafliadipratama.musiceuy.R.drawable.ic_spotify,
                         onClick = { currentTab = SyncViewTab.SPOTIFY_INPUT }
                     )
 
@@ -164,7 +164,7 @@ fun AccountSyncBottomSheet(
                         title = "Apple Music Importer",
                         subtitle = "Impor playlist Apple Music dan tangga lagu kurasi Apple",
                         gradient = listOf(Color(0xFFFC3C44), Color(0xFF9E1B21)),
-                        iconText = "AP",
+                        iconResId = com.rafliadipratama.musiceuy.R.drawable.ic_apple_music,
                         onClick = { currentTab = SyncViewTab.APPLE_INPUT }
                     )
                 }
@@ -214,7 +214,7 @@ private fun ProviderCard(
     title: String,
     subtitle: String,
     gradient: List<Color>,
-    iconText: String,
+    @androidx.annotation.DrawableRes iconResId: Int,
     onClick: () -> Unit
 ) {
     Card(
@@ -235,11 +235,11 @@ private fun ProviderCard(
                     .background(Brush.linearGradient(gradient)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = iconText,
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Black
+                androidx.compose.material3.Icon(
+                    painter = androidx.compose.ui.res.painterResource(id = iconResId),
+                    contentDescription = title,
+                    tint = Color.White,
+                    modifier = Modifier.size(26.dp)
                 )
             }
 

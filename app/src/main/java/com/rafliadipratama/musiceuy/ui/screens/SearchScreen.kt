@@ -706,7 +706,7 @@ private fun TopResultCard(
                         .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = track.sourceLabel ?: "Lagu Resmi",
+                        text = "Hasil Teratas",
                         color = BrandGreenBright,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold

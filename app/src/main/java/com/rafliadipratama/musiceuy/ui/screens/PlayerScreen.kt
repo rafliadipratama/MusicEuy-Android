@@ -148,7 +148,6 @@ fun PlayerScreen(
                     )
                 )
             )
-            .statusBarsPadding()
             .navigationBarsPadding(),
         contentAlignment = Alignment.Center
     ) {
@@ -283,8 +282,9 @@ private fun PortraitPlayerLayout(
         modifier = Modifier
             .fillMaxSize()
             .widthIn(max = if (isTablet) 560.dp else 1000.dp)
-            .padding(horizontal = 22.dp, vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 24.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
         // --- 1. Clean Top Bar ---
         Row(
@@ -364,8 +364,6 @@ private fun PortraitPlayerLayout(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
         // --- 2. Center Area: Large Artwork or Realtime Lyrics (Apple Music Style) ---
         Box(
             modifier = Modifier
@@ -412,56 +410,56 @@ private fun PortraitPlayerLayout(
             }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        // --- 3. Bottom Controls Area (Track Info, Seekbar, Controls, Utilities) ---
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            TrackInfoRow(
+                track = track,
+                uiState = uiState,
+                onOpenArtist = onOpenArtist,
+                onToggleLike = onToggleLike,
+                onDownload = onDownload
+            )
 
-        // --- 3. Track Info Row (Title, Artist, Like, Download) ---
-        TrackInfoRow(
-            track = track,
-            uiState = uiState,
-            onOpenArtist = onOpenArtist,
-            onToggleLike = onToggleLike,
-            onDownload = onDownload
-        )
+            Spacer(modifier = Modifier.height(10.dp))
 
-        Spacer(modifier = Modifier.height(12.dp))
+            PlaybackSeekbar(
+                currentMs = currentMs,
+                durationMs = durationMs,
+                isUserSeeking = isUserSeeking,
+                seekProgress = seekProgress,
+                onSeekChange = onSeekChange,
+                onSeekFinished = onSeekFinished
+            )
 
-        // --- 4. Progress Seekbar & Timers ---
-        PlaybackSeekbar(
-            currentMs = currentMs,
-            durationMs = durationMs,
-            isUserSeeking = isUserSeeking,
-            seekProgress = seekProgress,
-            onSeekChange = onSeekChange,
-            onSeekFinished = onSeekFinished
-        )
+            Spacer(modifier = Modifier.height(12.dp))
 
-        Spacer(modifier = Modifier.height(14.dp))
+            PrimaryControlsRow(
+                isPlaying = uiState.isPlaying,
+                isShuffle = uiState.isShuffle,
+                repeatMode = uiState.repeatMode,
+                onToggleShuffle = onToggleShuffle,
+                onPrevious = onPrevious,
+                onTogglePlayPause = onTogglePlayPause,
+                onNext = onNext,
+                onToggleRepeat = onToggleRepeat
+            )
 
-        // --- 5. Primary Controls (Shuffle, Prev, Play/Pause, Next, Repeat) ---
-        PrimaryControlsRow(
-            isPlaying = uiState.isPlaying,
-            isShuffle = uiState.isShuffle,
-            repeatMode = uiState.repeatMode,
-            onToggleShuffle = onToggleShuffle,
-            onPrevious = onPrevious,
-            onTogglePlayPause = onTogglePlayPause,
-            onNext = onNext,
-            onToggleRepeat = onToggleRepeat
-        )
+            Spacer(modifier = Modifier.height(14.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
+            BottomUtilityRow(
+                isLyricsVisible = uiState.isLyricsVisible,
+                isAutoplayEnabled = uiState.isAutoplayEnabled,
+                isQueueVisible = uiState.isQueueVisible,
+                onToggleLyrics = onToggleLyrics,
+                onToggleAutoplay = onToggleAutoplay,
+                onToggleQueue = onToggleQueue
+            )
 
-        // --- 6. Clean Bottom Utility Bar (Lyrics, Autoplay, Queue) ---
-        BottomUtilityRow(
-            isLyricsVisible = uiState.isLyricsVisible,
-            isAutoplayEnabled = uiState.isAutoplayEnabled,
-            isQueueVisible = uiState.isQueueVisible,
-            onToggleLyrics = onToggleLyrics,
-            onToggleAutoplay = onToggleAutoplay,
-            onToggleQueue = onToggleQueue
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
+        }
     }
 }
 
@@ -736,50 +734,6 @@ private fun TrackInfoRow(
                         tint = AccentEmerald,
                         modifier = Modifier.size(16.dp)
                     )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                val tierBadge = if (track.id.startsWith("mono_") || uiState.userProfile.audioQualityTier.contains("FLAC")) {
-                    "Hi-Res Lossless • FLAC"
-                } else if (track.audioUrl.contains("opus") || track.id.startsWith("yt:")) {
-                    "Lossless • Opus 320k"
-                } else {
-                    "AAC • 256kbps"
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(Color.White.copy(alpha = 0.12f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = tierBadge,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                if (uiState.userProfile.autoEqModel != "None") {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFF00C9FF).copy(alpha = 0.2f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "AutoEQ",
-                            color = Color(0xFF00C9FF),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
             }
         }
