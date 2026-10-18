@@ -79,7 +79,10 @@ import coil.compose.AsyncImage
 import com.rafliadipratama.musiceuy.R
 import com.rafliadipratama.musiceuy.data.model.Album
 import com.rafliadipratama.musiceuy.data.model.Artist
+import com.rafliadipratama.musiceuy.ui.components.SmoothCornerShape
 import com.rafliadipratama.musiceuy.ui.components.TrackItem
+import com.rafliadipratama.musiceuy.ui.components.press3D
+import com.rafliadipratama.musiceuy.ui.components.pressBounce
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreen
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreenBright
 import com.rafliadipratama.musiceuy.ui.theme.ObsidianBackground
@@ -234,8 +237,9 @@ fun HomeScreen(
                         val isSelected = uiState.selectedHomeFilter == pill
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(50.dp))
+                                .clip(SmoothCornerShape(20.dp))
                                 .background(if (isSelected) BrandGreen else SurfaceContainerHigh)
+                                .pressBounce(pressedScale = 0.92f)
                                 .clickable {
                                     viewModel.selectHomeFilter(pill)
                                 }
@@ -249,6 +253,7 @@ fun HomeScreen(
                             )
                         }
                     }
+
                 }
                 Spacer(modifier = Modifier.height(10.dp))
             }
@@ -475,8 +480,9 @@ fun HomeScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(width = 175.dp, height = 115.dp)
-                                            .clip(RoundedCornerShape(16.dp))
+                                            .clip(SmoothCornerShape(16.dp))
                                             .background(Brush.linearGradient(chart.gradientColors))
+                                            .press3D(maxTilt = 6f, pressedScale = 0.96f)
                                             .clickable { viewModel.openOfficialChart(chart.title, chart.browseId, chart.subtitle) }
                                             .padding(14.dp)
                                     ) {
@@ -508,7 +514,8 @@ fun HomeScreen(
                                                     .align(Alignment.End)
                                                     .size(32.dp)
                                                     .clip(CircleShape)
-                                                    .background(Color.Black.copy(alpha = 0.45f)),
+                                                    .background(Color.Black.copy(alpha = 0.45f))
+                                                    .pressBounce(pressedScale = 0.88f),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
@@ -521,6 +528,7 @@ fun HomeScreen(
                                         }
                                     }
                                 }
+
                             }
                             Spacer(modifier = Modifier.height(18.dp))
                         }
@@ -850,20 +858,20 @@ private fun AlbumSearchCard(
     album: Album,
     onClick: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceContainerHigh),
+    Box(
         modifier = Modifier
             .width(130.dp)
+            .clip(SmoothCornerShape(14.dp))
+            .background(SurfaceContainerHigh)
+            .pressBounce(pressedScale = 0.95f)
             .clickable { onClick() }
+            .padding(8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(8.dp)
-        ) {
+        Column {
             Box(
                 modifier = Modifier
                     .size(114.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(SmoothCornerShape(10.dp))
                     .background(SurfaceContainer),
                 contentAlignment = Alignment.Center
             ) {
@@ -911,102 +919,99 @@ private fun HeroCarouselCard(
     gradient: List<Color>,
     onPlayClick: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(20.dp),
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(170.dp)
-            .clickable { onPlayClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            .clip(SmoothCornerShape(20.dp))
+            .background(Brush.linearGradient(gradient))
+            .press3D(maxTilt = 5f, pressedScale = 0.97f)
+            .clickable { onPlayClick() }
+            .padding(18.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.linearGradient(gradient))
-                .padding(18.dp)
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier
+                        .clip(SmoothCornerShape(6.dp))
+                        .background(Color.Black.copy(alpha = 0.35f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.Black.copy(alpha = 0.35f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "FEATURED SPOTLIGHT",
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White.copy(alpha = 0.2f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "Hi-Res FLAC",
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    Text(
+                        text = "FEATURED SPOTLIGHT",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
+                Box(
+                    modifier = Modifier
+                        .clip(SmoothCornerShape(6.dp))
+                        .background(Color.White.copy(alpha = 0.2f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = title,
-                            color = Color.White,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = subtitle,
-                            color = Color.White.copy(alpha = 0.85f),
-                            fontSize = 12.sp,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    Text(
+                        text = "Hi-Res FLAC",
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = subtitle,
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 12.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                            .clickable { onPlayClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Putar",
-                            tint = Color.Black,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .pressBounce(pressedScale = 0.88f)
+                        .clickable { onPlayClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Putar",
+                        tint = Color.Black,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }
     }
 }
+

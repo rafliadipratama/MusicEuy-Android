@@ -75,72 +75,51 @@ class MainActivity : ComponentActivity() {
                 MusicEuyTheme {
                     var selectedTab by remember { mutableStateOf(NavigationTab.HOME) }
 
-                    BackHandler(enabled = uiState.isProfileVisible) {
-                        viewModel.closeProfile()
+                    // Back Handlers (Highest to Lowest Priority)
+                    BackHandler(enabled = uiState.isPlayerExpanded) {
+                        viewModel.collapsePlayer()
                     }
-
+                    BackHandler(enabled = uiState.isQueueVisible) {
+                        viewModel.dismissQueue()
+                    }
+                    BackHandler(enabled = uiState.isEqualizerSheetVisible) {
+                        viewModel.dismissEqualizer()
+                    }
+                    BackHandler(enabled = uiState.trackForContextMenu != null) {
+                        viewModel.dismissTrackContextMenu()
+                    }
+                    BackHandler(enabled = uiState.isAddToPlaylistSheetVisible) {
+                        viewModel.dismissAddToPlaylist()
+                    }
+                    BackHandler(enabled = uiState.isSleepTimerDialogVisible) {
+                        viewModel.hideSleepTimerDialog()
+                    }
                     BackHandler(enabled = uiState.isLanguageDialogVisible) {
                         viewModel.dismissLanguageDialog()
                     }
-
+                    BackHandler(enabled = uiState.isProfileVisible) {
+                        viewModel.closeProfile()
+                    }
                     BackHandler(enabled = uiState.isDownloadedScreenVisible) {
                         viewModel.closeDownloadedTracks()
                     }
-
-                BackHandler(enabled = !uiState.isDownloadedScreenVisible && uiState.selectedPlaylist != null) {
-                    viewModel.closePlaylist()
-                }
-
-                BackHandler(enabled = uiState.selectedPlaylist == null && uiState.selectedArtist != null) {
-                    viewModel.closeArtistDetail()
-                }
-
-                BackHandler(enabled = uiState.selectedPlaylist == null && uiState.selectedArtist == null && uiState.isAddToPlaylistSheetVisible) {
-                    viewModel.dismissAddToPlaylist()
-                }
-
-                BackHandler(enabled = uiState.isSleepTimerDialogVisible) {
-                    viewModel.hideSleepTimerDialog()
-                }
-
-                LaunchedEffect(uiState.downloadNotificationMessage) {
-                    uiState.downloadNotificationMessage?.let { msg ->
-                        Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
-                        viewModel.clearDownloadMessage()
+                    BackHandler(enabled = uiState.selectedPlaylist != null) {
+                        viewModel.closePlaylist()
                     }
-                }
+                    BackHandler(enabled = uiState.selectedArtist != null) {
+                        viewModel.closeArtistDetail()
+                    }
+                    BackHandler(enabled = !uiState.isOnboardingCompleted) {
+                        viewModel.skipOnboarding()
+                    }
 
-                BackHandler(enabled = uiState.trackForContextMenu != null) {
-                    viewModel.dismissTrackContextMenu()
-                }
+                    LaunchedEffect(uiState.downloadNotificationMessage) {
+                        uiState.downloadNotificationMessage?.let { msg ->
+                            Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                            viewModel.clearDownloadMessage()
+                        }
+                    }
 
-                BackHandler(enabled = uiState.isQueueVisible) {
-                    viewModel.dismissQueue()
-                }
-
-                BackHandler(enabled = uiState.isEqualizerSheetVisible) {
-                    viewModel.dismissEqualizer()
-                }
-
-                BackHandler(enabled = uiState.isPlayerExpanded) {
-                    viewModel.collapsePlayer()
-                }
-
-                BackHandler(enabled = !uiState.isPlayerExpanded && uiState.selectedArtist != null) {
-                    viewModel.closeArtistDetail()
-                }
-
-                BackHandler(enabled = !uiState.isPlayerExpanded && uiState.selectedPlaylist != null) {
-                    viewModel.closePlaylist()
-                }
-
-                BackHandler(enabled = !uiState.isPlayerExpanded && uiState.isDownloadedScreenVisible) {
-                    viewModel.closeDownloadedTracks()
-                }
-
-                BackHandler(enabled = !uiState.isOnboardingCompleted) {
-                    viewModel.skipOnboarding()
-                }
 
                 if (!uiState.isOnboardingCompleted) {
                     OnboardingScreen(

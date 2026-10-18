@@ -38,6 +38,7 @@ import coil.compose.AsyncImage
 import com.rafliadipratama.musiceuy.data.model.Artist
 import com.rafliadipratama.musiceuy.data.model.Track
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreen
+import com.rafliadipratama.musiceuy.ui.theme.BrandGreenBright
 import com.rafliadipratama.musiceuy.ui.theme.SurfaceContainer
 import com.rafliadipratama.musiceuy.ui.theme.SurfaceContainerHigh
 import com.rafliadipratama.musiceuy.ui.theme.TextMuted
@@ -71,7 +72,8 @@ fun TrackItem(
         Row(
             modifier = Modifier
                 .weight(1f)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(SmoothCornerShape(10.dp))
+                .pressBounce(pressedScale = 0.97f)
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = if (onLongClick != null) { { onLongClick(track) } } else null
@@ -83,7 +85,7 @@ fun TrackItem(
             Box(
                 modifier = Modifier
                     .size(52.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(SmoothCornerShape(10.dp))
             ) {
                 AsyncImage(
                     model = track.coverUrl,
@@ -96,15 +98,25 @@ fun TrackItem(
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .background(Color.Black.copy(alpha = 0.5f)),
+                            .background(Color.Black.copy(alpha = 0.55f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Default.Equalizer else Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            tint = BrandGreen,
-                            modifier = Modifier.size(26.dp)
-                        )
+                        if (isPlaying) {
+                            PlayingIndicator(
+                                color = BrandGreenBright,
+                                isPlaying = true,
+                                bars = 4,
+                                barWidth = 2.5.dp,
+                                maxHeight = 16.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = BrandGreen,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
             }

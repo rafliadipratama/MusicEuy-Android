@@ -55,22 +55,36 @@ class MonochromeLosslessPlugin(
             val result = mutableListOf<Track>()
             for (i in 0 until tracksArray.length()) {
                 val item = tracksArray.getJSONObject(i)
-                val id = item.optString("id")
+                val id = item.optString("id").ifBlank { item.optString("trackId") }
                 val title = item.optString("title")
-                val artist = item.optString("artist")
-                val album = item.optString("album")
-                val durationSec = item.optLong("durationMs", 0L) / 1000L
-                val coverUrl = item.optString("coverUrl")
+                
+                // Parse artists from artistNames array
+                val artistNamesArray = item.optJSONArray("artistNames")
+                val artistName = if (artistNamesArray != null && artistNamesArray.length() > 0) {
+                    val names = mutableListOf<String>()
+                    for (j in 0 until artistNamesArray.length()) {
+                        val n = artistNamesArray.optString(j)
+                        if (n.isNotBlank()) names.add(n)
+                    }
+                    names.joinToString(", ")
+                } else {
+                    item.optString("artist", "Unknown Artist")
+                }
+
+                val album = item.optString("album").ifBlank { item.optString("releaseTitle", "") }
+                val durationMs = item.optLong("duration", item.optLong("durationMs", 0L))
+                val durationSec = if (durationMs > 10_000) durationMs / 1000L else durationMs
+                val coverUrl = item.optString("artwork").ifBlank { item.optString("coverUrl") }
 
                 if (id.isNotBlank() && title.isNotBlank()) {
                     result.add(
                         Track(
                             id = "mono_$id",
                             title = title,
-                            artist = Artist(id = "mono_art_${artist.hashCode()}", name = artist),
-                            albumTitle = album,
+                            artist = Artist(id = "mono_art_${artistName.hashCode()}", name = artistName),
+                            albumTitle = album.takeIf { it.isNotBlank() },
                             durationSec = durationSec.toInt(),
-                            audioUrl = "https://tracks.monochrome.st/stream/$id.flac",
+                            audioUrl = "$baseUrl/track/$id",
                             coverUrl = coverUrl,
                             sourceLabel = "Monochrome Hi-Res FLAC"
                         )
@@ -104,7 +118,8 @@ class MonochromeLosslessPlugin(
                 val searchJson = JSONObject(searchBody)
                 val items = searchJson.optJSONArray("tracks") ?: return@withContext null
                 if (items.length() == 0) return@withContext null
-                items.getJSONObject(0).optString("id")
+                val firstObj = items.getJSONObject(0)
+                firstObj.optString("id").ifBlank { firstObj.optString("trackId") }
             }
 
             if (trackId.isBlank()) return@withContext null

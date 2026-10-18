@@ -69,7 +69,7 @@ fun MiniPlayer(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+            .clip(SmoothCornerShape(16.dp))
             .then(bgModifier)
     ) {
         Column {
@@ -86,26 +86,27 @@ fun MiniPlayer(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Tappable song info area that opens PlayerScreen
                 Row(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(SmoothCornerShape(10.dp))
+                        .pressBounce(pressedScale = 0.98f)
                         .clickable(onClick = onClick)
                         .padding(vertical = 2.dp, horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Artwork
+                    // Artwork with Apple superellipse
                     AsyncImage(
                         model = track.coverUrl,
                         contentDescription = track.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .size(46.dp)
+                            .clip(SmoothCornerShape(10.dp))
                     )
 
                     Spacer(modifier = Modifier.width(10.dp))
@@ -141,22 +142,26 @@ fun MiniPlayer(
                     }
                 }
 
-                // Dedicated Controls
+                // Dedicated Controls with tactile spring feedback
                 IconButton(
                     onClick = onQueueClick,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier
+                        .size(38.dp)
+                        .pressBounce(pressedScale = 0.85f)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                         contentDescription = "Antrean Musik",
                         tint = TextSecondary,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
                 IconButton(
                     onClick = onPlayPause,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier
+                        .size(42.dp)
+                        .pressBounce(pressedScale = 0.85f)
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -168,16 +173,19 @@ fun MiniPlayer(
 
                 IconButton(
                     onClick = onNext,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier
+                        .size(38.dp)
+                        .pressBounce(pressedScale = 0.85f)
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
                         contentDescription = "Next",
                         tint = TextSecondary,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
         }
     }
 }
+

@@ -29,20 +29,40 @@ Berkas APK resmi untuk aplikasi pemutar musik **MusicEuy Android**.
 
 ## Pembaruan di Versi 1.5.0 (Fondasi Arsitektur Musicfy & Apple Music)
 
-- **Desain & Layout Beranda Modern (Musicfy & Apple Music Style)**:
+- **Perbaikan Algoritma Pencarian & Pemutaran Instan**:
+  - **Direct Track Playback**: Memperbaiki bug di mana lagu hasil pencarian tidak bisa langsung diputar. Sekarang setiap lagu dapat diketuk langsung dari layar pencarian tanpa perlu masuk ke layar artis terlebih dahulu.
+  - **Multi-Stage Resilient Stream Resolution**: Sistem resolusi bertingkat otomatis (Local Cache -> Direct FLAC/MP3 -> Plugin Resolvers -> NewPipeExtractor -> Dynamic YouTube Fallback) dengan pemulihan mandiri (*self-healing error listener*) saat stream audio terputus.
+  - **Monochrome Hi-Res Lossless Fix**: Memperbaiki endpoint direct byte-range FLAC dan mapping data JSON artis serta artwork cover.
+
+- **Integrasi JavaScript Solver Engine (YouTube Cipher & Signature)**:
+  - Mengadopsi arsitektur solver JavaScript dari Musicfy (`yt.solver.core.js`, `astring.js`, `meriyah.js`) yang dieksekusi secara instan via engine WebView tanpa overhead.
+  - Mencegah error stream expired, error 403 Forbidden, dan menangani transformasi parameter `n` YouTube Music secara otomatis.
+
+- **Rombak Total UI/UX (Clean, Familiar Spotify, Apple Music & YouTube Music)**:
+  - **Apple Superellipse Squircles**: Menggunakan geometri lengkungan `SmoothCornerShape` (kurvatur eksponen 4.0) untuk semua artwork, kartu, dan miniplayer.
+  - **Tactile Micro-Interactions**: Animasi pantulan pegas `pressBounce` (stiffness 1600f, damping ratio 0.42f) dan efek kemiringan perspektif 3D `press3D`.
+  - **Animated Equalizer Bars**: Indikator animasi equalizer audio dinamis `PlayingIndicator` yang berdenyut saat lagu sedang aktif diputar.
+  - **Apple Music & Spotify Top Result Card**: Kartu *Hasil Terbaik* teratas dengan latar belakang ambient artwork kabur, tombol *Play/Pause* melingkar, dan quick filter pills (Semua, Lagu, Artis, Album).
+  - **Jelajahi Kategori / Genre Matrix**: Grid 2-kolom visual bergaya Spotify dengan gradien warna modern untuk eksplorasi genre musik cepat.
+  - **Pembersihan Arsitektur & Deduplikasi**: Menghapus duplikasi *BackHandler*, menyederhanakan hierarki navigasi, dan menghilangkan elemen layout yang berantakan (*clean architecture*).
+
+- **Desain & Layout Beranda Modern (Musicfy Style)**:
   - **Hero Carousel Editorial Banner**: Kartu sorotan lagu terpopuler dengan gradien vibran, label *Featured Spotlight*, badge fidelitas *Hi-Res FLAC*, dan tombol pemutaran instan.
   - **Quick Action Bar**: Tombol pengenal musik sekitar (*Shazam In-App*), tombol sinkronisasi akun, dan avatar profil dengan inisial dinamis.
   - **Tangga Lagu & Charts Resmi**: Tangga lagu resmi Indonesia dan Global dengan artwork bergradasi modern.
+
 - **Profil Pengguna & Kartu VIP Member Pass**:
   - **Holographic VIP Member Card**: Kartu anggota eksklusif dengan nomor ID unik (`EUY-2026-XXXX`), status audiophile terverifikasi, dan efek kilau gradien holografik.
   - **Statistik Mendengarkan**: Menampilkan total lagu diputar, total menit durasi pemutaran, dan artis favorit.
   - **Dialog Edit Profil**: Kustomisasi nama tampilan, bio pribadi, dan foto profil.
+
 - **Musicfy Audio Lab & Streaming Engine**:
   - **Audio Quality Tier**: Pilihan tingkat fidelitas murni *Hi-Res Lossless FLAC (24-bit)*, *Lossless Opus 320k*, *Balanced AAC 256k*, dan *Data Saver 128k*.
   - **AutoEQ Headphone Target**: Kalibrasi respon frekuensi *Harman Target* untuk AirPods Pro 2, AirPods Max, Sony WH-1000XM5/XM4, WF-1000XM5, Galaxy Buds 2 Pro, Moondrop Chu II/Aria, Sennheiser HD600/650, Audio-Technica ATH-M50x, Tangzu Wan'er, dan 7Hz Zero:2.
   - **Crossmix DJ Engine**: Transisi antar lagu tingkat studio (*Smooth Crossfade*, *Vinyl Spin-back*, *Tape-stop*, *Filter Sweep*).
   - **Interlude Dots & Terjemahan Lirik**: Animasi titik ritmik saat jeda vokal/instrumental dan auto-terjemahan lirik asing.
   - **PO Token & Bot-Detection Bypass**: Sakelar bypass otomatis deteksi bot YouTube Music tanpa memerlukan akun Google.
+
 - **Fitur Ekosistem Tambahan**:
   - **Shazam Ambient Recognition**: Kenali judul lagu dari audio ruangan sekitar menggunakan mikrofon perangkat.
   - **Social Lyrics Story Generator**: Generator kartu kutipan lirik dengan cover art untuk Instagram Stories & WhatsApp.
@@ -51,6 +71,7 @@ Berkas APK resmi untuk aplikasi pemutar musik **MusicEuy Android**.
   - **Pembaruan Aplikasi OTA**: Pengecekan versi rilis langsung via GitHub Releases API.
   - **Dukungan Multi-Bahasa**: Pilihan bahasa Indonesia dan Inggris secara instan di dalam aplikasi.
   - **Plugin Streaming Lengkap**: Dukungan stream Monochrome Hi-Res FLAC, YouTube Music, JioSaavn, SoundCloud, Deezer, Bandcamp, Jamendo, Discord RPC, dan Last.fm Scrobbler.
+
 
 ---
 

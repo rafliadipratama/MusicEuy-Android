@@ -1,5 +1,8 @@
 package com.rafliadipratama.musiceuy.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,6 +20,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,12 +34,12 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.DownloadDone
-import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -41,8 +47,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.ui.res.stringResource
-import com.rafliadipratama.musiceuy.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -52,20 +56,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.rafliadipratama.musiceuy.R
 import com.rafliadipratama.musiceuy.data.model.Album
 import com.rafliadipratama.musiceuy.data.model.Artist
+import com.rafliadipratama.musiceuy.data.model.Track
+import com.rafliadipratama.musiceuy.ui.components.SmoothCornerShape
 import com.rafliadipratama.musiceuy.ui.components.TrackItem
+import com.rafliadipratama.musiceuy.ui.components.pressBounce
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreen
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreenBright
 import com.rafliadipratama.musiceuy.ui.theme.ObsidianBackground
@@ -108,14 +118,16 @@ fun SearchScreen(
             ExploreGenre("Dangdut Koplo", "Dangdut Koplo Viral", listOf(Color(0xFFFF9800), Color(0xFFFFB74D))),
             ExploreGenre("Rock 2000-an", "Rock Indonesia 2000an", listOf(Color(0xFFD32F2F), Color(0xFFEF5350))),
             ExploreGenre("Akustik Santai", "Akustik Indonesia", listOf(Color(0xFF009688), Color(0xFF4DB6AC))),
-            ExploreGenre("Lo-Fi Chill", "Lofi Hip Hop Beats", listOf(Color(0xFF3F51B5), Color(0xFF7986CB)))
+            ExploreGenre("Lo-Fi Chill", "Lofi Hip Hop Beats", listOf(Color(0xFF3F51B5), Color(0xFF7986CB))),
+            ExploreGenre("Hip Hop & R&B", "Hip Hop Indonesia", listOf(Color(0xFF1A237E), Color(0xFF00BCD4))),
+            ExploreGenre("Nostalgia 90-an", "Lagu Nostalgia 90an", listOf(Color(0xFF5D4037), Color(0xFF8D6E63)))
         )
     }
 
-    // Trigger search with small debounce when typing or when category changes
+    // Debounced search when user types
     LaunchedEffect(searchInput) {
         if (searchInput.isNotBlank()) {
-            kotlinx.coroutines.delay(400)
+            kotlinx.coroutines.delay(350)
             viewModel.search(searchInput.trim())
         }
     }
@@ -123,13 +135,18 @@ fun SearchScreen(
     val isSearchActive = searchInput.isNotBlank() || uiState.searchResults.isNotEmpty() ||
             uiState.searchResultArtists.isNotEmpty() || uiState.searchResultAlbums.isNotEmpty()
 
+    // Determine Top Result Track
+    val topResultTrack = remember(uiState.searchResults, searchInput) {
+        uiState.searchResults.firstOrNull()
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(ObsidianBackground)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top Title
+            // Header Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -137,15 +154,15 @@ fun SearchScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Eksplorasi & Pencarian",
+                    text = "Pencarian",
                     color = TextPrimary,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-0.5).sp
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-0.6).sp
                 )
             }
 
-            // Search Bar Input (Ergonomic, High contrast, clear button)
+            // High-Performance Apple Music / Spotify Search Bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -158,7 +175,7 @@ fun SearchScreen(
                         Text(
                             text = if (uiState.isOnline) stringResource(id = R.string.search_placeholder) else stringResource(id = R.string.offline_search_hint),
                             color = TextMuted,
-                            fontSize = 14.sp
+                            fontSize = 14.5.sp
                         )
                     },
                     leadingIcon = {
@@ -171,10 +188,13 @@ fun SearchScreen(
                     },
                     trailingIcon = {
                         if (searchInput.isNotBlank()) {
-                            IconButton(onClick = {
-                                searchInput = ""
-                                viewModel.loadTrending()
-                            }) {
+                            IconButton(
+                                onClick = {
+                                    searchInput = ""
+                                    viewModel.loadTrending()
+                                },
+                                modifier = Modifier.pressBounce(pressedScale = 0.85f)
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Hapus",
@@ -185,11 +205,11 @@ fun SearchScreen(
                         }
                     },
                     singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = SmoothCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BrandGreen,
-                        unfocusedBorderColor = SurfaceContainerHigh,
-                        focusedContainerColor = SurfaceContainerLow,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.08f),
+                        focusedContainerColor = SurfaceContainerHigh,
                         unfocusedContainerColor = SurfaceContainerLow,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary
@@ -207,13 +227,14 @@ fun SearchScreen(
                 )
             }
 
+            // Offline Indicator Banner if no internet
             if (!uiState.isOnline) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 18.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(SmoothCornerShape(10.dp))
                         .background(Color(0xFFFFB74D).copy(alpha = 0.12f))
                         .padding(horizontal = 12.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -234,40 +255,51 @@ fun SearchScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Category Filter Pills (Hanya saat online)
-            if (uiState.isOnline) {
+            // Category Filter Pills
+            if (isSearchActive) {
+                Spacer(modifier = Modifier.height(10.dp))
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 18.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(searchCategoryPills) { cat ->
-                        val isSelected = uiState.searchCategory == cat
+                    items(searchCategoryPills) { category ->
+                        val isSelected = uiState.searchCategory == category
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(50.dp))
-                                .background(if (isSelected) BrandGreen else SurfaceContainerHigh)
-                                .clickable { viewModel.setSearchCategory(cat) }
-                                .padding(horizontal = 16.dp, vertical = 7.dp)
+                                .clip(SmoothCornerShape(20.dp))
+                                .background(
+                                    if (isSelected) BrandGreen else SurfaceContainerHigh
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) BrandGreen else Color.White.copy(alpha = 0.06f),
+                                    shape = SmoothCornerShape(20.dp)
+                                )
+                                .pressBounce(pressedScale = 0.92f)
+                                .clickable { viewModel.setSearchCategory(category) }
+                                .padding(horizontal = 16.dp, vertical = 7.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = cat,
-                                color = if (isSelected) Color(0xFF0C0E11) else TextSecondary,
-                                fontSize = 12.sp,
+                                text = category,
+                                color = if (isSelected) Color.Black else TextPrimary,
+                                fontSize = 13.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             )
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Main Content: Exploration mode OR Search results mode
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Main Content Area
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 220.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(bottom = 110.dp, start = 18.dp, end = 18.dp)
             ) {
                 // Loading Indicator
                 if (uiState.isSearching) {
@@ -275,109 +307,29 @@ fun SearchScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(36.dp),
+                                .padding(vertical = 32.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(color = BrandGreen, modifier = Modifier.size(36.dp))
+                            CircularProgressIndicator(
+                                color = BrandGreen,
+                                strokeWidth = 2.5.dp,
+                                modifier = Modifier.size(32.dp)
+                            )
                         }
                     }
                 }
 
-                // Error Message
-                uiState.error?.let { err ->
-                    item {
-                        Text(
-                            text = err,
-                            color = Color(0xFFFF5252),
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-
+                // =========================================================================
+                // 1. DISCOVERY STATE (Query is Blank)
+                // =========================================================================
                 if (!isSearchActive) {
-                    if (!uiState.isOnline) {
-                        // =========================================================
-                        // OFFLINE READY-TO-PLAY SONGS
-                        // =========================================================
-                        if (uiState.downloadedTracks.isNotEmpty()) {
-                            item {
-                                SearchSectionHeader(
-                                    title = stringResource(id = R.string.offline_downloaded_section_title),
-                                    icon = Icons.Default.DownloadDone
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                            }
-
-                            items(uiState.downloadedTracks, key = { "offline_search_${it.id}" }) { track ->
-                                val isLiked = uiState.likedTrackIds.contains(track.id)
-                                val activeTrack = track.copy(isLiked = isLiked)
-                                val isActive = uiState.currentTrack?.id == track.id
-                                TrackItem(
-                                    track = activeTrack,
-                                    isPlaying = uiState.isPlaying,
-                                    isActive = isActive,
-                                    onClick = {
-                                        viewModel.playTrack(activeTrack, uiState.downloadedTracks)
-                                    },
-                                    onLongClick = {
-                                        viewModel.showTrackContextMenu(activeTrack)
-                                    },
-                                    onArtistClick = { artist ->
-                                        viewModel.openArtistDetail(artist)
-                                    },
-                                    onAddToPlaylistClick = {
-                                        viewModel.showAddToPlaylist(activeTrack)
-                                    },
-                                    onToggleLikeClick = {
-                                        viewModel.toggleLike(activeTrack)
-                                    }
-                                )
-                            }
-                        } else {
-                            item {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 40.dp, horizontal = 24.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CloudOff,
-                                        contentDescription = null,
-                                        tint = TextMuted,
-                                        modifier = Modifier.size(48.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Text(
-                                        text = stringResource(id = R.string.offline_no_songs_title),
-                                        color = TextPrimary,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(
-                                        text = stringResource(id = R.string.offline_no_songs_desc),
-                                        color = TextMuted,
-                                        fontSize = 12.sp,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                        lineHeight = 17.sp
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        // =========================================================
-                        // EXPLORATION & DISCOVERY STATE (Query is blank & Online)
-                        // =========================================================
-
-                    // 0. Riwayat Pencarian Terakhir (Search History)
+                    // Search History
                     if (uiState.searchHistory.isNotEmpty()) {
                         item {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
+                                    .padding(vertical = 6.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -386,19 +338,18 @@ fun SearchScreen(
                                         imageVector = Icons.Default.History,
                                         contentDescription = null,
                                         tint = BrandGreen,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(18.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = stringResource(id = R.string.search_history_title),
+                                        text = "Pencarian Terakhir",
                                         color = TextPrimary,
-                                        fontSize = 17.sp,
+                                        fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
-
                                 Text(
-                                    text = stringResource(id = R.string.search_clear_all),
+                                    text = "Hapus Semua",
                                     color = TextMuted,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -407,115 +358,110 @@ fun SearchScreen(
                                         .padding(4.dp)
                                 )
                             }
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
+                            Spacer(modifier = Modifier.height(4.dp))
                             LazyRow(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                items(uiState.searchHistory, key = { "hist_$it" }) { historyItem ->
+                                items(uiState.searchHistory) { historyItem ->
                                     Row(
                                         modifier = Modifier
-                                            .clip(RoundedCornerShape(50.dp))
+                                            .clip(SmoothCornerShape(20.dp))
                                             .background(SurfaceContainerHigh)
-                                            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(50.dp))
+                                            .border(1.dp, Color.White.copy(alpha = 0.06f), SmoothCornerShape(20.dp))
+                                            .pressBounce(pressedScale = 0.94f)
                                             .clickable {
                                                 searchInput = historyItem
                                                 viewModel.search(historyItem)
                                             }
-                                            .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                                            .padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.History,
-                                            contentDescription = null,
-                                            tint = TextMuted,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
                                         Text(
                                             text = historyItem,
                                             color = TextPrimary,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Medium
                                         )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        IconButton(
-                                            onClick = { viewModel.removeSearchHistory(historyItem) },
-                                            modifier = Modifier.size(20.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = "Hapus",
-                                                tint = TextMuted,
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                        }
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Hapus item",
+                                            tint = TextMuted,
+                                            modifier = Modifier
+                                                .size(14.dp)
+                                                .clickable { viewModel.removeSearchHistory(historyItem) }
+                                        )
                                     }
                                 }
                             }
-
                             Spacer(modifier = Modifier.height(18.dp))
                         }
                     }
 
-                    // 1. Paling Sering Dicari / Trending Searches
+                    // Trending Keywords
                     item {
-                        SearchSectionHeader(title = "Paling Sering Dicari", icon = Icons.AutoMirrored.Filled.TrendingUp)
+                        SearchSectionHeader(
+                            title = "Sedang Tren",
+                            icon = Icons.AutoMirrored.Filled.TrendingUp
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
                         LazyRow(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(trendingKeywords) { keyword ->
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(50.dp))
-                                        .background(SurfaceContainerHigh)
-                                        .border(1.dp, BrandGreen.copy(alpha = 0.25f), RoundedCornerShape(50.dp))
+                                        .clip(SmoothCornerShape(20.dp))
+                                        .background(SurfaceContainerLow)
+                                        .border(1.dp, Color.White.copy(alpha = 0.08f), SmoothCornerShape(20.dp))
+                                        .pressBounce(pressedScale = 0.92f)
                                         .clickable {
                                             searchInput = keyword
                                             viewModel.search(keyword)
                                         }
-                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                        .padding(horizontal = 14.dp, vertical = 7.dp)
                                 ) {
                                     Text(
                                         text = keyword,
-                                        color = TextPrimary,
+                                        color = TextSecondary,
                                         fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.height(18.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
                     }
 
-                    // 2. Eksplorasi Genre & Mood
+                    // Browse Categories / Genres
                     item {
-                        SearchSectionHeader(title = "Jelajahi Berdasarkan Genre", icon = Icons.Default.Explore)
+                        SearchSectionHeader(
+                            title = "Jelajahi Kategori",
+                            icon = Icons.Default.MusicNote
+                        )
                         Spacer(modifier = Modifier.height(10.dp))
                     }
 
-                    // 2-column genre grid cards
-                    items(exploreGenres.chunked(2)) { pair ->
+                    // 2-Column Grid for Genres
+                    val chunkedGenres = exploreGenres.chunked(2)
+                    items(chunkedGenres) { rowGenres ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 5.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            for (genre in pair) {
+                            for (genre in rowGenres) {
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(95.dp)
-                                        .clip(RoundedCornerShape(16.dp))
+                                        .height(84.dp)
+                                        .clip(SmoothCornerShape(14.dp))
                                         .background(Brush.linearGradient(genre.gradientColors))
+                                        .pressBounce(pressedScale = 0.95f)
                                         .clickable {
                                             searchInput = genre.query
                                             viewModel.search(genre.query)
@@ -534,20 +480,42 @@ fun SearchScreen(
                         }
                     }
                 }
-            } else {
-                // =========================================================
-                // SEARCH RESULTS MODE
-                    // =========================================================
 
-                    // 1. Musisi / Artis Hasil Pencarian
+                // =========================================================================
+                // 2. SEARCH RESULTS STATE (Query entered)
+                // =========================================================================
+                if (isSearchActive) {
+                    // TOP RESULT CARD (Apple Music / Spotify Style)
+                    if (topResultTrack != null && (uiState.searchCategory == "Semua" || uiState.searchCategory == "Lagu")) {
+                        item {
+                            SearchSectionHeader(title = "Hasil Terbaik")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TopResultCard(
+                                track = topResultTrack,
+                                isActive = uiState.currentTrack?.id == topResultTrack.id,
+                                isPlaying = uiState.isPlaying,
+                                onClick = {
+                                    if (uiState.currentTrack?.id == topResultTrack.id) {
+                                        viewModel.togglePlayPause()
+                                    } else {
+                                        viewModel.playTrack(topResultTrack, uiState.searchResults)
+                                    }
+                                },
+                                onLongClick = {
+                                    viewModel.showTrackContextMenu(topResultTrack)
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(22.dp))
+                        }
+                    }
+
+                    // ARTISTS RESULTS
                     if (uiState.searchCategory == "Semua" || uiState.searchCategory == "Artis") {
                         if (uiState.searchResultArtists.isNotEmpty()) {
                             item {
                                 SearchSectionHeader(title = "Artis Terkait", icon = Icons.Default.Person)
+                                Spacer(modifier = Modifier.height(8.dp))
                                 LazyRow(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
                                     items(uiState.searchResultArtists, key = { it.id }) { artist ->
@@ -557,20 +525,18 @@ fun SearchScreen(
                                         )
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(20.dp))
                             }
                         }
                     }
 
-                    // 2. Album Hasil Pencarian
+                    // ALBUMS RESULTS
                     if (uiState.searchCategory == "Semua" || uiState.searchCategory == "Album") {
                         if (uiState.searchResultAlbums.isNotEmpty()) {
                             item {
                                 SearchSectionHeader(title = "Album & Single", icon = Icons.Default.Album)
+                                Spacer(modifier = Modifier.height(8.dp))
                                 LazyRow(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                                 ) {
                                     items(uiState.searchResultAlbums, key = { it.id }) { album ->
@@ -580,19 +546,27 @@ fun SearchScreen(
                                         )
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(20.dp))
                             }
                         }
                     }
 
-                    // 3. Lagu Hasil Pencarian
+                    // SONGS LIST
                     if (uiState.searchCategory == "Semua" || uiState.searchCategory == "Lagu") {
-                        if (uiState.searchResults.isNotEmpty()) {
+                        // Skip the first one if already shown in Top Result Card when in "Semua"
+                        val songRows = if (uiState.searchCategory == "Semua" && topResultTrack != null) {
+                            uiState.searchResults.filter { it.id != topResultTrack.id }
+                        } else {
+                            uiState.searchResults
+                        }
+
+                        if (songRows.isNotEmpty()) {
                             item {
                                 SearchSectionHeader(title = "Lagu", icon = Icons.Default.MusicNote)
+                                Spacer(modifier = Modifier.height(6.dp))
                             }
 
-                            items(uiState.searchResults, key = { it.id }) { track ->
+                            items(songRows, key = { it.id }) { track ->
                                 val isLiked = uiState.likedTrackIds.contains(track.id)
                                 val activeTrack = track.copy(isLiked = isLiked)
                                 val isActive = uiState.currentTrack?.id == track.id
@@ -620,7 +594,7 @@ fun SearchScreen(
                         }
                     }
 
-                    // Empty results state
+                    // EMPTY STATE
                     if (!uiState.isSearching && uiState.searchResults.isEmpty() &&
                         uiState.searchResultArtists.isEmpty() && uiState.searchResultAlbums.isEmpty()
                     ) {
@@ -636,18 +610,18 @@ fun SearchScreen(
                                         imageVector = Icons.Default.Search,
                                         contentDescription = null,
                                         tint = TextMuted,
-                                        modifier = Modifier.size(48.dp)
+                                        modifier = Modifier.size(44.dp)
                                     )
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
-                                        text = "Lagu atau artis tidak ditemukan",
+                                        text = "Tidak ada hasil untuk '$searchInput'",
                                         color = TextSecondary,
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "Coba gunakan kata kunci lain atau periksa ejaanmu",
+                                        text = "Periksa ejaan kata kunci atau coba artis lain",
                                         color = TextMuted,
                                         fontSize = 13.sp
                                     )
@@ -661,6 +635,129 @@ fun SearchScreen(
     }
 }
 
+/**
+ * Apple Music & Spotify inspired Top Result Card.
+ * Prominently presents the highest-matching song with blurred ambient artwork
+ * and an instant white circular Play Button.
+ */
+@Composable
+private fun TopResultCard(
+    track: Track,
+    isActive: Boolean,
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(SmoothCornerShape(18.dp))
+            .background(Color(0xFF141416))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), SmoothCornerShape(18.dp))
+            .pressBounce(pressedScale = 0.98f)
+            .clickable { onClick() }
+    ) {
+        // Blurred ambient backdrop
+        if (track.coverUrl.isNotBlank()) {
+            AsyncImage(
+                model = track.coverUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .matchParentSize()
+                    .alpha(0.25f)
+            )
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Black.copy(alpha = 0.45f),
+                                Color(0xFF101012).copy(alpha = 0.92f)
+                            )
+                        )
+                    )
+            )
+        }
+
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Album Artwork with squircle curvature
+            AsyncImage(
+                model = track.coverUrl,
+                contentDescription = track.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(SmoothCornerShape(14.dp))
+            )
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            // Metadata Column
+            Column(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .clip(SmoothCornerShape(6.dp))
+                        .background(BrandGreen.copy(alpha = 0.18f))
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = track.sourceLabel ?: "Lagu Resmi",
+                        color = BrandGreenBright,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = track.title,
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(3.dp))
+
+                Text(
+                    text = "${track.artist.name} ${if (track.durationFormatted.isNotBlank()) "• ${track.durationFormatted}" else ""}",
+                    color = TextSecondary,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            // Big Circular Play Button (Apple Music style)
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .pressBounce(pressedScale = 0.88f)
+                    .clickable { onClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isActive && isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = "Putar",
+                    tint = Color.Black,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun SearchSectionHeader(
     title: String,
@@ -668,7 +765,7 @@ private fun SearchSectionHeader(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
     ) {
         if (icon != null) {
             Icon(
@@ -682,8 +779,9 @@ private fun SearchSectionHeader(
         Text(
             text = title,
             color = TextPrimary,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.3).sp
         )
     }
 }
@@ -697,6 +795,7 @@ private fun ArtistSearchItemCard(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .width(96.dp)
+            .pressBounce(pressedScale = 0.94f)
             .clickable { onClick() }
     ) {
         Box(
@@ -761,12 +860,13 @@ private fun AlbumSearchItemCard(
     Column(
         modifier = Modifier
             .width(130.dp)
+            .pressBounce(pressedScale = 0.94f)
             .clickable { onClick() }
     ) {
         Box(
             modifier = Modifier
                 .size(130.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(SmoothCornerShape(14.dp))
                 .background(SurfaceContainerHigh)
         ) {
             AsyncImage(

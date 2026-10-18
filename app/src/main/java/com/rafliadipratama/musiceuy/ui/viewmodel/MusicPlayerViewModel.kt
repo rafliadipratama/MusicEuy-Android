@@ -19,6 +19,7 @@ import com.rafliadipratama.musiceuy.data.network.MusicStreamSource
 import com.rafliadipratama.musiceuy.service.MusicService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -219,6 +220,35 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                     handleTrackEnded()
                 }
             }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                android.util.Log.e("MusicEuy", "Player playback error occurred: ${error.message}", error)
+                val curTrack = _uiState.value.currentTrack ?: return
+                if (curTrack.audioUrl.startsWith("content://") || curTrack.audioUrl.startsWith("file://")) return
+
+                viewModelScope.launch {
+                    val q = "${curTrack.title} ${curTrack.artist.name}".trim()
+                    android.util.Log.d("MusicEuy", "Auto-recovering playback with YouTube search for: $q")
+                    val results = withContext(Dispatchers.IO) { streamSource.searchYouTubeMusic(q) }
+                    val match = results.firstOrNull()
+                    if (match != null) {
+                        val quality = com.rafliadipratama.musiceuy.audio.AudioEffectManager.getAudioQuality(getApplication())
+                        val recoveredStream = withContext(Dispatchers.IO) {
+                            streamSource.resolveYouTubeAudioStream(match.id.removePrefix("yt:"), quality)
+                        }
+                        if (!recoveredStream.isNullOrBlank()) {
+                            val transformed = com.rafliadipratama.musiceuy.solver.YouTubeCipherSolver.transformNParamInUrl(
+                                getApplication(),
+                                recoveredStream
+                            )
+                            val item = MediaItem.Builder().setMediaId(curTrack.id).setUri(transformed).build()
+                            mediaController?.setMediaItem(item)
+                            mediaController?.prepare()
+                            mediaController?.play()
+                        }
+                    }
+                }
+            }
         })
     }
 
@@ -288,18 +318,31 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             }
 
             val allResults = withContext(Dispatchers.IO) {
-                val pluginTracks = pluginManager.search(query)
-                if (pluginTracks.isNotEmpty()) {
-                    val artists = streamSource.searchArtists(query)
-                    val albums = streamSource.searchAlbums(query)
-                    com.rafliadipratama.musiceuy.data.network.SearchAllResults(
-                        tracks = pluginTracks,
-                        artists = artists,
-                        albums = albums
-                    )
-                } else {
-                    streamSource.searchAll(query)
+                val officialDef = async {
+                    try { streamSource.searchAll(query) } catch (_: Exception) { com.rafliadipratama.musiceuy.data.network.SearchAllResults() }
                 }
+                val pluginDef = async {
+                    try { pluginManager.search(query) } catch (_: Exception) { emptyList() }
+                }
+
+                val official = officialDef.await()
+                val pluginTracks = pluginDef.await()
+
+                val combinedTracks = mutableListOf<Track>()
+                // Include official YouTube Music tracks
+                combinedTracks.addAll(official.tracks)
+                // Append any unique plugin tracks that aren't already in list
+                for (pt in pluginTracks) {
+                    if (combinedTracks.none { it.title.equals(pt.title, ignoreCase = true) }) {
+                        combinedTracks.add(pt)
+                    }
+                }
+
+                com.rafliadipratama.musiceuy.data.network.SearchAllResults(
+                    tracks = if (combinedTracks.isNotEmpty()) combinedTracks else official.tracks,
+                    artists = official.artists,
+                    albums = official.albums
+                )
             }
             _uiState.update {
                 it.copy(
@@ -654,23 +697,59 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 return@launch
             }
 
-            // If audioUrl is a placeholder (e.g. yt:ID), resolve via active plugins
-            if (!isLocalAudio && !activeAudioUri.startsWith("http")) {
-                val resolvedStream = withContext(Dispatchers.IO) {
-                    pluginManager.resolveStream(track)
+            // Resolve stream if needed
+            if (!isLocalAudio) {
+                if (!activeAudioUri.startsWith("http") || activeAudioUri.startsWith("yt:") || track.id.startsWith("yt:")) {
+                    val resolvedStream = withContext(Dispatchers.IO) {
+                        pluginManager.resolveStream(track)
+                    }
+                    if (!resolvedStream.isNullOrBlank() && resolvedStream.startsWith("http")) {
+                        activeAudioUri = resolvedStream
+                        android.util.Log.d("MusicEuy", "Resolved via PluginManager: $activeAudioUri")
+                    } else {
+                        val quality = com.rafliadipratama.musiceuy.audio.AudioEffectManager.getAudioQuality(getApplication())
+                        val fallbackStream = withContext(Dispatchers.IO) {
+                            val vid = track.id.removePrefix("yt:").removePrefix("mono_")
+                            streamSource.resolveYouTubeAudioStream(vid, quality)
+                        }
+                        if (!fallbackStream.isNullOrBlank()) {
+                            activeAudioUri = fallbackStream
+                        }
+                    }
                 }
-                if (!resolvedStream.isNullOrBlank() && resolvedStream.startsWith("http")) {
-                    activeAudioUri = resolvedStream
-                    android.util.Log.d("MusicEuy", "Resolved via PluginManager: $activeAudioUri")
-                } else {
-                    android.util.Log.w("MusicEuy", "PluginManager resolution failed, trying fallback streamSource for ${track.title}")
-                    val quality = com.rafliadipratama.musiceuy.audio.AudioEffectManager.getAudioQuality(getApplication())
-                    val fallbackStream = withContext(Dispatchers.IO) {
-                        streamSource.resolveYouTubeAudioStream(track.id.removePrefix("yt:"), quality)
+
+                // If Monochrome track, ensure canonical endpoint
+                if (track.id.startsWith("mono_") || activeAudioUri.contains("monochrome.st")) {
+                    val monoId = track.id.removePrefix("mono_")
+                    activeAudioUri = "https://tracks.monochrome.st/track/$monoId"
+                }
+
+                // BULLETPROOF FALLBACK:
+                // If activeAudioUri is still not valid HTTP, search YouTube Music dynamically
+                if (!activeAudioUri.startsWith("http")) {
+                    val q = "${track.title} ${track.artist.name}".trim()
+                    android.util.Log.w("MusicEuy", "Direct URI resolution failed, searching YouTube Music fallback: $q")
+                    val ytMatches = withContext(Dispatchers.IO) {
+                        try { streamSource.searchYouTubeMusic(q) } catch (_: Exception) { emptyList() }
                     }
-                    if (!fallbackStream.isNullOrBlank()) {
-                        activeAudioUri = fallbackStream
+                    val topMatch = ytMatches.firstOrNull()
+                    if (topMatch != null) {
+                        val quality = com.rafliadipratama.musiceuy.audio.AudioEffectManager.getAudioQuality(getApplication())
+                        val resolved = withContext(Dispatchers.IO) {
+                            streamSource.resolveYouTubeAudioStream(topMatch.id.removePrefix("yt:"), quality)
+                        }
+                        if (!resolved.isNullOrBlank()) {
+                            activeAudioUri = resolved
+                        }
                     }
+                }
+
+                // Apply YouTube Cipher & n-param solver if stream is from googlevideo.com
+                if (activeAudioUri.startsWith("http") && activeAudioUri.contains("googlevideo.com")) {
+                    activeAudioUri = com.rafliadipratama.musiceuy.solver.YouTubeCipherSolver.transformNParamInUrl(
+                        getApplication(),
+                        activeAudioUri
+                    )
                 }
             }
 

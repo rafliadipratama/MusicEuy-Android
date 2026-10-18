@@ -235,14 +235,18 @@ class PluginManager(
      */
     suspend fun search(query: String): List<Track> {
         val enabledPlugins = _plugins.value.filter { it.isEnabled }
+        val results = mutableListOf<Track>()
 
         for (plugin in enabledPlugins) {
-            val results = plugin.search(query)
-            if (results.isNotEmpty()) {
-                return results
-            }
+            try {
+                val tracks = plugin.search(query)
+                if (tracks.isNotEmpty()) {
+                    results.addAll(tracks)
+                    if (results.size >= 8) break
+                }
+            } catch (_: Exception) {}
         }
 
-        return emptyList()
+        return results
     }
 }
