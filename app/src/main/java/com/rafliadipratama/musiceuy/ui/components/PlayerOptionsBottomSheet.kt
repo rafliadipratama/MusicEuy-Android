@@ -151,6 +151,17 @@ fun PlayerOptionsBottomSheet(
             )
 
             OptionItem(
+                icon = Icons.Default.GraphicEq,
+                title = "Equalizer & Efek Suara",
+                subtitle = "Sesuaikan 5-band EQ, Bass Boost, & Kualitas Bitrate",
+                isHighlight = true,
+                onClick = {
+                    onDismiss()
+                    onEqualizerClick()
+                }
+            )
+
+            OptionItem(
                 icon = Icons.Default.Bedtime,
                 title = "Pengatur Waktu Tidur (Sleep Timer)",
                 subtitle = sleepTimerSubtitle,
@@ -178,16 +189,6 @@ fun PlayerOptionsBottomSheet(
                 onClick = {
                     onDismiss()
                     onAddToPlaylistClick()
-                }
-            )
-
-            OptionItem(
-                icon = Icons.Default.GraphicEq,
-                title = "Equalizer & Efek Suara",
-                subtitle = "Sesuaikan 5-band EQ, Bass Boost, & Kualitas Bitrate",
-                onClick = {
-                    onDismiss()
-                    onEqualizerClick()
                 }
             )
 

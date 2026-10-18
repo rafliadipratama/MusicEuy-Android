@@ -191,7 +191,6 @@ fun PlayerScreen(
                 lyricsListState = lyricsListState,
                 onCollapse = { viewModel.collapsePlayer() },
                 onShowOptions = { isOptionsSheetVisible = true },
-                onShowEqualizer = { viewModel.showEqualizer() },
                 onToggleLyrics = { viewModel.toggleLyrics() },
                 onToggleAutoplay = { viewModel.toggleAutoplay() },
                 onToggleQueue = { viewModel.toggleQueue() },
@@ -227,7 +226,6 @@ fun PlayerScreen(
                 lyricsListState = lyricsListState,
                 onCollapse = { viewModel.collapsePlayer() },
                 onShowOptions = { isOptionsSheetVisible = true },
-                onShowEqualizer = { viewModel.showEqualizer() },
                 onToggleLyrics = { viewModel.toggleLyrics() },
                 onToggleAutoplay = { viewModel.toggleAutoplay() },
                 onToggleQueue = { viewModel.toggleQueue() },
@@ -286,7 +284,6 @@ private fun PortraitPlayerLayout(
     lyricsListState: androidx.compose.foundation.lazy.LazyListState,
     onCollapse: () -> Unit,
     onShowOptions: () -> Unit,
-    onShowEqualizer: () -> Unit,
     onToggleLyrics: () -> Unit,
     onToggleAutoplay: () -> Unit,
     onToggleQueue: () -> Unit,
@@ -346,31 +343,18 @@ private fun PortraitPlayerLayout(
                 )
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Box {
                 IconButton(
-                    onClick = onShowEqualizer,
+                    onClick = onShowOptions,
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.GraphicEq,
-                        contentDescription = "Equalizer",
-                        tint = if (uiState.isEqualizerSheetVisible) AccentEmerald else TextSecondary,
-                        modifier = Modifier.size(22.dp)
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Opsi Lainnya",
+                        tint = TextPrimary,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-
-                Box {
-                    IconButton(
-                        onClick = onShowOptions,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Opsi Lainnya",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
 
                     // Green dot indicator if sleep timer is active
                     val isTimerActive = uiState.sleepTimerRemainingSeconds != null || uiState.isSleepTimerEndOfTrack
@@ -385,7 +369,6 @@ private fun PortraitPlayerLayout(
                     }
                 }
             }
-        }
 
         // --- 1.5. Audio / Video Switch Pill ---
         AudioVideoToggleSwitch(
@@ -538,7 +521,6 @@ private fun LandscapePlayerLayout(
     lyricsListState: androidx.compose.foundation.lazy.LazyListState,
     onCollapse: () -> Unit,
     onShowOptions: () -> Unit,
-    onShowEqualizer: () -> Unit,
     onToggleLyrics: () -> Unit,
     onToggleAutoplay: () -> Unit,
     onToggleQueue: () -> Unit,
@@ -704,23 +686,13 @@ private fun LandscapePlayerLayout(
                     )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onShowEqualizer, modifier = Modifier.size(36.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.GraphicEq,
-                            contentDescription = "Equalizer",
-                            tint = if (uiState.isEqualizerSheetVisible) AccentEmerald else TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    IconButton(onClick = onShowOptions, modifier = Modifier.size(36.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Opsi",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                IconButton(onClick = onShowOptions, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Opsi",
+                        tint = TextPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 

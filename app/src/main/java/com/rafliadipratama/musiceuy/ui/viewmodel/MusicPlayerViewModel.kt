@@ -1804,7 +1804,38 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 val isArtistFilter = favArtists.any { it.equals(category, ignoreCase = true) } ||
                         _uiState.value.popularArtists.any { it.name.equals(category, ignoreCase = true) }
 
-                if (isArtistFilter) {
+                // Check if user clicked a song title pill
+                val matchingTrack = tasteProfile.songSeeds.find { it.title.equals(category, ignoreCase = true) }
+                    ?: _uiState.value.mostPlayedTracks.find { it.title.equals(category, ignoreCase = true) }
+                    ?: _uiState.value.likedTracks.find { it.title.equals(category, ignoreCase = true) }
+
+                if (matchingTrack != null) {
+                    val relatedTitleTracks = withContext(Dispatchers.IO) {
+                        streamSource.fetchSongRadio(matchingTrack).filter {
+                            it.id !in tasteProfile.avoidSongs &&
+                            it.artist.name.trim().lowercase() !in tasteProfile.avoidArtists
+                        }
+                    }
+                    val titleShelf = if (relatedTitleTracks.isNotEmpty()) {
+                        listOf(
+                            com.rafliadipratama.musiceuy.data.model.HomeCategoryItem(
+                                id = "title_${matchingTrack.id}",
+                                kind = com.rafliadipratama.musiceuy.data.model.HomeCategoryKind.BECAUSE_YOU_LIKE,
+                                label = "LAGU DENGAN JUDUL & TEMA SERUPA",
+                                title = "Lagu Mirip '${matchingTrack.title}'",
+                                thumbnailUrl = matchingTrack.coverUrl,
+                                tracks = relatedTitleTracks.take(12)
+                            )
+                        )
+                    } else emptyList()
+
+                    _uiState.update {
+                        it.copy(
+                            trendingTracks = (listOf(matchingTrack) + relatedTitleTracks).distinctBy { t -> t.id },
+                            recommendationCategories = titleShelf
+                        )
+                    }
+                } else if (isArtistFilter) {
                     val artistTracks = withContext(Dispatchers.IO) {
                         streamSource.getArtistTopTracks(category).filter {
                             it.id !in tasteProfile.avoidSongs

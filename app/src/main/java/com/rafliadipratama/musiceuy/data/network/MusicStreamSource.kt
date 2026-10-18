@@ -2202,55 +2202,83 @@ class MusicStreamSource(
     }
 
     /**
-     * Generates a Song Radio queue based on the seed track's artist and title.
-     * Guaranteed to produce related songs strictly within the same musical genre, mood, and artist cluster.
+     * Cleans song title by removing metadata noise (official video, feat, lyrics, brackets, etc.)
+     * for high-accuracy title similarity matching.
+     */
+    fun cleanSongTitle(title: String): String {
+        return title
+            .replace(Regex("(?i)\\b(official\\s*(music\\s*)?video|video\\s*klip|official\\s*audio|lyric(s)?|video\\s*lirik|clip|klip|hd|hq|4k|mv|audio|remastered)\\b"), "")
+            .replace(Regex("[\\[\\(].*?[\\]\\)]"), "")
+            .replace(Regex("[^\\p{L}\\p{Nd}\\s]"), " ")
+            .trim()
+            .replace(Regex("\\s+"), " ")
+    }
+
+    /**
+     * Computes semantic and token similarity between two song titles (0.0 to 1.0).
+     */
+    fun computeTitleSimilarity(titleA: String, titleB: String): Double {
+        val cleanA = cleanSongTitle(titleA).lowercase()
+        val cleanB = cleanSongTitle(titleB).lowercase()
+        if (cleanA.isBlank() || cleanB.isBlank()) return 0.0
+        if (cleanA == cleanB) return 1.0
+
+        val tokensA = cleanA.split(" ").filter { it.length > 1 }.toSet()
+        val tokensB = cleanB.split(" ").filter { it.length > 1 }.toSet()
+        if (tokensA.isEmpty() || tokensB.isEmpty()) return 0.0
+
+        val intersection = tokensA.intersect(tokensB).size
+        val union = tokensA.union(tokensB).size
+        val jaccard = if (union > 0) intersection.toDouble() / union else 0.0
+
+        // Containment bonus if one title contains the other completely
+        val containmentBonus = if (cleanA.contains(cleanB) || cleanB.contains(cleanA)) 0.35 else 0.0
+
+        return (jaccard + containmentBonus).coerceAtMost(1.0)
+    }
+
+    /**
+     * Generates a Song Radio queue prioritized by same/similar song title,
+     * alternate versions, and direct title relevance rather than generic broad genres.
      */
     suspend fun fetchSongRadio(track: Track): List<Track> = withContext(Dispatchers.IO) {
-        val radioTracks = mutableListOf<Track>()
+        val cleanTitle = cleanSongTitle(track.title)
+        val rawCandidates = mutableListOf<Track>()
+
         try {
-            val peerArtists = ArtistCatalog.getPeerArtists(track.artist.name)
+            // Pass 1: Direct search targeting the exact same song title
+            val querySameTitle = "$cleanTitle song"
+            val results1 = searchYouTubeMusic(querySameTitle)
+            rawCandidates.addAll(results1)
 
-            // Pass 1: Seed track radio mix (filtered for compatible vibe)
-            val query1 = "${track.artist.name} ${track.title} radio mix"
-            val results1 = searchYouTubeMusic(query1)
-            for (candidate in results1) {
-                if (candidate.id != track.id && ArtistCatalog.isTrackCompatibleWithSeed(candidate, track.artist.name)) {
-                    radioTracks.add(candidate)
-                }
-            }
+            // Pass 2: Track title + artist mix
+            val queryTitleArtist = "$cleanTitle ${track.artist.name} radio"
+            val results2 = searchYouTubeMusic(queryTitleArtist)
+            rawCandidates.addAll(results2)
 
-            // Pass 2: If queue needs more tracks, fetch songs from peer artists in the same genre cluster
-            if (radioTracks.size < 12 && peerArtists.isNotEmpty()) {
-                val peerSample = peerArtists.shuffled().take(3).joinToString(" ")
-                val query2 = "$peerSample hits radio mix"
-                val results2 = searchYouTubeMusic(query2)
-                for (candidate in results2) {
-                    if (candidate.id != track.id &&
-                        ArtistCatalog.isTrackCompatibleWithSeed(candidate, track.artist.name) &&
-                        radioTracks.none { it.id == candidate.id || it.title.equals(candidate.title, ignoreCase = true) }
-                    ) {
-                        radioTracks.add(candidate)
-                    }
-                }
-            }
-
-            // Pass 3: Fallback artist hits
-            if (radioTracks.size < 8) {
-                val query3 = "${track.artist.name} hits"
-                val results3 = searchYouTubeMusic(query3)
-                for (candidate in results3) {
-                    if (candidate.id != track.id &&
-                        ArtistCatalog.isLegitimateArtistTrack(candidate, track.artist.name) &&
-                        radioTracks.none { it.id == candidate.id || it.title.equals(candidate.title, ignoreCase = true) }
-                    ) {
-                        radioTracks.add(candidate)
-                    }
-                }
-            }
+            // Pass 3: Title radio mix
+            val queryTitleMix = "$cleanTitle radio mix"
+            val results3 = searchYouTubeMusic(queryTitleMix)
+            rawCandidates.addAll(results3)
         } catch (e: Exception) {
             android.util.Log.e("MusicEuy", "Error fetching song radio: ${e.message}")
         }
-        radioTracks.distinctBy { it.id }
+
+        // Exclude seed track itself and duplicate IDs
+        val usable = rawCandidates
+            .filter { it.id != track.id }
+            .distinctBy { it.id }
+
+        // Rank by Title Similarity Score (highest similarity to seed title first)
+        val ranked = usable.sortedWith(
+            compareByDescending<Track> { candidate ->
+                computeTitleSimilarity(track.title, candidate.title)
+            }.thenByDescending { candidate ->
+                if (candidate.artist.name.trim().equals(track.artist.name.trim(), ignoreCase = true)) 1 else 0
+            }
+        )
+
+        ranked
     }
 
     /**
@@ -2411,6 +2439,7 @@ class MusicStreamSource(
     /**
      * Musicfy track picking algorithm:
      * - Filters out avoided songs and avoided artists.
+     * - Prioritizes candidates with high title similarity when [targetTitle] is supplied.
      * - Partitions into heard vs unheard tracks:
      *   Keeps a balanced familiar ratio (familiar = (limit / 4).coerceAtLeast(1)),
      *   filling the remaining with unheard discoveries.
@@ -2418,6 +2447,7 @@ class MusicStreamSource(
      */
     private fun pickDiverseTracks(
         songs: List<Track>,
+        targetTitle: String? = null,
         heardIds: Set<String>,
         avoidSongs: Set<String>,
         avoidArtists: Set<String>,
@@ -2429,11 +2459,20 @@ class MusicStreamSource(
             track.artist.name.trim().lowercase() !in avoidArtists
         }.distinctBy { it.id }
 
-        val (heard, unheard) = usable.partition { it.id in heardIds }
+        // Prioritize by Title Similarity when targetTitle is provided
+        val prioritized = if (!targetTitle.isNullOrBlank()) {
+            usable.sortedByDescending { candidate ->
+                computeTitleSimilarity(targetTitle, candidate.title)
+            }
+        } else {
+            usable
+        }
+
+        val (heard, unheard) = prioritized.partition { it.id in heardIds }
         val familiar = (limit / 4).coerceAtLeast(1)
         val chosenUnheard = unheard.take(limit * 2).shuffled().take(limit - kotlin.math.min(familiar, heard.size))
         val chosenHeard = heard.shuffled().take(familiar)
-        val combined = (chosenUnheard + chosenHeard).shuffled()
+        val combined = chosenUnheard + chosenHeard
 
         val perArtistCount = HashMap<String, Int>()
         val filtered = mutableListOf<Track>()
@@ -2451,9 +2490,9 @@ class MusicStreamSource(
 
     /**
      * Builds Musicfy-style dynamic recommendation shelves synchronized with YouTube Music:
-     * 1. Because You Like <Song>: related tracks minus the song, partitioned for discovery.
+     * 1. Because You Like <Song>: related tracks minus the song, prioritized by same/similar titles.
      * 2. More Like <Artist>: artist radio filtered to exclude the artist itself (pure peer artists).
-     * 3. Because You Listen to <Genre> & Try Something New: top user genres + fresh unexplored genres.
+     * 3. Similar Song Title & Theme Shelves: replaces generic broad genre shelves.
      * 4. Musicfy interleaved row arrangement with across-row deduplication.
      */
     suspend fun fetchHomeRecommendations(
@@ -2467,9 +2506,9 @@ class MusicStreamSource(
 
         val becauseShelves = mutableListOf<HomeCategoryItem>()
         val moreLikeShelves = mutableListOf<HomeCategoryItem>()
-        val genreShelves = mutableListOf<HomeCategoryItem>()
+        val titleShelves = mutableListOf<HomeCategoryItem>()
 
-        // 1. "Because You Like <Song>" shelves (Tri-directional song seeds)
+        // 1. "Because You Like <Song>" shelves (Tri-directional song seeds, title-first matching)
         val songSeeds = if (!tasteProfile?.songSeeds.isNullOrEmpty()) {
             tasteProfile!!.songSeeds.take(3)
         } else {
@@ -2484,6 +2523,7 @@ class MusicStreamSource(
                         val candidates = rawRadio.filter { it.id != seed.id }
                         val picked = pickDiverseTracks(
                             songs = candidates,
+                            targetTitle = seed.title,
                             heardIds = heard,
                             avoidSongs = avoidSongs,
                             avoidArtists = avoidArtists,
@@ -2554,37 +2594,52 @@ class MusicStreamSource(
             moreLikeShelves.addAll(artistJobs.awaitAll().filterNotNull())
         }
 
-        // 3. User Genre & Try Something New
-        coroutineScope {
-            val genreJobs = listOf(
-                async {
-                    try {
-                        val genreTracks = searchYouTubeMusic("pop indonesia indie hits terbaik 2026")
-                        val picked = pickDiverseTracks(
-                            songs = genreTracks,
-                            heardIds = heard,
-                            avoidSongs = avoidSongs,
-                            avoidArtists = avoidArtists,
-                            limit = 10,
-                            perArtist = 2
-                        )
-                        if (picked.size >= 4) {
-                            HomeCategoryItem(
-                                id = "because_you_listen_pop",
-                                kind = HomeCategoryKind.BECAUSE_YOU_LISTEN,
-                                label = "KARENA KAMU MENDENGARKAN POP",
-                                title = "Pilihan Pop & Indie Terbaik",
-                                thumbnailUrl = picked.firstOrNull()?.coverUrl,
-                                tracks = picked
+        // 3. Similar Song Title & Thematic Shelves (Replaces generic broad genre shelves)
+        val secondarySongSeeds = if (!tasteProfile?.songSeeds.isNullOrEmpty()) {
+            tasteProfile!!.songSeeds.drop(1).take(2)
+        } else {
+            seedTracks.drop(1).take(2)
+        }
+
+        if (secondarySongSeeds.isNotEmpty()) {
+            coroutineScope {
+                val titleJobs = secondarySongSeeds.map { seed ->
+                    async {
+                        try {
+                            val cleanSeedTitle = cleanSongTitle(seed.title)
+                            val titleCandidates = searchYouTubeMusic("$cleanSeedTitle song audio")
+                            val picked = pickDiverseTracks(
+                                songs = titleCandidates,
+                                targetTitle = seed.title,
+                                heardIds = heard,
+                                avoidSongs = avoidSongs,
+                                avoidArtists = avoidArtists,
+                                limit = 10,
+                                perArtist = 2
                             )
-                        } else null
-                    } catch (_: Exception) { null }
-                },
-                async {
+                            if (picked.size >= 4) {
+                                HomeCategoryItem(
+                                    id = "similar_title_${seed.id}",
+                                    kind = HomeCategoryKind.BECAUSE_YOU_LISTEN,
+                                    label = "KOLEKSI JUDUL & TEMA SERUPA",
+                                    title = "Lagu Mirip '${seed.title}'",
+                                    thumbnailUrl = seed.coverUrl,
+                                    tracks = picked
+                                )
+                            } else null
+                        } catch (_: Exception) { null }
+                    }
+                }
+                titleShelves.addAll(titleJobs.awaitAll().filterNotNull())
+            }
+        } else {
+            // Fallback for new users: trending hits
+            coroutineScope {
+                val fallbackJob = async {
                     try {
-                        val freshTracks = searchYouTubeMusic("lofi study chill acoustic beats relaxing")
+                        val popularTracks = searchYouTubeMusic("top hits indonesia audio 2026")
                         val picked = pickDiverseTracks(
-                            songs = freshTracks,
+                            songs = popularTracks,
                             heardIds = heard,
                             avoidSongs = avoidSongs,
                             avoidArtists = avoidArtists,
@@ -2593,25 +2648,25 @@ class MusicStreamSource(
                         )
                         if (picked.size >= 4) {
                             HomeCategoryItem(
-                                id = "try_something_new",
-                                kind = HomeCategoryKind.TRY_SOMETHING_NEW,
-                                label = "COBA SESUATU YANG BARU",
-                                title = "Chill Lofi & Instrumental",
+                                id = "top_hits_title",
+                                kind = HomeCategoryKind.BECAUSE_YOU_LISTEN,
+                                label = "PILIHAN POPULER UNTUKMU",
+                                title = "Lagu Populer Indonesia",
                                 thumbnailUrl = picked.firstOrNull()?.coverUrl,
                                 tracks = picked
                             )
                         } else null
                     } catch (_: Exception) { null }
                 }
-            )
-            genreShelves.addAll(genreJobs.awaitAll().filterNotNull())
+                fallbackJob.await()?.let { titleShelves.add(it) }
+            }
         }
 
         // 4. Musicfy Interleaved Arrangement + De-duplication across rows
         val rounds = listOf(
             ArrayDeque(becauseShelves),
             ArrayDeque(moreLikeShelves),
-            ArrayDeque(genreShelves)
+            ArrayDeque(titleShelves)
         )
         val orderedCategories = mutableListOf<HomeCategoryItem>()
         while (rounds.any { it.isNotEmpty() }) {
