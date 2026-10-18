@@ -61,6 +61,7 @@ object AudioEffectManager {
     private var bassBoost: BassBoost? = null
     private var loudnessEnhancer: LoudnessEnhancer? = null
     private var currentSessionId: Int = 0
+    private var currentTrackLoudnessDb: Float? = null
 
     private val _state = MutableStateFlow(AudioEffectState())
     val state: StateFlow<AudioEffectState> = _state.asStateFlow()
@@ -75,7 +76,7 @@ object AudioEffectManager {
         val preset = prefs.getString(KEY_PRESET, "Datar") ?: "Datar"
         val bassEnabled = prefs.getBoolean(KEY_BASS_ENABLED, false)
         val bassStrength = prefs.getInt(KEY_BASS_STRENGTH, 0).toShort()
-        val loudnessEnabled = prefs.getBoolean(KEY_LOUDNESS_ENABLED, false)
+        val loudnessEnabled = prefs.getBoolean(KEY_LOUDNESS_ENABLED, true)
         val qualityStr = prefs.getString(KEY_AUDIO_QUALITY, AudioQuality.STANDAR.name) ?: AudioQuality.STANDAR.name
         val quality = AudioQuality.fromString(qualityStr)
 
@@ -154,13 +155,13 @@ object AudioEffectManager {
         }
 
         try {
-            // Setup LoudnessEnhancer (Normalisasi Volume)
+            // Setup LoudnessEnhancer (Normalisasi Volume / ReplayGain)
             val le = LoudnessEnhancer(audioSessionId).apply {
-                setTargetGain(300) // 3dB boost for normalization
                 enabled = _state.value.isLoudnessEnabled
             }
             loudnessEnhancer = le
-            Log.d(TAG, "LoudnessEnhancer attached to session $audioSessionId")
+            applyTrackReplayGain(currentTrackLoudnessDb)
+            Log.d(TAG, "LoudnessEnhancer attached to session $audioSessionId (enabled=${_state.value.isLoudnessEnabled})")
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing LoudnessEnhancer: ${e.message}")
         }
@@ -255,9 +256,38 @@ object AudioEffectManager {
     }
 
     fun toggleLoudness(context: Context, enabled: Boolean) {
-        loudnessEnhancer?.enabled = enabled
         getPrefs(context).edit().putBoolean(KEY_LOUDNESS_ENABLED, enabled).apply()
         _state.value = _state.value.copy(isLoudnessEnabled = enabled)
+        applyTrackReplayGain(currentTrackLoudnessDb)
+    }
+
+    /**
+     * Applies dynamic ReplayGain volume normalization based on InnerTube audioConfig loudnessDb.
+     * YouTube reference target is -14 LUFS.
+     * Positive loudnessDb means the track is louder than target (so gain is negative).
+     * Negative loudnessDb means the track is quieter than target (so gain is positive).
+     */
+    fun applyTrackReplayGain(loudnessDb: Float?) {
+        currentTrackLoudnessDb = loudnessDb
+        val le = loudnessEnhancer ?: return
+        try {
+            if (!_state.value.isLoudnessEnabled) {
+                le.enabled = false
+                return
+            }
+            // LoudnessEnhancer takes targetGain in millibels (mB, where 1 dB = 100 mB)
+            val targetGainMb = if (loudnessDb != null && !loudnessDb.isNaN()) {
+                val gainDb = -loudnessDb
+                (gainDb * 100).toInt().coerceIn(-800, 800)
+            } else {
+                150 // default subtle gentle boost if track metadata is not present
+            }
+            le.setTargetGain(targetGainMb)
+            le.enabled = true
+            Log.d(TAG, "ReplayGain applied: targetGain=${targetGainMb}mB (loudnessDb=$loudnessDb)")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to apply ReplayGain: ${e.message}")
+        }
     }
 
     fun setAudioQuality(context: Context, quality: AudioQuality) {

@@ -56,9 +56,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -107,13 +111,15 @@ fun PlayerScreen(
     val durationMs = uiState.durationMs
 
     val lyricsListState = rememberLazyListState()
+    var lastScrolledIndex by remember { mutableIntStateOf(-1) }
 
     // Auto-scroll synchronized lyrics
     LaunchedEffect(currentMs, uiState.lyrics) {
         if (uiState.isLyricsVisible && uiState.lyrics.hasSyncedLyrics) {
             val activeIndex = uiState.lyrics.syncedLyrics.indexOfLast { it.timestampMs <= currentMs }
-            if (activeIndex >= 0) {
-                lyricsListState.animateScrollToItem((activeIndex - 2).coerceAtLeast(0))
+            if (activeIndex >= 0 && activeIndex != lastScrolledIndex) {
+                lastScrolledIndex = activeIndex
+                lyricsListState.animateScrollToItem((activeIndex - 1).coerceAtLeast(0))
             }
         }
     }
@@ -1022,18 +1028,62 @@ private fun SyncedLyricsView(
         ) {
             itemsIndexed(synced) { index, line ->
                 val isActive = index == activeIndex
-                Text(
-                    text = line.text,
-                    color = if (isActive) Color.White else TextMuted.copy(alpha = 0.35f),
-                    fontSize = if (isActive) 24.sp else 18.sp,
-                    fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onSeekToLine(line.timestampMs) }
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                )
+                if (isActive && line.words.isNotEmpty()) {
+                    val annotatedString = buildAnnotatedString {
+                        line.words.forEachIndexed { wIdx, wordObj ->
+                            val isWordPast = currentMs > wordObj.endMs
+                            val isWordActive = currentMs in wordObj.startMs..wordObj.endMs
+
+                            val wordColor = when {
+                                isWordActive -> Color.White
+                                isWordPast -> Color.White.copy(alpha = 0.95f)
+                                else -> Color.White.copy(alpha = 0.35f)
+                            }
+                            val wordWeight = when {
+                                isWordActive -> FontWeight.Black
+                                isWordPast -> FontWeight.Bold
+                                else -> FontWeight.Medium
+                            }
+
+                            withStyle(
+                                style = SpanStyle(
+                                    color = wordColor,
+                                    fontWeight = wordWeight,
+                                    fontSize = if (isWordActive) 25.sp else 23.sp
+                                )
+                            ) {
+                                append(wordObj.word)
+                            }
+                            if (wIdx < line.words.size - 1) {
+                                append(" ")
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = annotatedString,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 36.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onSeekToLine(line.timestampMs) }
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                    )
+                } else {
+                    Text(
+                        text = line.text,
+                        color = if (isActive) Color.White else TextMuted.copy(alpha = 0.35f),
+                        fontSize = if (isActive) 23.sp else 18.sp,
+                        fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onSeekToLine(line.timestampMs) }
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                    )
+                }
             }
         }
     } else if (!uiState.lyrics.plainLyrics.isNullOrBlank()) {

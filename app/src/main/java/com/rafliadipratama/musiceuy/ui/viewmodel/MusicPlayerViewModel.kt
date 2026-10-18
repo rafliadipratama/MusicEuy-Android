@@ -270,12 +270,13 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                     )
                 }
                 counter++
-                if (counter % 15 == 0) { // every ~4.5 seconds
+                if (counter % 50 == 0) { // every ~4-5 seconds
                     _uiState.value.currentTrack?.let { cur ->
                         historyManager.saveLastPlaybackState(cur, pos, _uiState.value.queue)
                     }
                 }
-                delay(300)
+                val delayMs = if (_uiState.value.isPlaying) 80L else 300L
+                delay(delayMs)
             }
         }
     }
@@ -321,42 +322,42 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 return@launch
             }
 
-            val allResults = withContext(Dispatchers.IO) {
-                val officialDef = async {
-                    try { streamSource.searchAll(query) } catch (_: Exception) { com.rafliadipratama.musiceuy.data.network.SearchAllResults() }
-                }
-                val pluginDef = async {
-                    try { pluginManager.search(query) } catch (_: Exception) { emptyList() }
-                }
-
-                val official = officialDef.await()
-                val pluginTracks = pluginDef.await()
-
-                val combinedTracks = mutableListOf<Track>()
-                // Include official YouTube Music tracks
-                combinedTracks.addAll(official.tracks)
-                // Append any unique plugin tracks that aren't already in list
-                for (pt in pluginTracks) {
-                    if (combinedTracks.none { it.title.equals(pt.title, ignoreCase = true) }) {
-                        combinedTracks.add(pt)
-                    }
-                }
-
-                com.rafliadipratama.musiceuy.data.network.SearchAllResults(
-                    tracks = if (combinedTracks.isNotEmpty()) combinedTracks else official.tracks,
-                    artists = official.artists,
-                    albums = official.albums
-                )
+            val official = withContext(Dispatchers.IO) {
+                try { streamSource.searchAll(query) } catch (_: Exception) { com.rafliadipratama.musiceuy.data.network.SearchAllResults() }
             }
+
+            // Immediately show official results so search is blazing fast
             _uiState.update {
                 it.copy(
-                    searchResults = allResults.tracks,
-                    searchResultArtists = allResults.artists,
-                    searchResultAlbums = allResults.albums,
+                    searchResults = official.tracks,
+                    searchResultArtists = official.artists,
+                    searchResultAlbums = official.albums,
                     isSearching = false,
-                    error = if (allResults.tracks.isEmpty() && allResults.artists.isEmpty() && allResults.albums.isEmpty())
+                    error = if (official.tracks.isEmpty() && official.artists.isEmpty() && official.albums.isEmpty())
                         "Tidak ditemukan hasil untuk '$query'. Coba kata kunci lain." else null
                 )
+            }
+
+            // Asynchronously check plugins in background without blocking the UI
+            launch(Dispatchers.IO) {
+                try {
+                    val pluginTracks = kotlinx.coroutines.withTimeoutOrNull(2000L) {
+                        pluginManager.search(query)
+                    } ?: emptyList()
+                    if (pluginTracks.isNotEmpty()) {
+                        _uiState.update { state ->
+                            val currentTracks = state.searchResults.toMutableList()
+                            var added = false
+                            for (pt in pluginTracks) {
+                                if (currentTracks.none { it.id == pt.id || it.title.equals(pt.title, ignoreCase = true) }) {
+                                    currentTracks.add(pt)
+                                    added = true
+                                }
+                            }
+                            if (added) state.copy(searchResults = currentTracks) else state
+                        }
+                    }
+                } catch (_: Exception) {}
             }
         }
     }
@@ -794,6 +795,10 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
             controller.setMediaItem(mediaItem)
             controller.prepare()
+
+            // Apply EBU R128 / YouTube ReplayGain volume normalization
+            val loudnessDb = com.rafliadipratama.musiceuy.data.network.MusicStreamSource.getLoudnessDb(track.id)
+            com.rafliadipratama.musiceuy.audio.AudioEffectManager.applyTrackReplayGain(loudnessDb)
 
             // Smooth crossfade transition if enabled
             if (_uiState.value.crossfadeSeconds > 0) {

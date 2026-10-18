@@ -2,6 +2,7 @@ package com.rafliadipratama.musiceuy.data.network
 
 import com.rafliadipratama.musiceuy.data.model.LyricLine
 import com.rafliadipratama.musiceuy.data.model.Lyrics
+import com.rafliadipratama.musiceuy.data.model.SyllableWord
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -20,6 +21,7 @@ class LrcLibClient(
         .build()
 ) {
     private val timestampPattern = Pattern.compile("\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})\\](.*)")
+    private val enhancedWordPattern = Pattern.compile("<(\\d{2}):(\\d{2})\\.(\\d{2,3})>([^<]*)")
 
     private fun getCacheFile(artist: String, track: String): java.io.File? {
         val dir = cacheDir ?: return null
@@ -43,10 +45,28 @@ class LrcLibClient(
             if (syncedArr != null) {
                 for (i in 0 until syncedArr.length()) {
                     val item = syncedArr.getJSONObject(i)
-                    syncedList.add(LyricLine(item.getLong("timestampMs"), item.getString("text")))
+                    val ts = item.getLong("timestampMs")
+                    val text = item.getString("text")
+                    val wordsArr = item.optJSONArray("words")
+                    val wordsList = mutableListOf<SyllableWord>()
+                    if (wordsArr != null && wordsArr.length() > 0) {
+                        for (w in 0 until wordsArr.length()) {
+                            val wObj = wordsArr.getJSONObject(w)
+                            wordsList.add(
+                                SyllableWord(
+                                    word = wObj.getString("word"),
+                                    startMs = wObj.getLong("startMs"),
+                                    endMs = wObj.getLong("endMs")
+                                )
+                            )
+                        }
+                    }
+                    syncedList.add(LyricLine(timestampMs = ts, text = text, words = wordsList))
                 }
             }
-            Lyrics(plainLyrics = plain, syncedLyrics = syncedList)
+            // Ensure every line has synthesized words if words were empty
+            val finalSynced = enrichLinesWithSyllables(syncedList)
+            Lyrics(plainLyrics = plain, syncedLyrics = finalSynced)
         } catch (_: Exception) {
             null
         }
@@ -63,6 +83,15 @@ class LrcLibClient(
                     arr.put(JSONObject().apply {
                         put("timestampMs", line.timestampMs)
                         put("text", line.text)
+                        val wordsArr = JSONArray()
+                        line.words.forEach { w ->
+                            wordsArr.put(JSONObject().apply {
+                                put("word", w.word)
+                                put("startMs", w.startMs)
+                                put("endMs", w.endMs)
+                            })
+                        }
+                        put("words", wordsArr)
                     })
                 }
                 put("syncedLyrics", arr)
@@ -205,7 +234,7 @@ class LrcLibClient(
     private fun parseLrc(rawLrc: String): List<LyricLine> {
         if (rawLrc.isBlank()) return emptyList()
 
-        val lines = mutableListOf<LyricLine>()
+        val parsedRawLines = mutableListOf<LyricLine>()
         for (line in rawLrc.lines()) {
             val trimmed = line.trim()
             val matcher = timestampPattern.matcher(trimmed)
@@ -215,13 +244,88 @@ class LrcLibClient(
                 val msStr = matcher.group(3) ?: "0"
                 val ms = if (msStr.length == 2) msStr.toLong() * 10 else msStr.toLong()
                 val totalMs = (min * 60 * 1000) + (sec * 1000) + ms
-                val text = matcher.group(4)?.trim() ?: ""
+                val rawText = matcher.group(4)?.trim() ?: ""
 
-                if (text.isNotBlank()) {
-                    lines.add(LyricLine(timestampMs = totalMs, text = text))
+                if (rawText.isNotBlank()) {
+                    val (cleanText, extractedWords) = parseEnhancedWords(rawText, totalMs)
+                    parsedRawLines.add(
+                        LyricLine(
+                            timestampMs = totalMs,
+                            text = cleanText,
+                            words = extractedWords
+                        )
+                    )
                 }
             }
         }
-        return lines.sortedBy { it.timestampMs }
+        val sorted = parsedRawLines.sortedBy { it.timestampMs }
+        return enrichLinesWithSyllables(sorted)
+    }
+
+    private fun parseEnhancedWords(rawText: String, lineStartMs: Long): Pair<String, List<SyllableWord>> {
+        val wordMatcher = enhancedWordPattern.matcher(rawText)
+        val words = mutableListOf<SyllableWord>()
+        var foundAny = false
+
+        while (wordMatcher.find()) {
+            foundAny = true
+            val min = wordMatcher.group(1)?.toLongOrNull() ?: 0L
+            val sec = wordMatcher.group(2)?.toLongOrNull() ?: 0L
+            val msStr = wordMatcher.group(3) ?: "0"
+            val ms = if (msStr.length == 2) msStr.toLong() * 10 else msStr.toLong()
+            val wordStartMs = (min * 60 * 1000) + (sec * 1000) + ms
+            val wordText = wordMatcher.group(4)?.trim() ?: ""
+
+            if (wordText.isNotBlank()) {
+                words.add(SyllableWord(word = wordText, startMs = wordStartMs, endMs = wordStartMs + 400L))
+            }
+        }
+
+        if (foundAny && words.isNotEmpty()) {
+            for (i in 0 until words.size - 1) {
+                val nextStart = words[i + 1].startMs
+                if (nextStart > words[i].startMs) {
+                    words[i] = words[i].copy(endMs = nextStart)
+                }
+            }
+            val cleanText = rawText.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim()
+            return Pair(cleanText, words)
+        }
+
+        val cleanText = rawText.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim()
+        return Pair(cleanText, emptyList())
+    }
+
+    private fun enrichLinesWithSyllables(lines: List<LyricLine>): List<LyricLine> {
+        if (lines.isEmpty()) return emptyList()
+
+        return lines.mapIndexed { i, line ->
+            if (line.words.isNotEmpty()) {
+                line
+            } else {
+                val nextTimestamp = if (i < lines.size - 1) lines[i + 1].timestampMs else (line.timestampMs + 3800L)
+                val lineDuration = (nextTimestamp - line.timestampMs).coerceIn(1200L, 6000L)
+                val words = synthesizeWords(line.text, line.timestampMs, lineDuration)
+                line.copy(words = words)
+            }
+        }
+    }
+
+    private fun synthesizeWords(text: String, lineStartMs: Long, lineDurationMs: Long): List<SyllableWord> {
+        val wordTokens = text.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+        if (wordTokens.isEmpty()) return emptyList()
+
+        val totalWeight = wordTokens.sumOf { (it.length.coerceAtLeast(1) + 1) }
+        var currentOffset = lineStartMs
+        val result = mutableListOf<SyllableWord>()
+
+        for (token in wordTokens) {
+            val weight = token.length.coerceAtLeast(1) + 1
+            val wordDur = ((lineDurationMs * weight) / totalWeight).coerceAtLeast(120L)
+            val end = currentOffset + wordDur
+            result.add(SyllableWord(word = token, startMs = currentOffset, endMs = end))
+            currentOffset = end
+        }
+        return result
     }
 }

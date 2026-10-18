@@ -109,8 +109,27 @@ class MusicStreamSource(
         // Fast in-memory TTL cache for audio stream URLs (videoId -> Pair(streamUrl, expireTimestampMs))
         val songUrlCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
 
+        // ReplayGain loudness tracking (videoId -> loudnessDb from InnerTube audioConfig)
+        val songLoudnessCache = java.util.concurrent.ConcurrentHashMap<String, Float>()
+
+        // Instant query cache for Search
+        val searchAllCache = java.util.concurrent.ConcurrentHashMap<String, SearchAllResults>()
+
+        // Instant artist screen cache
+        val artistTracksCache = java.util.concurrent.ConcurrentHashMap<String, List<Track>>()
+        val artistProfileCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Artist, List<Album>>>()
+
         fun clearSongUrlCache() {
             songUrlCache.clear()
+            songLoudnessCache.clear()
+            searchAllCache.clear()
+            artistTracksCache.clear()
+            artistProfileCache.clear()
+        }
+
+        fun getLoudnessDb(videoId: String): Float? {
+            val cleanVid = videoId.removePrefix("yt:").removePrefix("mono_").trim()
+            return songLoudnessCache[cleanVid]
         }
     }
 
@@ -259,6 +278,19 @@ class MusicStreamSource(
                     }
 
                     val streamingData = json.optJSONObject("streamingData") ?: return@use
+
+                    // Capture ReplayGain loudness metadata from InnerTube playerConfig
+                    val audioConfig = json.optJSONObject("playerConfig")?.optJSONObject("audioConfig")
+                    val loudness = audioConfig?.optDouble("loudnessDb", Double.NaN)
+                    val perceptualLoudness = audioConfig?.optDouble("perceptualLoudnessDb", Double.NaN)
+                    val effectiveLoudness = if (loudness != null && !loudness.isNaN()) loudness.toFloat()
+                        else if (perceptualLoudness != null && !perceptualLoudness.isNaN()) perceptualLoudness.toFloat()
+                        else null
+                    if (effectiveLoudness != null) {
+                        songLoudnessCache[videoId] = effectiveLoudness
+                        android.util.Log.d("MusicEuy", "ReplayGain captured for $videoId: $effectiveLoudness dB")
+                    }
+
                     val adaptiveFormats = streamingData.optJSONArray("adaptiveFormats") ?: return@use
                     val audioFormats = mutableListOf<AudioStreamCandidate>()
 
@@ -711,15 +743,26 @@ class MusicStreamSource(
         val cleanQ = query.trim()
         if (cleanQ.isBlank()) return@withContext SearchAllResults()
 
+        val cacheKey = cleanQ.lowercase()
+        val cached = searchAllCache[cacheKey]
+        if (cached != null) {
+            android.util.Log.d("MusicEuy", "searchAll cache hit for: $cleanQ")
+            return@withContext cached
+        }
+
         val tracksDef = async { searchTracks(cleanQ) }
         val artistsDef = async { searchArtists(cleanQ) }
         val albumsDef = async { searchAlbums(cleanQ) }
 
-        SearchAllResults(
+        val result = SearchAllResults(
             tracks = tracksDef.await(),
             artists = artistsDef.await(),
             albums = albumsDef.await()
         )
+        if (result.tracks.isNotEmpty() || result.artists.isNotEmpty() || result.albums.isNotEmpty()) {
+            searchAllCache[cacheKey] = result
+        }
+        result
     }
 
     suspend fun fetchExploreHome(favoriteArtists: List<String> = emptyList()): ExploreHomeData = withContext(Dispatchers.IO) {
@@ -1108,6 +1151,16 @@ class MusicStreamSource(
      * Fetches artist profile (avatar, banner, browseId) and all official albums from YouTube Music.
      */
     suspend fun getArtistProfileAndAlbums(artistName: String): Pair<Artist, List<Album>> = withContext(Dispatchers.IO) {
+        val cleanName = artistName.trim()
+        if (cleanName.isBlank()) return@withContext Pair(Artist("empty", "", null), emptyList())
+
+        val cacheKey = cleanName.lowercase()
+        val cached = artistProfileCache[cacheKey]
+        if (cached != null) {
+            android.util.Log.d("MusicEuy", "getArtistProfileAndAlbums cache hit for: $cleanName")
+            return@withContext cached
+        }
+
         val albums = mutableListOf<Album>()
         var artistBrowseId: String? = null
         var artistAvatar: String? = null
@@ -1405,7 +1458,9 @@ class MusicStreamSource(
             bannerUrl = artistBanner,
             isVerified = true
         )
-        Pair(fullArtist, albums)
+        val result = Pair(fullArtist, albums)
+        artistProfileCache[cacheKey] = result
+        result
     }
 
     /**
@@ -1641,23 +1696,31 @@ class MusicStreamSource(
      * Rejects obscure songs, unrelated tracks, or songs with misleading titles that mimic the artist name.
      */
     suspend fun getArtistTopTracks(artistName: String): List<Track> = withContext(Dispatchers.IO) {
+        val cleanName = artistName.trim()
+        if (cleanName.isBlank()) return@withContext emptyList()
+
+        val cacheKey = cleanName.lowercase()
+        val cached = artistTracksCache[cacheKey]
+        if (cached != null && cached.isNotEmpty()) {
+            android.util.Log.d("MusicEuy", "getArtistTopTracks cache hit for: $cleanName")
+            return@withContext cached
+        }
+
         val verifiedTracks = mutableListOf<Track>()
         try {
-            // First attempt: official artist channel search
-            val query1 = "\"$artistName\" official audio"
-            val results1 = searchYouTubeMusic(query1)
+            // Fast direct artist query without quotes (avoids the 80s YouTube quote query timeout)
+            val results1 = searchYouTubeMusic(cleanName)
             for (t in results1) {
-                if (ArtistCatalog.isLegitimateArtistTrack(t, artistName)) {
+                if (ArtistCatalog.isLegitimateArtistTrack(t, cleanName)) {
                     verifiedTracks.add(t)
                 }
             }
 
-            // Second attempt: artist songs
-            if (verifiedTracks.size < 12) {
-                val query2 = "$artistName songs"
-                val results2 = searchYouTubeMusic(query2)
+            // Supplemental search if fewer than 8 songs
+            if (verifiedTracks.size < 8) {
+                val results2 = searchYouTubeMusic("$cleanName lagu hits")
                 for (t in results2) {
-                    if (ArtistCatalog.isLegitimateArtistTrack(t, artistName) && verifiedTracks.none { it.id == t.id || it.title.equals(t.title, ignoreCase = true) }) {
+                    if (ArtistCatalog.isLegitimateArtistTrack(t, cleanName) && verifiedTracks.none { it.id == t.id || it.title.equals(t.title, ignoreCase = true) }) {
                         verifiedTracks.add(t)
                     }
                 }
@@ -1665,7 +1728,12 @@ class MusicStreamSource(
         } catch (e: Exception) {
             android.util.Log.e("MusicEuy", "Error fetching artist top tracks: ${e.message}")
         }
-        verifiedTracks.distinctBy { it.id }
+
+        val finalTracks = verifiedTracks.distinctBy { it.id }
+        if (finalTracks.isNotEmpty()) {
+            artistTracksCache[cacheKey] = finalTracks
+        }
+        finalTracks
     }
 
     /**
