@@ -1648,7 +1648,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun openOfficialChart(chartName: String, browseId: String, subtitle: String) {
+    fun openOfficialChart(chartName: String, browseId: String, subtitle: String, initialCoverUrl: String? = null) {
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -1658,7 +1658,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                         id = browseId,
                         name = chartName,
                         description = "$subtitle • Tangga Lagu Resmi 2026",
-                        coverUrl = "",
+                        coverUrl = initialCoverUrl ?: "",
                         tracks = emptyList()
                     )
                 )
@@ -1668,7 +1668,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             }
             _uiState.update { state ->
                 if (state.selectedPlaylist?.id == browseId) {
-                    val cover = tracks.firstOrNull()?.coverUrl ?: ""
+                    val cover = initialCoverUrl?.takeIf { it.isNotBlank() } ?: tracks.firstOrNull()?.coverUrl ?: ""
                     state.copy(
                         isLoadingPlaylist = false,
                         selectedPlaylist = state.selectedPlaylist.copy(

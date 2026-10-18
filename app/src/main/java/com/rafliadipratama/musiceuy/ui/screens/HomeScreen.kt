@@ -87,12 +87,12 @@ import coil.compose.AsyncImage
 import com.rafliadipratama.musiceuy.R
 import com.rafliadipratama.musiceuy.data.model.Album
 import com.rafliadipratama.musiceuy.data.model.Artist
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.rafliadipratama.musiceuy.data.model.Playlist
 import com.rafliadipratama.musiceuy.data.model.Track
 import com.rafliadipratama.musiceuy.ui.components.PlayingIndicator
 import com.rafliadipratama.musiceuy.ui.components.SmoothCornerShape
 import com.rafliadipratama.musiceuy.ui.components.TrackItem
-import com.rafliadipratama.musiceuy.ui.components.press3D
 import com.rafliadipratama.musiceuy.ui.components.pressBounce
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreen
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreenBright
@@ -108,7 +108,8 @@ private data class OfficialChart(
     val title: String,
     val subtitle: String,
     val browseId: String,
-    val gradientColors: List<Color>
+    val gradientColors: List<Color>,
+    val coverUrl: String? = null
 )
 
 private data class TopCategory(
@@ -131,10 +132,34 @@ fun HomeScreen(
 
     val officialCharts = remember {
         listOf(
-            OfficialChart("Top 50 Indonesia", "Charts Resmi Indonesia", "VLPL4fGSI1pDJn5QPpj0R4vVgRWk8sSq549G", listOf(Color(0xFF007991), Color(0xFF78FFD6))),
-            OfficialChart("Top 50 Global", "Charts Global Terpopuler", "VLPLOHoVaTp8R7dqEEhhaOG7yfDoj_y2BrZ4", listOf(Color(0xFF8A2387), Color(0xFFE94057))),
-            OfficialChart("Viral Hits Indonesia", "Trending Viral Indonesia", "VLOLAK5uy_n7Ig_LAUbKE6_ZeQ1pwHmJcEhwX7BekBo", listOf(Color(0xFF11998E), Color(0xFF38EF7D))),
-            OfficialChart("Rilisan Baru 2026", "Rilisan Musik Terbaru", "VLPL4fGSI1pDJn4lW6MJA2q37CfnraqAizqE", listOf(Color(0xFFFF416C), Color(0xFFFF4B2B)))
+            OfficialChart(
+                "Top 50 Indonesia",
+                "Charts Resmi Indonesia",
+                "VLPL4fGSI1pDJn5QPpj0R4vVgRWk8sSq549G",
+                listOf(Color(0xFF007991), Color(0xFF78FFD6)),
+                "https://yt3.googleusercontent.com/wHZJ1dYK2lbb3ocVJMe1fE_FWf_pZI2ydIOwgSV9YeZcJpYSc8vAHHjt6_o4bRU9InAGeomx0v4n=s576"
+            ),
+            OfficialChart(
+                "Top 50 Global",
+                "Charts Global Terpopuler",
+                "VLPLOHoVaTp8R7dqEEhhaOG7yfDoj_y2BrZ4",
+                listOf(Color(0xFF8A2387), Color(0xFFE94057)),
+                "https://yt3.googleusercontent.com/t4PqTAJLy66M235aV912vM8pEKnAC0QM_zfhSomgdnQYYmBDJxoOzh1l0gWA7CRf9r_XyyEn0Go=s576"
+            ),
+            OfficialChart(
+                "Viral Hits Indonesia",
+                "Trending Viral Indonesia",
+                "VLOLAK5uy_n7Ig_LAUbKE6_ZeQ1pwHmJcEhwX7BekBo",
+                listOf(Color(0xFF11998E), Color(0xFF38EF7D)),
+                "https://yt3.googleusercontent.com/2qHUJ20mtWoAZBU80LpQkNfu7EXSKKNs8K-MFFV5vIuFKDseRNHb1cVbmuzmfHvNJKKZGJ-cJKI=s576"
+            ),
+            OfficialChart(
+                "Rilisan Baru 2026",
+                "Rilisan Musik Terbaru",
+                "VLPL4fGSI1pDJn4lW6MJA2q37CfnraqAizqE",
+                listOf(Color(0xFFFF416C), Color(0xFFFF4B2B)),
+                "https://yt3.googleusercontent.com/DF1qlviHbfG6kvfw1FBVtGGP-QHA-vpDs4-JZ-h51QCmPbW6XEzRIzcAkanyTzw9k4hopm62hJk=s576"
+            )
         )
     }
 
@@ -442,17 +467,45 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
                                 items(officialCharts) { chart ->
+                                    val chartInteractionSource = remember { MutableInteractionSource() }
                                     Box(
                                         modifier = Modifier
-                                            .size(width = 175.dp, height = 115.dp)
+                                            .size(width = 175.dp, height = 118.dp)
                                             .clip(SmoothCornerShape(16.dp))
                                             .background(Brush.linearGradient(chart.gradientColors))
-                                            .press3D(maxTilt = 6f, pressedScale = 0.96f)
-                                            .clickable { viewModel.openOfficialChart(chart.title, chart.browseId, chart.subtitle) }
-                                            .padding(14.dp)
+                                            .pressBounce(interactionSource = chartInteractionSource, pressedScale = 0.95f)
+                                            .clickable(
+                                                interactionSource = chartInteractionSource,
+                                                indication = null
+                                            ) { viewModel.openOfficialChart(chart.title, chart.browseId, chart.subtitle, chart.coverUrl) }
                                     ) {
+                                        // Official Cover Artwork (from Google CDN)
+                                        if (!chart.coverUrl.isNullOrEmpty()) {
+                                            AsyncImage(
+                                                model = chart.coverUrl,
+                                                contentDescription = chart.title,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                            // Glassmorphic / Scrim Gradient Overlay for high text contrast
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(
+                                                        Brush.verticalGradient(
+                                                            colors = listOf(
+                                                                Color.Black.copy(alpha = 0.35f),
+                                                                Color.Black.copy(alpha = 0.85f)
+                                                            )
+                                                        )
+                                                    )
+                                            )
+                                        }
+
                                         Column(
-                                            modifier = Modifier.fillMaxSize(),
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(14.dp),
                                             verticalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Column {
@@ -479,7 +532,7 @@ fun HomeScreen(
                                                     .align(Alignment.End)
                                                     .size(32.dp)
                                                     .clip(CircleShape)
-                                                    .background(Color.Black.copy(alpha = 0.45f))
+                                                    .background(Color.Black.copy(alpha = 0.55f))
                                                     .pressBounce(pressedScale = 0.88f),
                                                 contentAlignment = Alignment.Center
                                             ) {
@@ -509,6 +562,7 @@ fun HomeScreen(
                             ) {
                                 items(topCategories) { category ->
                                     val isSelected = uiState.selectedHomeFilter == category.filterPill
+                                    val catInteractionSource = remember { MutableInteractionSource() }
                                     Box(
                                         modifier = Modifier
                                             .size(width = 145.dp, height = 70.dp)
@@ -519,8 +573,11 @@ fun HomeScreen(
                                                 color = if (isSelected) BrandGreenBright else Color.Transparent,
                                                 shape = SmoothCornerShape(16.dp)
                                             )
-                                            .press3D(maxTilt = 6f, pressedScale = 0.95f)
-                                            .clickable {
+                                            .pressBounce(interactionSource = catInteractionSource, pressedScale = 0.95f)
+                                            .clickable(
+                                                interactionSource = catInteractionSource,
+                                                indication = null
+                                            ) {
                                                 viewModel.selectHomeFilter(if (isSelected) "Semua" else category.filterPill)
                                             }
                                             .padding(horizontal = 14.dp, vertical = 12.dp)
