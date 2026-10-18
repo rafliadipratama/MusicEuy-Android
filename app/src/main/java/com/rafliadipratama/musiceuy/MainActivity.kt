@@ -113,6 +113,27 @@ class MainActivity : ComponentActivity() {
                         viewModel.skipOnboarding()
                     }
 
+                    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+                    ) { /* Handled */ }
+
+                    LaunchedEffect(Unit) {
+                        val prefs = getSharedPreferences("musiceuy_app_prefs", MODE_PRIVATE)
+                        val hasRequested = prefs.getBoolean("has_requested_media_permission", false)
+                        if (!hasRequested) {
+                            val perms = mutableListOf<String>()
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                perms.add(android.Manifest.permission.READ_MEDIA_AUDIO)
+                                perms.add(android.Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                perms.add(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                                perms.add(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                            }
+                            prefs.edit().putBoolean("has_requested_media_permission", true).apply()
+                            permissionLauncher.launch(perms.toTypedArray())
+                        }
+                    }
+
                     LaunchedEffect(uiState.downloadNotificationMessage) {
                         uiState.downloadNotificationMessage?.let { msg ->
                             Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()

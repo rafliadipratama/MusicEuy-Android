@@ -80,7 +80,7 @@ fun NewReleasesBottomSheet(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Rilisan Baru YouTube Music",
+                        text = "Rilisan Baru Populer",
                         color = TextPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold

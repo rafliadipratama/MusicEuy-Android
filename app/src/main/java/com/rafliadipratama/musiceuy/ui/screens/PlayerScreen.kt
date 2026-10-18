@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
@@ -39,12 +40,15 @@ import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.CircularProgressIndicator
@@ -128,9 +132,10 @@ fun PlayerScreen(
     var lastScrolledIndex by remember { mutableIntStateOf(-1) }
 
     // Auto-scroll synchronized lyrics
-    LaunchedEffect(currentMs, uiState.lyrics) {
+    LaunchedEffect(currentMs, uiState.lyrics, uiState.lyricsOffsetMs) {
         if (uiState.isLyricsVisible && uiState.lyrics.hasSyncedLyrics) {
-            val activeIndex = uiState.lyrics.syncedLyrics.indexOfLast { it.timestampMs <= currentMs }
+            val adjustedMs = currentMs + uiState.lyricsOffsetMs
+            val activeIndex = uiState.lyrics.syncedLyrics.indexOfLast { it.timestampMs <= adjustedMs }
             if (activeIndex >= 0 && activeIndex != lastScrolledIndex) {
                 lastScrolledIndex = activeIndex
                 lyricsListState.animateScrollToItem((activeIndex - 1).coerceAtLeast(0))
@@ -203,7 +208,9 @@ fun PlayerScreen(
                 onDownload = { viewModel.downloadTrack(track) },
                 onOpenArtist = { viewModel.openArtistDetail(track.artist) },
                 onSeekToLine = { posMs -> viewModel.seekTo(posMs) },
-                onToggleVideoMode = { viewModel.setVideoMode(it) }
+                onToggleVideoMode = { viewModel.setVideoMode(it) },
+                onAdjustLyricsOffset = { viewModel.adjustLyricsOffset(it) },
+                onResetLyricsOffset = { viewModel.resetLyricsOffset() }
             )
         } else {
             // ==================== PORTRAIT LAYOUT (Mobile & Tablet) ====================
@@ -238,7 +245,9 @@ fun PlayerScreen(
                 onDownload = { viewModel.downloadTrack(track) },
                 onOpenArtist = { viewModel.openArtistDetail(track.artist) },
                 onSeekToLine = { posMs -> viewModel.seekTo(posMs) },
-                onToggleVideoMode = { viewModel.setVideoMode(it) }
+                onToggleVideoMode = { viewModel.setVideoMode(it) },
+                onAdjustLyricsOffset = { viewModel.adjustLyricsOffset(it) },
+                onResetLyricsOffset = { viewModel.resetLyricsOffset() }
             )
         }
 
@@ -296,7 +305,9 @@ private fun PortraitPlayerLayout(
     onDownload: () -> Unit,
     onOpenArtist: () -> Unit,
     onSeekToLine: (Long) -> Unit = {},
-    onToggleVideoMode: (Boolean) -> Unit = {}
+    onToggleVideoMode: (Boolean) -> Unit = {},
+    onAdjustLyricsOffset: (Long) -> Unit = {},
+    onResetLyricsOffset: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -388,7 +399,9 @@ private fun PortraitPlayerLayout(
                     uiState = uiState,
                     currentMs = currentMs,
                     lyricsListState = lyricsListState,
-                    onSeekToLine = onSeekToLine
+                    onSeekToLine = onSeekToLine,
+                    onAdjustOffset = onAdjustLyricsOffset,
+                    onResetOffset = onResetLyricsOffset
                 )
             } else if (uiState.isVideoMode) {
                 PlayerVideoSurface(
@@ -533,7 +546,9 @@ private fun LandscapePlayerLayout(
     onDownload: () -> Unit,
     onOpenArtist: () -> Unit,
     onSeekToLine: (Long) -> Unit = {},
-    onToggleVideoMode: (Boolean) -> Unit = {}
+    onToggleVideoMode: (Boolean) -> Unit = {},
+    onAdjustLyricsOffset: (Long) -> Unit = {},
+    onResetLyricsOffset: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -707,7 +722,9 @@ private fun LandscapePlayerLayout(
                         uiState = uiState,
                         currentMs = currentMs,
                         lyricsListState = lyricsListState,
-                        onSeekToLine = onSeekToLine
+                        onSeekToLine = onSeekToLine,
+                        onAdjustOffset = onAdjustLyricsOffset,
+                        onResetOffset = onResetLyricsOffset
                     )
                 }
             } else {
@@ -1044,7 +1061,9 @@ private fun SyncedLyricsView(
     uiState: com.rafliadipratama.musiceuy.ui.viewmodel.PlayerUiState,
     currentMs: Long,
     lyricsListState: androidx.compose.foundation.lazy.LazyListState,
-    onSeekToLine: (Long) -> Unit = {}
+    onSeekToLine: (Long) -> Unit = {},
+    onAdjustOffset: (Long) -> Unit = {},
+    onResetOffset: () -> Unit = {}
 ) {
     if (uiState.isLoadingLyrics) {
         Column(
@@ -1066,72 +1085,140 @@ private fun SyncedLyricsView(
         }
     } else if (uiState.lyrics.hasSyncedLyrics) {
         val synced = uiState.lyrics.syncedLyrics
-        val activeIndex = synced.indexOfLast { it.timestampMs <= currentMs }
+        val adjustedMs = currentMs + uiState.lyricsOffsetMs
+        val activeIndex = synced.indexOfLast { it.timestampMs <= adjustedMs }
 
-        LazyColumn(
-            state = lyricsListState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 40.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            itemsIndexed(synced) { index, line ->
-                val isActive = index == activeIndex
-                if (isActive && line.words.isNotEmpty()) {
-                    val annotatedString = buildAnnotatedString {
-                        line.words.forEachIndexed { wIdx, wordObj ->
-                            val isWordPast = currentMs > wordObj.endMs
-                            val isWordActive = currentMs in wordObj.startMs..wordObj.endMs
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                state = lyricsListState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 46.dp, bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                itemsIndexed(synced) { index, line ->
+                    val isActive = index == activeIndex
+                    if (isActive && line.words.isNotEmpty()) {
+                        val annotatedString = buildAnnotatedString {
+                            line.words.forEachIndexed { wIdx, wordObj ->
+                                val isWordPast = adjustedMs > wordObj.endMs
+                                val isWordActive = adjustedMs in wordObj.startMs..wordObj.endMs
 
-                            val wordColor = when {
-                                isWordActive -> Color.White
-                                isWordPast -> Color.White.copy(alpha = 0.95f)
-                                else -> Color.White.copy(alpha = 0.35f)
-                            }
-                            val wordWeight = when {
-                                isWordActive -> FontWeight.Black
-                                isWordPast -> FontWeight.Bold
-                                else -> FontWeight.Medium
-                            }
+                                val wordColor = when {
+                                    isWordActive -> Color.White
+                                    isWordPast -> Color.White.copy(alpha = 0.95f)
+                                    else -> Color.White.copy(alpha = 0.35f)
+                                }
+                                val wordWeight = when {
+                                    isWordActive -> FontWeight.Black
+                                    isWordPast -> FontWeight.Bold
+                                    else -> FontWeight.Medium
+                                }
 
-                            withStyle(
-                                style = SpanStyle(
-                                    color = wordColor,
-                                    fontWeight = wordWeight,
-                                    fontSize = if (isWordActive) 25.sp else 23.sp
-                                )
-                            ) {
-                                append(wordObj.word)
-                            }
-                            if (wIdx < line.words.size - 1) {
-                                append(" ")
+                                withStyle(
+                                    style = SpanStyle(
+                                        color = wordColor,
+                                        fontWeight = wordWeight,
+                                        fontSize = if (isWordActive) 25.sp else 23.sp
+                                    )
+                                ) {
+                                    append(wordObj.word)
+                                }
+                                if (wIdx < line.words.size - 1) {
+                                    append(" ")
+                                }
                             }
                         }
-                    }
 
-                    Text(
-                        text = annotatedString,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 36.sp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onSeekToLine(line.timestampMs) }
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                        Text(
+                            text = annotatedString,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 36.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onSeekToLine(line.timestampMs) }
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                        )
+                    } else {
+                        Text(
+                            text = line.text,
+                            color = if (isActive) Color.White else TextMuted.copy(alpha = 0.35f),
+                            fontSize = if (isActive) 23.sp else 18.sp,
+                            fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onSeekToLine(line.timestampMs) }
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+
+            // Floating Offset Calibration Pill (Icons only + compact offset indicator)
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 4.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.Black.copy(alpha = 0.65f))
+                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                IconButton(
+                    onClick = { onAdjustOffset(-250L) },
+                    modifier = Modifier.size(26.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Remove,
+                        contentDescription = "-250ms",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(14.dp)
                     )
-                } else {
-                    Text(
-                        text = line.text,
-                        color = if (isActive) Color.White else TextMuted.copy(alpha = 0.35f),
-                        fontSize = if (isActive) 23.sp else 18.sp,
-                        fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onSeekToLine(line.timestampMs) }
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                }
+
+                val offset = uiState.lyricsOffsetMs
+                val offsetText = when {
+                    offset > 0 -> "+${offset}ms"
+                    offset < 0 -> "${offset}ms"
+                    else -> "0ms"
+                }
+                Text(
+                    text = offsetText,
+                    color = if (offset != 0L) AccentEmerald else TextMuted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+
+                IconButton(
+                    onClick = { onAdjustOffset(250L) },
+                    modifier = Modifier.size(26.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "+250ms",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(14.dp)
                     )
+                }
+
+                if (offset != 0L) {
+                    IconButton(
+                        onClick = onResetOffset,
+                        modifier = Modifier.size(26.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reset Offset",
+                            tint = AccentEmerald,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
             }
         }

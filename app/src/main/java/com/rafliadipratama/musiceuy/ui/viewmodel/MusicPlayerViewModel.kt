@@ -21,6 +21,8 @@ import com.rafliadipratama.musiceuy.service.MusicService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -119,6 +121,7 @@ data class PlayerUiState(
     val isVideoMode: Boolean = false,
     val currentVideoStreamUrl: String? = null,
     val isLoadingVideo: Boolean = false,
+    val lyricsOffsetMs: Long = 0L,
     val isOnline: Boolean = true,
     val error: String? = null
 )
@@ -196,6 +199,17 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         }
         initMediaController()
         loadInitialData()
+
+        viewModelScope.launch {
+            com.rafliadipratama.musiceuy.audio.AudioEffectManager.state.collect { effectState ->
+                applyPlaybackParameters(effectState.playbackSpeed, effectState.pitchSemitones)
+            }
+        }
+    }
+
+    fun applyPlaybackParameters(speed: Float, pitchSemitones: Int) {
+        val pitchFactor = Math.pow(2.0, pitchSemitones / 12.0).toFloat()
+        mediaController?.playbackParameters = androidx.media3.common.PlaybackParameters(speed, pitchFactor)
     }
 
     private fun initMediaController() {
@@ -206,6 +220,8 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             try {
                 mediaController = controllerFuture?.get()
                 setupPlayerListener()
+                val currentEffects = com.rafliadipratama.musiceuy.audio.AudioEffectManager.state.value
+                applyPlaybackParameters(currentEffects.playbackSpeed, currentEffects.pitchSemitones)
             } catch (_: Exception) {
             }
         }, MoreExecutors.directExecutor())
@@ -313,6 +329,13 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                         currentPositionMs = pos,
                         durationMs = if (dur > 0) dur else it.durationMs
                     )
+                }
+                if (_uiState.value.isSleepTimerEndOfTrack && dur > 15000L) {
+                    val remainingMs = dur - pos
+                    if (remainingMs in 1..15000L) {
+                        val vol = (remainingMs / 15000f).coerceIn(0f, 1f)
+                        mediaController?.volume = vol
+                    }
                 }
                 counter++
                 if (counter % 50 == 0) { // every ~4-5 seconds
@@ -1512,8 +1535,8 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             while (remaining > 0 && isActive) {
                 delay(1000)
                 remaining--
-                if (remaining <= 60) {
-                    val vol = (remaining / 60f).coerceIn(0f, 1f)
+                if (remaining <= 20) {
+                    val vol = (remaining / 20f).coerceIn(0f, 1f)
                     mediaController?.volume = vol
                 }
                 _uiState.update { it.copy(sleepTimerRemainingSeconds = remaining) }
@@ -1769,6 +1792,14 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         return success
     }
 
+    fun adjustLyricsOffset(deltaMs: Long) {
+        _uiState.update { it.copy(lyricsOffsetMs = (it.lyricsOffsetMs + deltaMs).coerceIn(-10000L, 10000L)) }
+    }
+
+    fun resetLyricsOffset() {
+        _uiState.update { it.copy(lyricsOffsetMs = 0L) }
+    }
+
     fun startSongRadio(track: Track) {
         viewModelScope.launch {
             _uiState.update {
@@ -1780,6 +1811,41 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             val related = streamSource.fetchSongRadio(track)
             val queue = listOf(track) + related
             playTrack(track, queue)
+        }
+    }
+
+    fun startPlaylistRadio(playlistTracks: List<Track>, playlistName: String = "Playlist") {
+        if (playlistTracks.isEmpty()) return
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isAutoplayEnabled = true,
+                    downloadNotificationMessage = "Memulai Radio $playlistName..."
+                )
+            }
+            val seedTracks = playlistTracks.shuffled().take(3)
+            val radioTracks = mutableListOf<Track>()
+            withContext(Dispatchers.IO) {
+                coroutineScope {
+                    val jobs = seedTracks.map { seed ->
+                        async {
+                            try {
+                                streamSource.fetchSongRadio(seed)
+                            } catch (_: Exception) {
+                                emptyList<Track>()
+                            }
+                        }
+                    }
+                    jobs.awaitAll().forEach { tracks ->
+                        radioTracks.addAll(tracks)
+                    }
+                }
+            }
+            val distinctRadio = radioTracks.distinctBy { it.id }.filter { rt ->
+                playlistTracks.none { it.id == rt.id }
+            }
+            val fullQueue = (playlistTracks + distinctRadio).distinctBy { it.id }
+            playTrack(fullQueue.first(), fullQueue)
         }
     }
 
@@ -1930,7 +1996,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun playOfficialChart(chartName: String) {
-        openOfficialChart(chartName, "chart_${chartName.hashCode()}", "YouTube Music Official")
+        openOfficialChart(chartName, "chart_${chartName.hashCode()}", "Tangga Lagu Resmi")
     }
 
     fun showImportPlaylistDialog() {

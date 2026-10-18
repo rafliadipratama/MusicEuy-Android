@@ -15,10 +15,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -274,6 +277,26 @@ fun PlaylistDetailScreen(
                             text = "Acak",
                             color = TextPrimary,
                             fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            if (currentPlaylist.tracks.isNotEmpty()) {
+                                viewModel.startPlaylistRadio(currentPlaylist.tracks, currentPlaylist.name)
+                            }
+                        },
+                        enabled = currentPlaylist.tracks.isNotEmpty(),
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color.White.copy(alpha = 0.08f), CircleShape)
+                            .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AllInclusive,
+                            contentDescription = "Mulai Radio Playlist",
+                            tint = BrandGreen,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }

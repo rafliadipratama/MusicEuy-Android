@@ -32,7 +32,9 @@ data class AudioEffectState(
     val bassBoostStrength: Short = 0, // 0 to 1000
     val isLoudnessEnabled: Boolean = false,
     val audioQuality: AudioQuality = AudioQuality.STANDAR,
-    val crossfadeSeconds: Int = 0
+    val crossfadeSeconds: Int = 0,
+    val playbackSpeed: Float = 1.0f,
+    val pitchSemitones: Int = 0
 )
 
 object AudioEffectManager {
@@ -46,6 +48,8 @@ object AudioEffectManager {
     private const val KEY_LOUDNESS_ENABLED = "loudness_enabled"
     private const val KEY_AUDIO_QUALITY = "audio_quality"
     private const val KEY_CROSSFADE = "crossfade_seconds"
+    private const val KEY_PLAYBACK_SPEED = "playback_speed"
+    private const val KEY_PITCH_SEMITONES = "pitch_semitones"
 
     val PRESET_MAP = mapOf(
         "Datar" to listOf<Short>(0, 0, 0, 0, 0),
@@ -85,6 +89,8 @@ object AudioEffectManager {
             prefs.getInt("$KEY_BAND_PREFIX$i", defaultLevels.getOrElse(i) { 0 }.toInt()).toShort()
         }
         val crossfade = prefs.getInt(KEY_CROSSFADE, 0)
+        val speed = prefs.getFloat(KEY_PLAYBACK_SPEED, 1.0f)
+        val pitch = prefs.getInt(KEY_PITCH_SEMITONES, 0)
 
         _state.value = AudioEffectState(
             isEqEnabled = eqEnabled,
@@ -94,8 +100,30 @@ object AudioEffectManager {
             bassBoostStrength = bassStrength,
             isLoudnessEnabled = loudnessEnabled,
             audioQuality = quality,
-            crossfadeSeconds = crossfade
+            crossfadeSeconds = crossfade,
+            playbackSpeed = speed,
+            pitchSemitones = pitch
         )
+    }
+
+    fun setPlaybackSpeed(context: Context, speed: Float) {
+        val clamped = speed.coerceIn(0.5f, 2.0f)
+        getPrefs(context).edit().putFloat(KEY_PLAYBACK_SPEED, clamped).apply()
+        _state.value = _state.value.copy(playbackSpeed = clamped)
+    }
+
+    fun setPitchSemitones(context: Context, semitones: Int) {
+        val clamped = semitones.coerceIn(-12, 12)
+        getPrefs(context).edit().putInt(KEY_PITCH_SEMITONES, clamped).apply()
+        _state.value = _state.value.copy(pitchSemitones = clamped)
+    }
+
+    fun resetSpeedAndPitch(context: Context) {
+        getPrefs(context).edit()
+            .putFloat(KEY_PLAYBACK_SPEED, 1.0f)
+            .putInt(KEY_PITCH_SEMITONES, 0)
+            .apply()
+        _state.value = _state.value.copy(playbackSpeed = 1.0f, pitchSemitones = 0)
     }
 
     fun setCrossfadeSeconds(context: Context, seconds: Int) {

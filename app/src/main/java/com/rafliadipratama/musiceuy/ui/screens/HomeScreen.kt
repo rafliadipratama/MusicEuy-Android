@@ -659,10 +659,10 @@ fun HomeScreen(
                             }
                         }
 
-                        // 4. Playlist Populer YouTube Music (Carousel Cover Persegi Style Musicfy & YouTube Music)
+                        // 4. Playlist Populer (Carousel Cover Persegi Style Musicfy & YouTube Music)
                         if (uiState.communityPlaylists.isNotEmpty()) {
                             item {
-                                SectionHeader(title = "Playlist Populer YouTube Music", icon = Icons.Default.Headphones)
+                                SectionHeader(title = "Playlist Populer", icon = Icons.Default.Headphones)
                                 LazyRow(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1325,7 +1325,7 @@ private fun PlaylistHomeCard(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = playlist.description.ifBlank { "Playlist YouTube Music" },
+                text = playlist.description.ifBlank { "Playlist Pilihan" },
                 color = TextSecondary,
                 fontSize = 11.sp,
                 maxLines = 1,
