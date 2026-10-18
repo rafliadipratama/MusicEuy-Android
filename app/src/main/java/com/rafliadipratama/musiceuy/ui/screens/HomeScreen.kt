@@ -721,6 +721,7 @@ fun HomeScreen(
         }
 
         if (isShazamDialogVisible) {
+            val recogState by ShazamRecognitionService.state.collectAsState()
             AlertDialog(
                 onDismissRequest = {
                     isShazamDialogVisible = false
@@ -739,7 +740,6 @@ fun HomeScreen(
                     }
                 },
                 text = {
-                    val recogState by ShazamRecognitionService.state.collectAsState()
                     val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
                         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
                     ) { isGranted ->
@@ -787,7 +787,7 @@ fun HomeScreen(
                             }
                             is RecognitionState.Success -> {
                                 val t = (recogState as RecognitionState.Success).track
-                                Text("Ditemukan: ${t.title} • ${t.artist}", color = BrandGreen, fontWeight = FontWeight.Bold)
+                                Text("Ditemukan: ${t.title} • ${t.artist.name}", color = BrandGreen, fontWeight = FontWeight.Bold)
                             }
                             is RecognitionState.Error -> {
                                 val msg = (recogState as RecognitionState.Error).message
@@ -798,11 +798,28 @@ fun HomeScreen(
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = {
-                        isShazamDialogVisible = false
-                        ShazamRecognitionService.reset()
-                    }) {
-                        Text("Tutup", color = TextSecondary)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (recogState is RecognitionState.Error) {
+                            TextButton(onClick = {
+                                scope.launch {
+                                    ShazamRecognitionService.startListening(context) { recognized ->
+                                        recognized?.let { track ->
+                                            viewModel.playTrack(track)
+                                            isShazamDialogVisible = false
+                                        }
+                                    }
+                                }
+                            }) {
+                                Text("Coba Lagi", color = BrandGreen, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        TextButton(onClick = {
+                            isShazamDialogVisible = false
+                            ShazamRecognitionService.reset()
+                        }) {
+                            Text("Tutup", color = TextSecondary)
+                        }
                     }
                 },
                 containerColor = Color(0xFF161B22)
