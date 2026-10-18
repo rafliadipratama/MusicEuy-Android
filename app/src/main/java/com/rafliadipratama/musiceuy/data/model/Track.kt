@@ -20,6 +20,7 @@ data class Track(
     val isVerified: Boolean = true,
     val isDownloaded: Boolean = false,
     val fileSizeBytes: Long = 0L,
+    val playCount: String? = null,
     val sourceLabel: String = "YouTube Music Verified"
 ) {
     val durationFormatted: String

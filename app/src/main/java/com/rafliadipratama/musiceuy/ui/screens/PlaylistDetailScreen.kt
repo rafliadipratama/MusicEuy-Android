@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -78,7 +80,9 @@ fun PlaylistDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val currentPlaylist = uiState.playlists.find { it.id == playlist.id } ?: playlist
+    val currentPlaylist = uiState.selectedPlaylist?.takeIf { it.id == playlist.id }
+        ?: uiState.playlists.find { it.id == playlist.id }
+        ?: playlist
 
     var searchQuery by remember { mutableStateOf("") }
     var sortOption by remember { mutableStateOf(PlaylistSortOption.DEFAULT) }
@@ -335,7 +339,7 @@ fun PlaylistDetailScreen(
                                     .background(SurfaceContainerHigh)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Sort,
+                                    imageVector = Icons.AutoMirrored.Filled.Sort,
                                     contentDescription = "Urutkan",
                                     tint = if (sortOption != PlaylistSortOption.DEFAULT) BrandGreen else TextSecondary,
                                     modifier = Modifier.size(22.dp)
@@ -380,7 +384,30 @@ fun PlaylistDetailScreen(
                 )
             }
 
-            if (currentPlaylist.tracks.isEmpty()) {
+            if (uiState.isLoadingPlaylist) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 50.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                color = BrandGreen,
+                                strokeWidth = 3.dp,
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "Memuat daftar lagu resmi dari YouTube Music...",
+                                color = TextSecondary,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+            } else if (currentPlaylist.tracks.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier

@@ -1,5 +1,165 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App & General -->
     <string name="app_name">MusicEuy</string>
-    <string name="widget_description">Pemutar musik ringkas di Layar Utama</string>
+    <string name="widget_description">Compact music player for Home Screen</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="confirm">Confirm</string>
+    <string name="close">Close</string>
+    <string name="back">Back</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="songs">songs</string>
+    <string name="tracks">tracks</string>
+    <string name="plays">plays</string>
+    <string name="unknown_artist">Unknown Artist</string>
+    <string name="unknown_album">Unknown Album</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_home">Home</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_library">Library</string>
+    <string name="nav_plugins">Plugins</string>
+
+    <!-- Home Screen -->
+    <string name="home_continue_listening">Continue Listening</string>
+    <string name="home_resume">Resume</string>
+    <string name="home_last_stopped">Stopped at %s</string>
+    <string name="home_top_50">Top 50 Hits</string>
+    <string name="home_top_50_subtitle">Trending music across Indonesia &amp; Global</string>
+    <string name="home_popular_artists">Popular Artists</string>
+    <string name="home_popular_artists_subtitle">Verified musicians &amp; artists you love</string>
+    <string name="home_albums_singles">Top Albums &amp; Singles</string>
+    <string name="home_albums_singles_subtitle">Best trending albums and hit singles right now</string>
+    <string name="home_play_all">Play All</string>
+    <string name="home_shuffle">Shuffle</string>
+    <string name="home_loading_charts">Loading music charts...</string>
+    <string name="home_empty_title">No songs loaded yet</string>
+    <string name="home_empty_desc">Tap Refresh below to load latest trending charts</string>
+    <string name="home_refresh">Refresh Charts</string>
+
+    <!-- Search Screen -->
+    <string name="search_placeholder">Search songs, artists, or albums...</string>
+    <string name="search_history_title">Search History</string>
+    <string name="search_clear_all">Clear All</string>
+    <string name="search_results_title">Search Results</string>
+    <string name="search_empty_title">Find Your Favorite Music</string>
+    <string name="search_empty_subtitle">Type a song title, artist, or album name above</string>
+    <string name="search_no_results">No results found for \"%s\"</string>
+    <string name="search_searching">Searching music...</string>
+
+    <!-- Library Screen -->
+    <string name="library_title">Your Library</string>
+    <string name="library_subtitle">Playlists, genres, favorite songs &amp; history</string>
+    <string name="library_liked_songs">Liked Songs</string>
+    <string name="library_liked_songs_subtitle">%d songs saved</string>
+    <string name="library_downloaded_songs">Downloaded</string>
+    <string name="library_downloaded_songs_subtitle">Offline listening</string>
+    <string name="library_most_played">Most Played</string>
+    <string name="library_most_played_subtitle">Your top tracks</string>
+    <string name="library_create_playlist">Create New Playlist</string>
+    <string name="library_new_playlist_name">Playlist name...</string>
+    <string name="library_new_playlist_desc">Description (optional)...</string>
+    <string name="library_create">Create</string>
+    <string name="library_my_playlists">My Playlists</string>
+    <string name="library_empty_playlists">No playlists created yet</string>
+    <string name="library_empty_playlists_desc">Tap the + button to create your first custom playlist</string>
+    <string name="library_genre_stations">Genre Stations</string>
+    <string name="library_playback_history">Listening History</string>
+    <string name="library_clear_history">Clear History</string>
+    <string name="library_history_empty">No listening history yet</string>
+    <string name="library_history_empty_desc">Songs you listen to will automatically appear here</string>
+
+    <!-- Language Selector -->
+    <string name="language_settings">Language / Bahasa</string>
+    <string name="language_dialog_title">Select App Language</string>
+    <string name="language_system">Follow System</string>
+    <string name="language_system_desc">Use device system language</string>
+    <string name="language_indonesian">Bahasa Indonesia</string>
+    <string name="language_indonesian_desc">Indonesian</string>
+    <string name="language_english">English</string>
+    <string name="language_english_desc">Global English</string>
+
+    <!-- Player & Controls -->
+    <string name="player_lyrics">Karaoke Lyrics</string>
+    <string name="player_lyrics_synced">Synchronized via LRCLIB</string>
+    <string name="player_no_lyrics">Lyrics not available for this track</string>
+    <string name="player_queue">Playback Queue</string>
+    <string name="player_equalizer">Equalizer</string>
+    <string name="player_sleep_timer">Sleep Timer</string>
+    <string name="player_download">Download Track</string>
+    <string name="player_share_story">Share Story Card</string>
+    <string name="player_add_to_playlist">Add to Playlist</string>
+    <string name="player_start_radio">Start Track Radio</string>
+    <string name="player_start_radio_desc">Play similar songs based on this vibe</string>
+    <string name="player_view_artist">View Artist Profile</string>
+    <string name="player_not_interested">Not Interested</string>
+    <string name="player_not_interested_desc">Hide this song and reduce similar suggestions</string>
+
+    <!-- Sleep Timer -->
+    <string name="sleep_timer_title">Sleep Timer</string>
+    <string name="sleep_timer_subtitle">Automatically pauses music playback when time ends</string>
+    <string name="sleep_timer_off">Turn Off Sleep Timer</string>
+    <string name="sleep_timer_end_of_track">End of current track</string>
+    <string name="sleep_timer_minutes">%d minutes</string>
+    <string name="sleep_timer_active_badge">Timer: %s remaining</string>
+
+    <!-- Context Menu Actions -->
+    <string name="menu_play_now">Play Now</string>
+    <string name="menu_play_now_desc">Start playing this track immediately</string>
+    <string name="menu_play_next">Play Next</string>
+    <string name="menu_play_next_desc">Play right after current song finishes</string>
+    <string name="menu_add_to_queue">Add to Queue</string>
+    <string name="menu_add_to_queue_desc">Append to the end of queue</string>
+    <string name="menu_add_to_playlist">Add to Playlist</string>
+    <string name="menu_add_to_playlist_desc">Save into your custom playlist</string>
+    <string name="menu_download">Download Music</string>
+    <string name="menu_download_desc">Save to local device storage</string>
+    <string name="menu_downloaded">Downloaded</string>
+    <string name="menu_downloaded_desc">Saved in Music storage</string>
+    <string name="menu_like">Like This Song</string>
+    <string name="menu_like_desc">Save to your favorites</string>
+    <string name="menu_unlike">Remove from Liked Songs</string>
+    <string name="menu_unlike_desc">Remove from your favorites</string>
+    <string name="menu_view_artist">View Artist Profile</string>
+    <string name="menu_view_artist_desc">Explore discography and popular tracks</string>
+
+    <!-- Downloaded Tracks Screen -->
+    <string name="downloads_title">Downloaded Songs</string>
+    <string name="downloads_subtitle">Offline music storage</string>
+    <string name="downloads_empty_title">No downloaded songs yet</string>
+    <string name="downloads_empty_desc">Tap the download icon on any song to listen without internet</string>
+    <string name="downloads_delete_confirm">Delete from storage?</string>
+    <string name="downloads_delete_desc">This track file will be removed from device storage</string>
+
+    <!-- Plugins Screen -->
+    <string name="plugins_title">Plugins &amp; Audio Engines</string>
+    <string name="plugins_subtitle">Modular streaming, lyrics &amp; audio enhancements</string>
+    <string name="plugins_active">Active</string>
+    <string name="plugins_disabled">Disabled</string>
+    <string name="plugins_update_ytdlp">Check / Update OTA</string>
+
+    <!-- Onboarding Screen -->
+    <string name="onboarding_title">Choose Your Favorite Artists</string>
+    <string name="onboarding_subtitle">Select at least 3 artists to personalize your home charts and music discovery</string>
+    <string name="onboarding_skip">Skip for now</string>
+    <string name="onboarding_continue">Continue (%d selected)</string>
+    <string name="onboarding_search_hint">Search artists...</string>
+
+    <!-- Offline Mode -->
+    <string name="offline_mode_title">Offline Mode Active</string>
+    <string name="offline_mode_desc">No internet connection. Playing songs saved in your device storage.</string>
+    <string name="offline_open_downloads">Open Downloaded Songs</string>
+    <string name="offline_play_all">Play All Offline</string>
+    <string name="offline_downloaded_section_title">Downloaded On This Device</string>
+    <string name="offline_no_songs_title">No Downloaded Songs Yet</string>
+    <string name="offline_no_songs_desc">When connected to the internet, tap the three dots on any song and select Download to enjoy music anytime without mobile data.</string>
+    <string name="offline_search_hint">Search downloaded songs...</string>
+    <string name="offline_search_banner">Offline Mode • Searching music stored on device</string>
+    <string name="offline_track_requires_internet">This track requires an internet connection. Connect to internet or play downloaded music.</string>
+    <string name="offline_back_online">Connected back online</string>
+    <string name="offline_songs_count">%d offline songs</string>
 </resources>

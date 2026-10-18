@@ -17,6 +17,8 @@ class JioSaavnPlugin(
     override val description: String = "Penyedia audio langsung berkecepatan tinggi (320kbps AAC) dengan filter verifikasi ketat judul & artis"
     override val version: String = "1.0.0"
     override val author: String = "MusicEuy Community"
+    override val category: String = "Audio Stream"
+    override val githubUrl: String = "https://github.com/sumitkolhe/jiosaavn-api"
     override val isBuiltIn: Boolean = true
 
     override suspend fun search(query: String): List<Track> {

@@ -6,7 +6,8 @@ Berkas APK resmi untuk aplikasi pemutar musik **MusicEuy Android**.
 
 | Berkas | Versi | Ukuran | Arsitektur | Keterangan |
 | :--- | :--- | :--- | :--- | :--- |
-| [`MusicEuy-v1.4.0.apk`](./MusicEuy-v1.4.0.apk) | 1.4.0 | ~16 MB | Universal (arm64-v8a, armeabi-v7a, x86_64) | Signed Release APK (Terbaru - Onboarding Setup) |
+| [`MusicEuy-v1.5.0.apk`](./MusicEuy-v1.5.0.apk) | 1.5.0 | ~74 MB | Universal (arm64-v8a, armeabi-v7a, x86_64) | Signed Release APK (Terbaru - Musicfy & Apple Music Architecture) |
+| [`MusicEuy-v1.4.0.apk`](./MusicEuy-v1.4.0.apk) | 1.4.0 | ~16 MB | Universal (arm64-v8a, armeabi-v7a, x86_64) | Signed Release APK (Versi Sebelumnya) |
 | [`MusicEuy-v1.3.0.apk`](./MusicEuy-v1.3.0.apk) | 1.3.0 | ~16 MB | Universal (arm64-v8a, armeabi-v7a, x86_64) | Signed Release APK (Versi Sebelumnya) |
 | [`MusicEuy-v1.1.0.apk`](./MusicEuy-v1.1.0.apk) | 1.1.0 | ~16 MB | Universal (arm64-v8a, armeabi-v7a, x86_64) | Signed Release APK (Versi Sebelumnya) |
 
@@ -15,7 +16,7 @@ Berkas APK resmi untuk aplikasi pemutar musik **MusicEuy Android**.
 ## Panduan Instalasi di Perangkat Android (Poco F3 / Xiaomi / HyperOS / MIUI)
 
 1. **Unduh Berkas APK**:
-   - Unduh langsung [`MusicEuy-v1.4.0.apk`](./MusicEuy-v1.4.0.apk) dari repositori ini atau melalui menu [GitHub Releases](https://github.com/rafliadipratama/MusicEuy-Android/releases).
+   - Unduh langsung [`MusicEuy-v1.5.0.apk`](./MusicEuy-v1.5.0.apk) dari repositori ini atau melalui menu [GitHub Releases](https://github.com/rafliadipratama/MusicEuy-Android/releases).
 2. **Izin Sumber Tidak Dikenal (*Install Unknown Apps*)**:
    - Jika muncul peringatan saat membuka APK di Chrome atau File Manager, masuk ke:
      `Setelan (Settings) -> Privasi & Keamanan -> Pasang Aplikasi yang Tidak Dikenal (Install Unknown Apps)`.
@@ -23,6 +24,33 @@ Berkas APK resmi untuk aplikasi pemutar musik **MusicEuy Android**.
 3. **Pasang & Buka**:
    - Ketuk **Instal**.
    - Buka aplikasi **MusicEuy**. Aplikasi langsung siap memutar lagu tanpa login akun apa pun!
+
+---
+
+## Pembaruan di Versi 1.5.0 (Fondasi Arsitektur Musicfy & Apple Music)
+
+- **Desain & Layout Beranda Modern (Musicfy & Apple Music Style)**:
+  - **Hero Carousel Editorial Banner**: Kartu sorotan lagu terpopuler dengan gradien vibran, label *Featured Spotlight*, badge fidelitas *Hi-Res FLAC*, dan tombol pemutaran instan.
+  - **Quick Action Bar**: Tombol pengenal musik sekitar (*Shazam In-App*), tombol sinkronisasi akun, dan avatar profil dengan inisial dinamis.
+  - **Tangga Lagu & Charts Resmi**: Tangga lagu resmi Indonesia dan Global dengan artwork bergradasi modern.
+- **Profil Pengguna & Kartu VIP Member Pass**:
+  - **Holographic VIP Member Card**: Kartu anggota eksklusif dengan nomor ID unik (`EUY-2026-XXXX`), status audiophile terverifikasi, dan efek kilau gradien holografik.
+  - **Statistik Mendengarkan**: Menampilkan total lagu diputar, total menit durasi pemutaran, dan artis favorit.
+  - **Dialog Edit Profil**: Kustomisasi nama tampilan, bio pribadi, dan foto profil.
+- **Musicfy Audio Lab & Streaming Engine**:
+  - **Audio Quality Tier**: Pilihan tingkat fidelitas murni *Hi-Res Lossless FLAC (24-bit)*, *Lossless Opus 320k*, *Balanced AAC 256k*, dan *Data Saver 128k*.
+  - **AutoEQ Headphone Target**: Kalibrasi respon frekuensi *Harman Target* untuk AirPods Pro 2, AirPods Max, Sony WH-1000XM5/XM4, WF-1000XM5, Galaxy Buds 2 Pro, Moondrop Chu II/Aria, Sennheiser HD600/650, Audio-Technica ATH-M50x, Tangzu Wan'er, dan 7Hz Zero:2.
+  - **Crossmix DJ Engine**: Transisi antar lagu tingkat studio (*Smooth Crossfade*, *Vinyl Spin-back*, *Tape-stop*, *Filter Sweep*).
+  - **Interlude Dots & Terjemahan Lirik**: Animasi titik ritmik saat jeda vokal/instrumental dan auto-terjemahan lirik asing.
+  - **PO Token & Bot-Detection Bypass**: Sakelar bypass otomatis deteksi bot YouTube Music tanpa memerlukan akun Google.
+- **Fitur Ekosistem Tambahan**:
+  - **Shazam Ambient Recognition**: Kenali judul lagu dari audio ruangan sekitar menggunakan mikrofon perangkat.
+  - **Social Lyrics Story Generator**: Generator kartu kutipan lirik dengan cover art untuk Instagram Stories & WhatsApp.
+  - **Apple Music Playlist Cover Generator**: Generator cover seni playlist dengan kuas warna gradien dinamis.
+  - **Efek Partikel Like Burst**: Ledakan partikel halus saat menyukai lagu.
+  - **Pembaruan Aplikasi OTA**: Pengecekan versi rilis langsung via GitHub Releases API.
+  - **Dukungan Multi-Bahasa**: Pilihan bahasa Indonesia dan Inggris secara instan di dalam aplikasi.
+  - **Plugin Streaming Lengkap**: Dukungan stream Monochrome Hi-Res FLAC, YouTube Music, JioSaavn, SoundCloud, Deezer, Bandcamp, Jamendo, Discord RPC, dan Last.fm Scrobbler.
 
 ---
 

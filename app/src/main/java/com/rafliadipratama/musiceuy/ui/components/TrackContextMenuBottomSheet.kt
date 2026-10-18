@@ -46,6 +46,7 @@ import com.rafliadipratama.musiceuy.ui.theme.SurfaceContainer
 import com.rafliadipratama.musiceuy.ui.theme.TextPrimary
 import com.rafliadipratama.musiceuy.ui.theme.TextSecondary
 
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 
@@ -62,6 +63,7 @@ fun TrackContextMenuBottomSheet(
     onOpenArtist: () -> Unit,
     onDownload: () -> Unit = {},
     onStartRadio: () -> Unit = {},
+    onNotInterested: () -> Unit = {},
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -192,6 +194,14 @@ fun TrackContextMenuBottomSheet(
                 title = "Lihat Detail Artis",
                 subtitle = "Jelajahi diskografi dan lagu ${track.artist.name}",
                 onClick = onOpenArtist
+            )
+
+            ContextMenuItem(
+                icon = Icons.Default.Block,
+                iconTint = Color(0xFFFF5252),
+                title = "Tidak Tertarik dengan Lagu Ini",
+                subtitle = "Sembunyikan lagu & kurangi rekomendasi ${track.artist.name}",
+                onClick = onNotInterested
             )
         }
     }

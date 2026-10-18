@@ -48,6 +48,9 @@ import com.rafliadipratama.musiceuy.ui.screens.OnboardingScreen
 import com.rafliadipratama.musiceuy.ui.screens.PlayerScreen
 import com.rafliadipratama.musiceuy.ui.screens.PlaylistDetailScreen
 import com.rafliadipratama.musiceuy.ui.screens.PluginsScreen
+import com.rafliadipratama.musiceuy.ui.screens.SearchScreen
+import com.rafliadipratama.musiceuy.ui.screens.ProfileScreen
+import com.rafliadipratama.musiceuy.ui.components.LyricsShareDialog
 import com.rafliadipratama.musiceuy.ui.theme.MusicEuyTheme
 import com.rafliadipratama.musiceuy.ui.theme.ObsidianBackground
 import com.rafliadipratama.musiceuy.ui.viewmodel.MusicPlayerViewModel
@@ -59,14 +62,30 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            MusicEuyTheme {
-                val viewModel: MusicPlayerViewModel = viewModel()
-                val uiState by viewModel.uiState.collectAsState()
-                var selectedTab by remember { mutableStateOf(NavigationTab.HOME) }
+            val viewModel: MusicPlayerViewModel = viewModel()
+            val uiState by viewModel.uiState.collectAsState()
+            val baseContext = androidx.compose.ui.platform.LocalContext.current
+            val localizedContext = remember(uiState.currentLanguageCode) {
+                com.rafliadipratama.musiceuy.util.LanguageHelper.getLocalizedContext(baseContext, uiState.currentLanguageCode)
+            }
 
-                BackHandler(enabled = uiState.isDownloadedScreenVisible) {
-                    viewModel.closeDownloadedTracks()
-                }
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalContext provides localizedContext
+            ) {
+                MusicEuyTheme {
+                    var selectedTab by remember { mutableStateOf(NavigationTab.HOME) }
+
+                    BackHandler(enabled = uiState.isProfileVisible) {
+                        viewModel.closeProfile()
+                    }
+
+                    BackHandler(enabled = uiState.isLanguageDialogVisible) {
+                        viewModel.dismissLanguageDialog()
+                    }
+
+                    BackHandler(enabled = uiState.isDownloadedScreenVisible) {
+                        viewModel.closeDownloadedTracks()
+                    }
 
                 BackHandler(enabled = !uiState.isDownloadedScreenVisible && uiState.selectedPlaylist != null) {
                     viewModel.closePlaylist()
@@ -142,7 +161,11 @@ class MainActivity : ComponentActivity() {
                     ) {
                     // Main Tabs
                     when (selectedTab) {
-                        NavigationTab.HOME -> HomeScreen(viewModel = viewModel)
+                        NavigationTab.HOME -> HomeScreen(
+                            viewModel = viewModel,
+                            onNavigateToSearch = { selectedTab = NavigationTab.SEARCH }
+                        )
+                        NavigationTab.SEARCH -> SearchScreen(viewModel = viewModel)
                         NavigationTab.LIBRARY -> LibraryScreen(
                             viewModel = viewModel,
                             onNavigateToHome = { selectedTab = NavigationTab.HOME }
@@ -192,9 +215,20 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // STICKY BOTTOM DOCK (MiniPlayer on EVERY screen + BottomNavBar on root tabs)
-                    val isRootTab = uiState.selectedArtist == null && uiState.selectedPlaylist == null && !uiState.isDownloadedScreenVisible
-                    val showBottomDock = !uiState.isPlayerExpanded && (uiState.currentTrack != null || isRootTab)
+                    // User Profile Screen Overlay (Musicfy Style)
+                    AnimatedVisibility(
+                        visible = uiState.isProfileVisible,
+                        enter = slideInVertically(initialOffsetY = { it }),
+                        exit = slideOutVertically(targetOffsetY = { it })
+                    ) {
+                        ProfileScreen(
+                            viewModel = viewModel,
+                            onBackClick = { viewModel.closeProfile() }
+                        )
+                    }
+
+                    // STICKY BOTTOM DOCK (MiniPlayer + BottomNavBar on ALL screens, hidden only in Fullscreen Player)
+                    val showBottomDock = !uiState.isPlayerExpanded
 
                     if (showBottomDock) {
                         Surface(
@@ -214,7 +248,7 @@ class MainActivity : ComponentActivity() {
                                         .fillMaxWidth()
                                         .navigationBarsPadding()
                                 ) {
-                                    // MiniPlayer - Sticky & Synchronous on ALL screens
+                                    // MiniPlayer - Sticky on ALL screens when a track is active
                                     AnimatedVisibility(
                                         visible = uiState.currentTrack != null,
                                         enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
@@ -236,15 +270,16 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
 
-                                    // Bottom Navigation Bar - Visible on root tabs
-                                    AnimatedVisibility(
-                                        visible = isRootTab
-                                    ) {
-                                        BottomNavBar(
-                                            selectedTab = selectedTab,
-                                            onTabSelected = { selectedTab = it }
-                                        )
-                                    }
+                                    // Bottom Navigation Bar - Sticky on ALL screens
+                                    BottomNavBar(
+                                        selectedTab = selectedTab,
+                                        onTabSelected = { tab ->
+                                            selectedTab = tab
+                                            if (uiState.selectedArtist != null) viewModel.closeArtistDetail()
+                                            if (uiState.selectedPlaylist != null) viewModel.closePlaylist()
+                                            if (uiState.isDownloadedScreenVisible) viewModel.closeDownloadedTracks()
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -283,6 +318,8 @@ class MainActivity : ComponentActivity() {
                                     onTrackClick = { track -> viewModel.playFromQueue(track) },
                                     onRemoveTrack = { trackId -> viewModel.removeFromQueue(trackId) },
                                     onClearQueue = { viewModel.clearQueue() },
+                                    onReorderUpcoming = { from, to -> viewModel.reorderUpcomingTracks(from, to) },
+                                    onMoveTrackToNext = { trackId -> viewModel.moveTrackToNext(trackId) },
                                     onDismiss = { viewModel.dismissQueue() }
                                 )
                             }
@@ -371,6 +408,10 @@ class MainActivity : ComponentActivity() {
                                             viewModel.dismissTrackContextMenu()
                                             viewModel.downloadTrack(track)
                                         },
+                                        onNotInterested = {
+                                            viewModel.dismissTrackContextMenu()
+                                            viewModel.markTrackNotInterested(track)
+                                        },
                                         onDismiss = { viewModel.dismissTrackContextMenu() }
                                     )
                                 }
@@ -406,9 +447,31 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+
+                    // In-App Multi-Language Selection Dialog
+                    if (uiState.isLanguageDialogVisible) {
+                        com.rafliadipratama.musiceuy.ui.components.LanguageSelectionDialog(
+                            currentLanguageCode = uiState.currentLanguageCode,
+                            onSelectLanguage = { lang ->
+                                viewModel.setLanguage(lang)
+                            },
+                            onDismiss = { viewModel.dismissLanguageDialog() }
+                        )
+                    }
+
+                    // Lyrics Share Dialog
+                    if (uiState.isLyricsShareDialogVisible && uiState.currentTrack != null) {
+                        LyricsShareDialog(
+                            track = uiState.currentTrack!!,
+                            lyricSnippet = uiState.selectedLyricForShare,
+                            dominantColor = uiState.dominantColor,
+                            onDismiss = { viewModel.closeLyricsShare() }
+                        )
+                    }
                 }
             }
         }
     }
+}
 }
 }

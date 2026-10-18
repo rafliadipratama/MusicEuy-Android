@@ -218,6 +218,27 @@ object AudioEffectManager {
         )
     }
 
+    fun setCustomBands(context: Context? = null, bands: List<Short>) {
+        val eq = equalizer
+        val newLevels = bands.toMutableList()
+        val prefsEdit = context?.let { getPrefs(it).edit() }
+        prefsEdit?.putString(KEY_PRESET, "AutoEQ Target")
+
+        for (i in 0 until minOf(newLevels.size, (eq?.numberOfBands?.toInt() ?: 5))) {
+            val lvl = newLevels[i].coerceIn(_state.value.minBandLevel, _state.value.maxBandLevel)
+            newLevels[i] = lvl
+            try {
+                eq?.setBandLevel(i.toShort(), lvl)
+            } catch (_: Exception) {}
+            prefsEdit?.putInt("$KEY_BAND_PREFIX$i", lvl.toInt())
+        }
+        prefsEdit?.apply()
+        _state.value = _state.value.copy(
+            currentPreset = "AutoEQ Target",
+            bandLevels = newLevels
+        )
+    }
+
     fun toggleBassBoost(context: Context, enabled: Boolean) {
         bassBoost?.enabled = enabled
         getPrefs(context).edit().putBoolean(KEY_BASS_ENABLED, enabled).apply()

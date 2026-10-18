@@ -47,6 +47,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.ui.res.stringResource
+import com.rafliadipratama.musiceuy.R
 import com.rafliadipratama.musiceuy.ui.components.MusicEuyRecapBottomSheet
 import com.rafliadipratama.musiceuy.ui.components.StorageManagerBottomSheet
 import androidx.compose.ui.platform.LocalContext
@@ -443,13 +446,13 @@ fun LibraryScreen(
 
                         Column {
                             Text(
-                                text = "Koleksi Saya",
+                                text = stringResource(id = R.string.library_title),
                                 color = TextPrimary,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Playlist, genre, lagu favorit & riwayat",
+                                text = stringResource(id = R.string.library_subtitle),
                                 color = TextSecondary,
                                 fontSize = 12.sp
                             )
@@ -457,6 +460,16 @@ fun LibraryScreen(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Multi-Language Selector
+                        IconButton(onClick = { viewModel.showLanguageDialog() }) {
+                            Icon(
+                                imageVector = Icons.Default.Language,
+                                contentDescription = stringResource(id = R.string.language_settings),
+                                tint = Color(0xFF64B5F6),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
                         // Recap / Statistik
                         IconButton(onClick = { viewModel.showRecapDialog() }) {
                             Icon(
@@ -535,7 +548,7 @@ fun LibraryScreen(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Disukai",
+                                text = stringResource(id = R.string.library_liked_songs),
                                 color = TextPrimary,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
@@ -579,7 +592,7 @@ fun LibraryScreen(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Diunduh",
+                                text = stringResource(id = R.string.library_downloaded_songs),
                                 color = TextPrimary,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
@@ -626,7 +639,7 @@ fun LibraryScreen(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Sering",
+                                text = stringResource(id = R.string.library_most_played),
                                 color = TextPrimary,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
@@ -663,7 +676,7 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Playlist Kamu",
+                            text = stringResource(id = R.string.library_my_playlists),
                             color = TextPrimary,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
@@ -683,7 +696,7 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "+ Buat Baru",
+                            text = "+ " + stringResource(id = R.string.library_create),
                             color = BrandGreen,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,

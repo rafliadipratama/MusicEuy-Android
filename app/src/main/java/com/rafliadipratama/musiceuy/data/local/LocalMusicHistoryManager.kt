@@ -30,6 +30,149 @@ class LocalMusicHistoryManager(context: Context) {
         private const val KEY_LIKED_TRACKS = "liked_tracks_json"
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
         private const val KEY_ONBOARDING_ARTISTS = "onboarding_artists"
+        private const val KEY_NOT_INTERESTED_TRACKS = "not_interested_tracks_set"
+        private const val KEY_NOT_INTERESTED_ARTISTS = "not_interested_artists_set"
+        private const val KEY_SEARCH_HISTORY = "search_history_json"
+        private const val KEY_LAST_PLAYED_TRACK = "last_played_track_json"
+        private const val KEY_LAST_PLAYED_POS = "last_played_position_ms"
+        private const val KEY_LAST_PLAYED_QUEUE = "last_played_queue_json"
+    }
+
+    // ==================== Search History ====================
+
+    fun getSearchHistory(): List<String> {
+        return try {
+            val json = prefs.getString(KEY_SEARCH_HISTORY, "[]") ?: "[]"
+            val arr = JSONArray(json)
+            val list = mutableListOf<String>()
+            for (i in 0 until arr.length()) {
+                val q = arr.getString(i).trim()
+                if (q.isNotBlank()) list.add(q)
+            }
+            list
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    fun saveSearchQuery(query: String) {
+        val clean = query.trim()
+        if (clean.isBlank()) return
+        val current = getSearchHistory().toMutableList()
+        current.removeAll { it.equals(clean, ignoreCase = true) }
+        current.add(0, clean)
+        val trimmed = current.take(20)
+        val arr = JSONArray(trimmed)
+        prefs.edit().putString(KEY_SEARCH_HISTORY, arr.toString()).apply()
+    }
+
+    fun removeSearchQuery(query: String) {
+        val current = getSearchHistory().toMutableList()
+        current.removeAll { it.equals(query.trim(), ignoreCase = true) }
+        val arr = JSONArray(current)
+        prefs.edit().putString(KEY_SEARCH_HISTORY, arr.toString()).apply()
+    }
+
+    fun clearSearchHistory() {
+        prefs.edit().remove(KEY_SEARCH_HISTORY).apply()
+    }
+
+    // ==================== Last Played Track ====================
+
+    fun saveLastPlayedTrack(track: Track, positionMs: Long = 0L) {
+        saveLastPlaybackState(track, positionMs, emptyList())
+    }
+
+    fun saveLastPlaybackState(track: Track, positionMs: Long = 0L, queue: List<Track> = emptyList()) {
+        try {
+            val obj = trackToJson(track).apply {
+                put("lastPositionMs", positionMs)
+                put("savedAt", System.currentTimeMillis())
+            }
+            val editor = prefs.edit()
+                .putString(KEY_LAST_PLAYED_TRACK, obj.toString())
+                .putLong(KEY_LAST_PLAYED_POS, positionMs)
+
+            if (queue.isNotEmpty()) {
+                val arr = JSONArray()
+                queue.take(50).forEach { t -> arr.put(trackToJson(t)) }
+                editor.putString(KEY_LAST_PLAYED_QUEUE, arr.toString())
+            }
+            editor.apply()
+        } catch (e: Exception) {
+            android.util.Log.e("MusicEuy", "Error saving last played track: ${e.message}")
+        }
+    }
+
+    fun getLastPlaybackQueue(): List<Track> {
+        return try {
+            val json = prefs.getString(KEY_LAST_PLAYED_QUEUE, null) ?: return emptyList()
+            val arr = JSONArray(json)
+            val list = mutableListOf<Track>()
+            for (i in 0 until arr.length()) {
+                list.add(jsonToTrack(arr.getJSONObject(i)))
+            }
+            list
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    fun getLastPlayedTrack(): Pair<Track, Long>? {
+        return try {
+            val json = prefs.getString(KEY_LAST_PLAYED_TRACK, null) ?: return null
+            val obj = JSONObject(json)
+            val track = jsonToTrack(obj)
+            val pos = prefs.getLong(KEY_LAST_PLAYED_POS, obj.optLong("lastPositionMs", 0L))
+            Pair(track, pos)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun trackToJson(track: Track): JSONObject {
+        val verifiedAvatar = track.artist.avatarUrl?.takeIf { it.isNotBlank() }
+            ?: com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl(track.artist.name)
+            ?: getCachedArtistAvatar(track.artist.name) ?: ""
+
+        return JSONObject().apply {
+            put("id", track.id)
+            put("title", track.title)
+            put("artistName", track.artist.name)
+            put("artistAvatar", verifiedAvatar)
+            put("albumTitle", track.albumTitle ?: "")
+            put("durationSec", track.durationSec)
+            put("audioUrl", track.audioUrl)
+            put("coverUrl", track.coverUrl)
+            put("isVerified", track.isVerified)
+            put("sourceLabel", track.sourceLabel)
+            put("globalPlayCount", track.playCount ?: "")
+        }
+    }
+
+    fun getNotInterestedTrackIds(): Set<String> {
+        return prefs.getStringSet(KEY_NOT_INTERESTED_TRACKS, emptySet()) ?: emptySet()
+    }
+
+    fun getNotInterestedArtists(): Set<String> {
+        return prefs.getStringSet(KEY_NOT_INTERESTED_ARTISTS, emptySet()) ?: emptySet()
+    }
+
+    fun markTrackNotInterested(trackId: String, artistName: String) {
+        val currentTracks = getNotInterestedTrackIds().toMutableSet()
+        val currentArtists = getNotInterestedArtists().toMutableSet()
+        if (trackId.isNotBlank()) currentTracks.add(trackId)
+        if (artistName.isNotBlank()) currentArtists.add(artistName.trim().lowercase())
+        prefs.edit()
+            .putStringSet(KEY_NOT_INTERESTED_TRACKS, currentTracks)
+            .putStringSet(KEY_NOT_INTERESTED_ARTISTS, currentArtists)
+            .apply()
+    }
+
+    fun isTrackNotInterested(trackId: String, artistName: String): Boolean {
+        val trackDisliked = getNotInterestedTrackIds().contains(trackId)
+        val artistDisliked = getNotInterestedArtists().contains(artistName.trim().lowercase())
+        return trackDisliked || artistDisliked
     }
 
     fun isOnboardingCompleted(): Boolean {
@@ -108,17 +251,22 @@ class LocalMusicHistoryManager(context: Context) {
             val count = (existing?.optInt("playCount", 0) ?: 0) + 1
             val timestamp = System.currentTimeMillis()
 
+            val verifiedAvatar = track.artist.avatarUrl?.takeIf { it.isNotBlank() }
+                ?: com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl(track.artist.name)
+                ?: getCachedArtistAvatar(track.artist.name) ?: ""
+
             val entry = JSONObject().apply {
                 put("id", track.id)
                 put("title", track.title)
                 put("artistName", track.artist.name)
-                put("artistAvatar", track.artist.avatarUrl ?: "")
+                put("artistAvatar", verifiedAvatar)
                 put("albumTitle", track.albumTitle ?: "")
                 put("durationSec", track.durationSec)
                 put("audioUrl", track.audioUrl)
                 put("coverUrl", track.coverUrl)
                 put("isVerified", track.isVerified)
                 put("sourceLabel", track.sourceLabel)
+                put("globalPlayCount", track.playCount ?: "")
                 put("playCount", count)
                 put("lastPlayed", timestamp)
             }
@@ -184,6 +332,126 @@ class LocalMusicHistoryManager(context: Context) {
         }
     }
 
+    /**
+     * Returns the list of popular artists dynamically sorted based on the user's actual listening history.
+     * Artists that the user listens to most frequently are placed at the beginning of the list.
+     * Artists selected during onboarding receive a bonus weight.
+     */
+    fun getSortedPopularArtists(baseCuratedArtists: List<Artist>): List<Artist> {
+        return try {
+            val currentMap = loadTracksMap()
+            val artistPlayCounts = mutableMapOf<String, Int>()
+            val artistAvatars = mutableMapOf<String, String>()
+
+            for (entry in currentMap.values) {
+                val artist = entry.optString("artistName", "").trim()
+                if (artist.isNotBlank()) {
+                    val count = entry.optInt("playCount", 1)
+                    val key = artist.lowercase()
+                    artistPlayCounts[key] = (artistPlayCounts[key] ?: 0) + count
+                    val avatar = entry.optString("artistAvatar", "").takeIf { it.isNotBlank() }
+                    if (avatar != null && !artistAvatars.containsKey(key)) {
+                        artistAvatars[key] = avatar
+                    }
+                }
+            }
+
+            val onboarded = getOnboardingArtists().map { it.trim().lowercase() }.toSet()
+            val notInterested = getNotInterestedArtists().map { it.trim().lowercase() }.toSet()
+
+            // Merge curated artists and user-discovered artists
+            val allArtistMap = linkedMapOf<String, Artist>()
+            for (ca in baseCuratedArtists) {
+                val key = ca.name.trim().lowercase()
+                allArtistMap[key] = ca
+            }
+
+            // Also add any artists user has played even if not in curated list
+            for (entry in currentMap.values) {
+                val name = entry.optString("artistName", "").trim()
+                val key = name.lowercase()
+                if (name.isNotBlank() && !allArtistMap.containsKey(key)) {
+                    val avatar = entry.optString("artistAvatar", "").takeIf { it.isNotBlank() }
+                        ?: com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl(name)
+                        ?: getCachedArtistAvatar(name)
+                    allArtistMap[key] = Artist(
+                        id = "art_${key.hashCode()}",
+                        name = name,
+                        avatarUrl = avatar,
+                        isVerified = true
+                    )
+                }
+            }
+
+            // Calculate score for each artist
+            val scoredArtists = allArtistMap.values
+                .filter { !notInterested.contains(it.name.trim().lowercase()) }
+                .map { artist ->
+                    val key = artist.name.trim().lowercase()
+                    val actualPlays = artistPlayCounts[key] ?: 0
+                    val onboardedBonus = if (onboarded.contains(key)) 5 else 0
+                    val totalScore = actualPlays * 10 + onboardedBonus
+                    val rawAvatar = artist.avatarUrl ?: artistAvatars[key] ?: getCachedArtistAvatar(artist.name)
+                    val finalAvatar = rawAvatar?.takeIf { it.isNotBlank() }
+                        ?: com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl(artist.name)
+                    val updatedArtist = if (finalAvatar != artist.avatarUrl) artist.copy(avatarUrl = finalAvatar) else artist
+                    Pair(updatedArtist, totalScore)
+                }
+
+            // Sort by score descending. For tie-breaks, maintain original curated order
+            scoredArtists.sortedWith(
+                compareByDescending<Pair<Artist, Int>> { it.second }
+            ).map { it.first }
+        } catch (_: Exception) {
+            baseCuratedArtists
+        }
+    }
+
+    /**
+     * Persistently stores and updates an artist's high-resolution avatar URL.
+     */
+    fun updateArtistAvatar(artistName: String, avatarUrl: String) {
+        try {
+            if (avatarUrl.isBlank()) return
+            val cleanName = artistName.trim().lowercase()
+
+            // Update in persistent cached avatars map
+            val avatarJson = prefs.getString("KEY_CACHED_ARTIST_AVATARS", "{}") ?: "{}"
+            val obj = JSONObject(avatarJson)
+            obj.put(cleanName, avatarUrl)
+            prefs.edit().putString("KEY_CACHED_ARTIST_AVATARS", obj.toString()).apply()
+
+            // Update in tracks map as well
+            val currentMap = loadTracksMap()
+            var changed = false
+            for (entry in currentMap.values) {
+                val name = entry.optString("artistName", "").trim().lowercase()
+                if (name == cleanName) {
+                    entry.put("artistAvatar", avatarUrl)
+                    changed = true
+                }
+            }
+            if (changed) {
+                saveTracksMap(currentMap)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MusicEuy", "Error updating artist avatar: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Retrieves the persistent cached avatar URL for an artist if available.
+     */
+    fun getCachedArtistAvatar(artistName: String): String? {
+        return try {
+            val avatarJson = prefs.getString("KEY_CACHED_ARTIST_AVATARS", "{}") ?: "{}"
+            val obj = JSONObject(avatarJson)
+            obj.optString(artistName.trim().lowercase(), "").takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private fun loadTracksMap(): MutableMap<String, JSONObject> {
         val jsonStr = prefs.getString(KEY_TRACKS, null) ?: return mutableMapOf()
         val map = mutableMapOf<String, JSONObject>()
@@ -220,6 +488,8 @@ class LocalMusicHistoryManager(context: Context) {
         val coverUrl = obj.optString("coverUrl", "")
         val isVerified = obj.optBoolean("isVerified", true)
         val sourceLabel = obj.optString("sourceLabel", "YouTube Music")
+        val playCount = obj.optString("globalPlayCount", "").takeIf { it.isNotBlank() }
+            ?: (obj.opt("playCount") as? String)?.takeIf { it.isNotBlank() }
 
         return Track(
             id = id,
@@ -237,6 +507,7 @@ class LocalMusicHistoryManager(context: Context) {
             coverUrl = coverUrl,
             isLiked = false,
             isVerified = isVerified,
+            playCount = playCount,
             sourceLabel = sourceLabel
         )
     }
@@ -354,6 +625,7 @@ class LocalMusicHistoryManager(context: Context) {
                         put("coverUrl", t.coverUrl)
                         put("isVerified", t.isVerified)
                         put("sourceLabel", t.sourceLabel)
+                        put("globalPlayCount", t.playCount ?: "")
                     }
                     tracksArr.put(tObj)
                 }
@@ -412,6 +684,7 @@ class LocalMusicHistoryManager(context: Context) {
                 put("coverUrl", t.coverUrl)
                 put("isVerified", t.isVerified)
                 put("sourceLabel", t.sourceLabel)
+                put("globalPlayCount", t.playCount ?: "")
             }
             arr.put(tObj)
         }

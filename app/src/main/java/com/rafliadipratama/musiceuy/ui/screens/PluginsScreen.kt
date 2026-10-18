@@ -2,6 +2,7 @@ package com.rafliadipratama.musiceuy.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,11 +41,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -378,7 +382,26 @@ fun PluginCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Category badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = plugin.category,
+                        color = TextMuted,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
                 // Version badge
                 Box(
                     modifier = Modifier
@@ -388,21 +411,6 @@ fun PluginCard(
                 ) {
                     Text(
                         text = "v${plugin.version}",
-                        color = TextMuted,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                // Author badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        text = plugin.author,
                         color = TextMuted,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium
@@ -421,6 +429,78 @@ fun PluginCard(
                             color = BrandGreenBright,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                if (plugin.githubUrl.isNotBlank()) {
+                    val uriHandler = LocalUriHandler.current
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFF24292E).copy(alpha = 0.8f))
+                            .clickable {
+                                try {
+                                    uriHandler.openUri(plugin.githubUrl)
+                                } catch (_: Exception) {}
+                            }
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = "GitHub ↗",
+                            color = Color(0xFF58A6FF),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+
+            if (plugin is com.rafliadipratama.musiceuy.plugin.YtDlpPlugin) {
+                val coroutineScope = rememberCoroutineScope()
+                var updateStatus by remember { mutableStateOf<String?>(null) }
+                var isUpdating by remember { mutableStateOf(false) }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White.copy(alpha = 0.04f))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = updateStatus ?: "Mesin yt-dlp aktif. Dapat diperbarui tanpa update APK.",
+                        color = TextMuted,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            isUpdating = true
+                            updateStatus = "Sedang memeriksa pembaruan OTA..."
+                            coroutineScope.launch {
+                                val result = plugin.updateEngine()
+                                updateStatus = result
+                                isUpdating = false
+                            }
+                        },
+                        enabled = !isUpdating,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                        modifier = Modifier.height(28.dp)
+                    ) {
+                        Text(
+                            text = if (isUpdating) "Mengunduh..." else "Perbarui OTA",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BrandGreenBright
                         )
                     }
                 }

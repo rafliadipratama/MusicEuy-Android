@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Icon
@@ -125,50 +126,65 @@ fun TrackItem(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .padding(top = 2.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .then(
-                            if (onArtistClick != null) {
-                                Modifier.clickable { onArtistClick(track.artist) }
-                            } else Modifier
-                        )
+                    modifier = Modifier.padding(top = 2.dp)
                 ) {
-                    Text(
-                        text = track.artist.name,
-                        color = TextSecondary,
-                        fontSize = 13.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .clip(RoundedCornerShape(4.dp))
+                            .then(
+                                if (onArtistClick != null) {
+                                    Modifier.clickable { onArtistClick(track.artist) }
+                                } else Modifier
+                            )
+                    ) {
+                        Text(
+                            text = track.artist.name,
+                            color = TextSecondary,
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
 
-                    if (track.artist.isVerified || track.isVerified) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Default.Verified,
-                            contentDescription = "Artis Terverifikasi",
-                            tint = VerifiedBadge,
-                            modifier = Modifier.size(15.dp)
+                        if (track.artist.isVerified || track.isVerified) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.Verified,
+                                contentDescription = "Artis Terverifikasi",
+                                tint = VerifiedBadge,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+
+                    val metaText = buildString {
+                        if (!track.playCount.isNullOrBlank()) {
+                            append(" • ${track.playCount}")
+                        }
+                        if (track.durationFormatted.isNotBlank() && track.durationFormatted != "0:00") {
+                            append(" • ${track.durationFormatted}")
+                        }
+                    }
+
+                    if (metaText.isNotBlank()) {
+                        Text(
+                            text = metaText,
+                            color = TextMuted,
+                            fontSize = 11.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Duration
-            Text(
-                text = track.durationFormatted,
-                color = TextMuted,
-                fontSize = 12.sp
-            )
         }
 
         // Trailing Like Action Button
         if (onToggleLikeClick != null) {
             IconButton(
                 onClick = { onToggleLikeClick(track) },
-                modifier = Modifier.size(38.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = if (effectiveLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -179,11 +195,23 @@ fun TrackItem(
             }
         }
 
-        // Trailing Add to Playlist Action Button
-        if (onAddToPlaylistClick != null) {
+        // Trailing More Options Button (Menu Lengkap: Tambah Playlist, Tidak Tertarik, Artis, dll)
+        if (onLongClick != null) {
+            IconButton(
+                onClick = { onLongClick(track) },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Menu Lagu",
+                    tint = TextSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        } else if (onAddToPlaylistClick != null) {
             IconButton(
                 onClick = { onAddToPlaylistClick(track) },
-                modifier = Modifier.size(38.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,

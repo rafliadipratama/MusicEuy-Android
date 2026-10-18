@@ -1,7 +1,12 @@
 package com.rafliadipratama.musiceuy.ui.screens
 
+import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.webkit.CookieManager
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,25 +36,27 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -65,22 +73,22 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
 import com.rafliadipratama.musiceuy.R
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreen
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreenBright
+import com.rafliadipratama.musiceuy.ui.theme.DarkBackground
 import com.rafliadipratama.musiceuy.ui.theme.ObsidianBackground
 import com.rafliadipratama.musiceuy.ui.theme.SurfaceContainer
 import com.rafliadipratama.musiceuy.ui.theme.SurfaceContainerHigh
-import com.rafliadipratama.musiceuy.ui.theme.SurfaceContainerLow
 import com.rafliadipratama.musiceuy.ui.theme.TextMuted
 import com.rafliadipratama.musiceuy.ui.theme.TextPrimary
 import com.rafliadipratama.musiceuy.ui.theme.TextSecondary
@@ -88,7 +96,9 @@ import com.rafliadipratama.musiceuy.ui.viewmodel.MusicPlayerViewModel
 
 private enum class OnboardingStep {
     WELCOME,
-    SELECT_ARTISTS
+    CONNECT_ACCOUNT,
+    SELECT_ARTISTS,
+    PROFILE_SETUP
 }
 
 private data class OnboardingArtistItem(
@@ -107,34 +117,29 @@ fun OnboardingScreen(
     val uiState by viewModel.uiState.collectAsState()
     var currentStep by remember { mutableStateOf(OnboardingStep.WELCOME) }
     val selectedArtists = remember { mutableStateListOf<String>() }
+    var usernameInput by remember { mutableStateOf("Sobat MusicEuy") }
 
-    // Daftar Kurasi Musisi Populer Indonesia & Internasional
+    // Curated Verified Artists (500x500 CDN)
     val curatedArtists = remember {
         listOf(
-            OnboardingArtistItem("Hindia", "Indie Pop", "https://yt3.googleusercontent.com/a/ACg8ocLq8Hindia=w500-h500"),
-            OnboardingArtistItem("Tulus", "Pop / Soul", "https://yt3.googleusercontent.com/a/ACg8ocTulus=w500-h500"),
-            OnboardingArtistItem("Sheila On 7", "Pop Rock", "https://lh3.googleusercontent.com/ZBI5XEhdUvkE59Kr7HKZYIjoopuA_kC0uPAWNsEw-EmLfTtRaXuDEv-qYWTv_lahkpA8Yuhe7P-sO2Y=w500-h500"),
-            OnboardingArtistItem("Bernadya", "Pop / Indie", "https://yt3.googleusercontent.com/a/ACg8ocIdkG482z9_Bernadya=w500-h500"),
-            OnboardingArtistItem("Mahalini", "Pop Ballad", "https://yt3.googleusercontent.com/a/ACg8ocMahalini=w500-h500"),
-            OnboardingArtistItem("Denny Caknan", "Dangdut Koplo", "https://yt3.googleusercontent.com/a/ACg8ocDennyCaknan=w500-h500"),
-            OnboardingArtistItem("NIKI", "R&B / Pop", "https://yt3.googleusercontent.com/a/ACg8ocNIKI_Official=w500-h500"),
-            OnboardingArtistItem("Taylor Swift", "Pop Global", "https://yt3.googleusercontent.com/a/ACg8ocTaylorSwift=w500-h500"),
-            OnboardingArtistItem("Coldplay", "Alternative Rock", "https://yt3.googleusercontent.com/a/ACg8ocColdplay_Band=w500-h500"),
-            OnboardingArtistItem("Sal Priadi", "Art Pop", "https://yt3.googleusercontent.com/a/ACg8ocSalPriadi=w500-h500"),
-            OnboardingArtistItem("Nadin Amizah", "Folk / Akustik", "https://yt3.googleusercontent.com/a/ACg8ocNadinAmizah=w500-h500"),
-            OnboardingArtistItem("Juicy Luicy", "Pop Akustik", "https://yt3.googleusercontent.com/a/ACg8ocJuicyLuicy=w500-h500"),
-            OnboardingArtistItem("Bruno Mars", "Pop / Funk", "https://yt3.googleusercontent.com/a/ACg8ocBrunoMars=w500-h500"),
-            OnboardingArtistItem("Feast", "Rock / Indie", "https://yt3.googleusercontent.com/a/ACg8ocFeast_Rock=w500-h500"),
-            OnboardingArtistItem("Fourtwnty", "Indie Folk", "https://yt3.googleusercontent.com/a/ACg8ocFourtwnty=w500-h500"),
-            OnboardingArtistItem("NDX A.K.A", "Dangdut Hip-Hop", "https://yt3.googleusercontent.com/a/ACg8ocNDXAKA_Music=w500-h500"),
-            OnboardingArtistItem("Guyon Waton", "Dangdut Akustik", "https://yt3.googleusercontent.com/a/ACg8ocGuyonWaton=w500-h500"),
-            OnboardingArtistItem("Billie Eilish", "Alt Pop", "https://yt3.googleusercontent.com/a/ACg8ocBillieEilish=w500-h500"),
-            OnboardingArtistItem("Lyodra", "Pop Divas", "https://yt3.googleusercontent.com/a/ACg8ocLyodra=w500-h500"),
-            OnboardingArtistItem("Tiara Andini", "Pop", "https://yt3.googleusercontent.com/a/ACg8ocTiaraAndini=w500-h500"),
-            OnboardingArtistItem("Dewa 19", "Rock Legend", "https://yt3.googleusercontent.com/a/ACg8ocDewa19_Official=w500-h500"),
-            OnboardingArtistItem("Noah", "Pop Rock", "https://yt3.googleusercontent.com/a/ACg8ocNoah_Band=w500-h500"),
-            OnboardingArtistItem("Raim Laode", "Pop Folk", "https://yt3.googleusercontent.com/a/ACg8ocRaimLaode=w500-h500"),
-            OnboardingArtistItem("Pamungkas", "Indie Pop", "https://yt3.googleusercontent.com/a/ACg8ocPamungkas=w500-h500")
+            OnboardingArtistItem("Hindia", "Indie Pop", "https://cdn-images.dzcdn.net/images/artist/b33a022fb4490dce3b6e12d1c19c0123/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Tulus", "Pop / Soul", "https://cdn-images.dzcdn.net/images/artist/c207c7f16afc162acca87e587e47b442/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Sheila On 7", "Pop Rock", "https://cdn-images.dzcdn.net/images/artist/9e6cc50e80a7dcb4dacc7eb15427335b/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Bernadya", "Pop / Indie", "https://cdn-images.dzcdn.net/images/artist/5bd274a72993ee8b8e72a7a8aedc12b5/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Mahalini", "Pop Ballad", "https://cdn-images.dzcdn.net/images/artist/bbb3c9932bf14c2ca059e24a041baf91/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Denny Caknan", "Dangdut Koplo", "https://cdn-images.dzcdn.net/images/artist/2e8a010d43c385b64bda3d17214566d1/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("NIKI", "R&B / Pop", "https://cdn-images.dzcdn.net/images/artist/324c50c04a5a944117cd3daa0963fc63/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Taylor Swift", "Pop Global", "https://cdn-images.dzcdn.net/images/artist/cc2495870fe1a792ad0cdb05501ad5ec/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Coldplay", "Alternative Rock", "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Sal Priadi", "Art Pop", "https://cdn-images.dzcdn.net/images/artist/513217e1630470658eb37ac7d7eb1910/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Nadin Amizah", "Folk / Akustik", "https://cdn-images.dzcdn.net/images/artist/10a75e65ad84fcfadeca0b74d1a56d0c/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Juicy Luicy", "Pop Akustik", "https://cdn-images.dzcdn.net/images/artist/b94e4bb5570b617550f28dbe0012f973/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Bruno Mars", "Pop / Funk", "https://cdn-images.dzcdn.net/images/artist/90f0b5b11df4f87ee878f38569b5995b/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Feast", "Rock / Indie", "https://cdn-images.dzcdn.net/images/artist/39f07b5656c1061598b5d68d1c5f5cb1/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Fourtwnty", "Indie Folk", "https://cdn-images.dzcdn.net/images/artist/5ef14df8afed38e82e07143abf300185/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("NDX A.K.A", "Dangdut Hip-Hop", "https://cdn-images.dzcdn.net/images/artist/ff3c815aa0d594f7a8c76b0defb9063b/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Billie Eilish", "Alt Pop", "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/500x500-000000-80-0-0.jpg"),
+            OnboardingArtistItem("Lyodra", "Pop Diva", "https://cdn-images.dzcdn.net/images/artist/153076781614790ca9a7dd0177cad752/500x500-000000-80-0-0.jpg")
         )
     }
 
@@ -148,7 +153,7 @@ fun OnboardingScreen(
         AnimatedContent(
             targetState = currentStep,
             transitionSpec = {
-                if (targetState == OnboardingStep.SELECT_ARTISTS) {
+                if (targetState.ordinal > initialState.ordinal) {
                     (slideInHorizontally { width -> width } + fadeIn())
                         .togetherWith(slideOutHorizontally { width -> -width } + fadeOut())
                 } else {
@@ -160,16 +165,22 @@ fun OnboardingScreen(
         ) { step ->
             when (step) {
                 OnboardingStep.WELCOME -> {
-                    WelcomeStepContent(
-                        onStart = { currentStep = OnboardingStep.SELECT_ARTISTS },
+                    AppleWelcomeContent(
+                        onStart = { currentStep = OnboardingStep.CONNECT_ACCOUNT },
                         onSkip = onSkip
                     )
                 }
+                OnboardingStep.CONNECT_ACCOUNT -> {
+                    AppleConnectAccountContent(
+                        viewModel = viewModel,
+                        onNext = { currentStep = OnboardingStep.SELECT_ARTISTS },
+                        onBack = { currentStep = OnboardingStep.WELCOME }
+                    )
+                }
                 OnboardingStep.SELECT_ARTISTS -> {
-                    SelectArtistsStepContent(
+                    AppleSelectArtistsContent(
                         allArtists = curatedArtists,
                         selectedArtists = selectedArtists,
-                        isCalibrating = uiState.isCalibratingOnboarding,
                         onArtistToggle = { name ->
                             if (selectedArtists.contains(name)) {
                                 selectedArtists.remove(name)
@@ -177,11 +188,20 @@ fun OnboardingScreen(
                                 selectedArtists.add(name)
                             }
                         },
-                        onBack = { currentStep = OnboardingStep.WELCOME },
-                        onSkip = onSkip,
+                        onNext = { currentStep = OnboardingStep.PROFILE_SETUP },
+                        onBack = { currentStep = OnboardingStep.CONNECT_ACCOUNT }
+                    )
+                }
+                OnboardingStep.PROFILE_SETUP -> {
+                    AppleProfileSetupContent(
+                        username = usernameInput,
+                        onUsernameChange = { usernameInput = it },
+                        selectedArtistsCount = selectedArtists.size,
+                        isCalibrating = uiState.isCalibratingOnboarding,
                         onComplete = {
                             onComplete(selectedArtists.toList())
-                        }
+                        },
+                        onBack = { currentStep = OnboardingStep.SELECT_ARTISTS }
                     )
                 }
             }
@@ -189,8 +209,11 @@ fun OnboardingScreen(
     }
 }
 
+// ============================================================================
+// STEP 1: APPLE MUSIC AESTHETIC WELCOME CONTENT
+// ============================================================================
 @Composable
-private fun WelcomeStepContent(
+private fun AppleWelcomeContent(
     onStart: () -> Unit,
     onSkip: () -> Unit
 ) {
@@ -201,503 +224,479 @@ private fun WelcomeStepContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Skip Button di Top Right
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End
         ) {
             TextButton(onClick = onSkip) {
-                Text(
-                    text = "Lewati",
-                    color = TextMuted,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Text(text = "Lewati", color = TextMuted, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             }
         }
 
-        // Hero Logo & Title
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(horizontal = 8.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(90.dp)
+                    .size(92.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
-                            colors = listOf(BrandGreen.copy(alpha = 0.25f), Color.Transparent)
+                            listOf(Color(0xFFFC3C44).copy(alpha = 0.25f), BrandGreen.copy(alpha = 0.15f), Color.Transparent)
                         )
                     )
-                    .border(2.dp, BrandGreen.copy(alpha = 0.5f), CircleShape),
+                    .border(2.dp, BrandGreen.copy(alpha = 0.6f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_musiceuy_logo),
                     contentDescription = "MusicEuy Logo",
                     tint = Color.Unspecified,
-                    modifier = Modifier.size(54.dp)
+                    modifier = Modifier.size(56.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = "Selamat Datang di",
-                color = TextSecondary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Normal
-            )
             Text(
                 text = "MusicEuy",
-                color = BrandGreenBright,
-                fontSize = 32.sp,
+                color = TextPrimary,
+                fontSize = 36.sp,
                 fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-0.5).sp
+                letterSpacing = (-1.0).sp
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Nikmati pemutar musik streaming tanpa iklan, hemat kuota, dengan lirik realtime dan kualitas audio terbaik.",
-                color = TextMuted,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center,
-                lineHeight = 19.sp,
-                modifier = Modifier.widthIn(max = 340.dp)
+                text = "Pengalaman Mendengarkan Musik Kelas Atas",
+                color = TextSecondary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(30.dp))
 
-            // 3 Kartu Keunggulan
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                FeatureHighlightCard(
+                AppleFeatureCard(
                     icon = Icons.Default.Headphones,
-                    title = "100% Bebas Iklan",
-                    description = "Dengarkan jutaan lagu favorit tanpa gangguan atau jeda iklan apa pun."
+                    iconColor = Color(0xFFFC3C44),
+                    title = "Streaming Lossless & Bebas Iklan",
+                    description = "Dengarkan jutaan lagu dalam kualitas audio resolusi tinggi tanpa interupsi iklan apa pun."
                 )
-                FeatureHighlightCard(
-                    icon = Icons.Default.Speed,
-                    title = "Audio Caching & Unduhan",
-                    description = "Putar sekali, audio otomatis di-cache dan dapat disimpan ke galeri lokal HP."
+                AppleFeatureCard(
+                    icon = Icons.Default.Sync,
+                    iconColor = Color(0xFF1DB954),
+                    title = "Multi-Platform Sync",
+                    description = "Hubungkan akun YouTube Music, Spotify, dan Apple Music tanpa akun berbayar."
                 )
-                FeatureHighlightCard(
+                AppleFeatureCard(
                     icon = Icons.Default.Mic,
-                    title = "Lirik Realtime LRCLIB",
-                    description = "Bernyanyi seru dengan lirik sinkron otomatis yang tetap tersimpan saat offline."
+                    iconColor = Color(0xFF38EF7D),
+                    title = "Lirik Realtime Karaoke",
+                    description = "Lirik bergulir tersinkronisasi per baris dari LRCLib yang dapat disimpan offline."
                 )
             }
         }
 
-        // Action Buttons di Bawah
-        Column(
+        Button(
+            onClick = onStart,
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 400.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .height(54.dp)
         ) {
-            Button(
-                onClick = onStart,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Text(
-                    text = "Mulai & Pilih Musisi Favorit",
-                    color = Color(0xFF0C0E11),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            TextButton(onClick = onSkip) {
-                Text(
-                    text = "Langsung masuk ke Beranda",
-                    color = TextSecondary,
-                    fontSize = 13.sp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FeatureHighlightCard(
-    icon: ImageVector,
-    title: String,
-    description: String
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(SurfaceContainerLow)
-            .border(1.dp, SurfaceContainerHigh, RoundedCornerShape(14.dp))
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(BrandGreen.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = BrandGreen,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = title,
-                color = TextPrimary,
-                fontSize = 13.sp,
+                text = "Mulai Pengaturan",
+                color = Color(0xFF0C0E11),
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = description,
-                color = TextMuted,
-                fontSize = 11.sp,
-                lineHeight = 15.sp
-            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color(0xFF0C0E11), modifier = Modifier.size(18.dp))
         }
     }
 }
 
+// ============================================================================
+// STEP 2: CONNECT ACCOUNTS (YOUTUBE MUSIC / SPOTIFY / APPLE MUSIC)
+// ============================================================================
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun SelectArtistsStepContent(
-    allArtists: List<OnboardingArtistItem>,
-    selectedArtists: List<String>,
-    isCalibrating: Boolean,
-    onArtistToggle: (String) -> Unit,
-    onBack: () -> Unit,
-    onSkip: () -> Unit,
-    onComplete: () -> Unit
+private fun AppleConnectAccountContent(
+    viewModel: MusicPlayerViewModel,
+    onNext: () -> Unit,
+    onBack: () -> Unit
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    val filteredArtists = remember(searchQuery, allArtists) {
-        if (searchQuery.isBlank()) {
-            allArtists
-        } else {
-            allArtists.filter {
-                it.name.contains(searchQuery, ignoreCase = true) ||
-                it.genre.contains(searchQuery, ignoreCase = true)
-            }
-        }
+    val context = LocalContext.current
+    var showYtLogin by remember { mutableStateOf(false) }
+    var showSpotifyImport by remember { mutableStateOf(false) }
+    var spotifyUrlInput by remember { mutableStateOf("") }
+    var isYtConnected by remember {
+        mutableStateOf(
+            context.getSharedPreferences("musiceuy_yt_auth", android.content.Context.MODE_PRIVATE)
+                .getBoolean("is_logged_in", false)
+        )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 18.dp)
-        ) {
-            // Header Top Bar
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Kembali",
-                        tint = TextPrimary
-                    )
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali", tint = TextPrimary)
                 }
-
-                TextButton(onClick = onSkip) {
-                    Text(
-                        text = "Lewati",
-                        color = TextMuted,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                TextButton(onClick = onNext) {
+                    Text("Lewati", color = TextMuted, fontSize = 14.sp)
                 }
             }
 
-            // Title & Instruction
+            Spacer(modifier = Modifier.height(12.dp))
+
             Text(
-                text = "Siapa musisi favoritmu?",
+                text = "Hubungkan Akun",
                 color = TextPrimary,
-                fontSize = 24.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = (-0.5).sp
             )
-
             Spacer(modifier = Modifier.height(4.dp))
-
             Text(
-                text = "Pilih minimal 3 musisi agar rekomendasi Beranda langsung menyajikan lagu yang sesuai seleramu.",
-                color = TextMuted,
-                fontSize = 13.sp,
+                text = "Sinkronkan daftar lagu dan riwayat putar dari layanan yang kamu gunakan.",
+                color = TextSecondary,
+                fontSize = 14.sp,
                 lineHeight = 18.sp
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Search Bar untuk mencari musisi
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+            // 1. YouTube Music Card
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceContainerHigh),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
-                placeholder = {
-                    Text(
-                        text = "Cari musisi lain...",
-                        color = TextMuted,
-                        fontSize = 13.sp
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Cari",
-                        tint = TextMuted,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotBlank()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Hapus",
-                                tint = TextMuted,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = BrandGreen,
-                    unfocusedBorderColor = SurfaceContainerHigh,
-                    focusedContainerColor = SurfaceContainerLow,
-                    unfocusedContainerColor = SurfaceContainerLow,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
-                ),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() })
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Grid Musisi
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 100.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentPadding = PaddingValues(bottom = 120.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .clickable { showYtLogin = true }
             ) {
-                // If searched artist doesn't match list, offer to add custom artist
-                if (filteredArtists.isEmpty() && searchQuery.isNotBlank()) {
-                    item {
-                        val customName = searchQuery.trim()
-                        val isSelected = selectedArtists.contains(customName)
-                        ArtistCircleItem(
-                            name = customName,
-                            genre = "Musisi Kustom",
-                            avatarUrl = "",
-                            isSelected = isSelected,
-                            onToggle = { onArtistToggle(customName) }
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Brush.linearGradient(listOf(Color(0xFFFF0000), Color(0xFF990000)))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("YT", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("YouTube Music / Akun Google", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(
+                            text = if (isYtConnected) "✓ Akun Google Terhubung" else "Login via WebView aman tanpa password tersimpan",
+                            color = if (isYtConnected) BrandGreen else TextSecondary,
+                            fontSize = 12.sp
                         )
                     }
+                    if (isYtConnected) {
+                        Icon(Icons.Default.Check, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(20.dp))
+                    }
                 }
+            }
 
-                items(filteredArtists, key = { it.name }) { artist ->
-                    val isSelected = selectedArtists.contains(artist.name)
-                    ArtistCircleItem(
-                        name = artist.name,
-                        genre = artist.genre,
-                        avatarUrl = artist.avatarUrl,
-                        isSelected = isSelected,
-                        onToggle = { onArtistToggle(artist.name) }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 2. Spotify Card
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceContainerHigh),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showSpotifyImport = true }
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Brush.linearGradient(listOf(Color(0xFF1DB954), Color(0xFF0F5A28)))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("SP", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Spotify Playlist Importer", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text("Impor link playlist Spotify langsung ke koleksi", color = TextSecondary, fontSize = 12.sp)
+                    }
+                }
+            }
+
+            if (showSpotifyImport) {
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = spotifyUrlInput,
+                    onValueChange = { spotifyUrlInput = it },
+                    placeholder = { Text("Tempel link playlist Spotify di sini...", color = TextMuted, fontSize = 12.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BrandGreen,
+                        unfocusedBorderColor = SurfaceContainer,
+                        focusedContainerColor = SurfaceContainerHigh,
+                        unfocusedContainerColor = SurfaceContainerHigh,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    )
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        viewModel.importExternalPlaylist(spotifyUrlInput.trim())
+                        Toast.makeText(context, "Memulai impor playlist...", Toast.LENGTH_SHORT).show()
+                        showSpotifyImport = false
+                    },
+                    enabled = spotifyUrlInput.isNotBlank(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Impor Sekarang", color = Color(0xFF0C0E11), fontWeight = FontWeight.Bold)
+                }
+            }
+
+            if (showYtLogin) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = DarkBackground),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                ) {
+                    AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                settings.userAgentString = settings.userAgentString.replace("; wv", "")
+                                CookieManager.getInstance().setAcceptCookie(true)
+                                webViewClient = object : WebViewClient() {
+                                    override fun onPageFinished(view: WebView?, url: String?) {
+                                        if (url != null && url.startsWith("https://music.youtube.com")) {
+                                            val cookie = CookieManager.getInstance().getCookie(url)
+                                            if (cookie != null && cookie.contains("SAPISID")) {
+                                                ctx.getSharedPreferences("musiceuy_yt_auth", android.content.Context.MODE_PRIVATE)
+                                                    .edit()
+                                                    .putString("cookie", cookie)
+                                                    .putBoolean("is_logged_in", true)
+                                                    .apply()
+                                                isYtConnected = true
+                                                showYtLogin = false
+                                            }
+                                        }
+                                    }
+                                }
+                                loadUrl("https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fmusic.youtube.com")
+                            }
+                        }
                     )
                 }
             }
         }
 
-        // Floating Bottom Sticky Dock: Counter & Finish Button
-        Surface(
+        Button(
+            onClick = onNext,
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth(),
-            color = Color(0xFF161B22),
-            shadowElevation = 24.dp
+                .fillMaxWidth()
+                .height(54.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Status counter
-                val count = selectedArtists.size
-                val statusText = when {
-                    count == 0 -> "Pilih minimal 3 musisi"
-                    count == 1 -> "Pilih 2 musisi lagi"
-                    count == 2 -> "Pilih 1 musisi lagi"
-                    else -> "Bagus! ($count musisi dipilih)"
-                }
-                val isTargetReached = count >= 3
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = statusText,
-                        color = if (isTargetReached) BrandGreenBright else TextSecondary,
-                        fontSize = 13.sp,
-                        fontWeight = if (isTargetReached) FontWeight.Bold else FontWeight.Medium
-                    )
-
-                    if (count > 0) {
-                        Text(
-                            text = "$count Dipilih",
-                            color = TextMuted,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Button(
-                    onClick = onComplete,
-                    enabled = count >= 1 && !isCalibrating,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BrandGreen,
-                        disabledContainerColor = SurfaceContainerHigh
-                    ),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    if (isCalibrating) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(
-                                color = Color(0xFF0C0E11),
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = "Mengalibrasi Beranda...",
-                                color = Color(0xFF0C0E11),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = if (isTargetReached) "Selesai & Masuk Beranda" else "Lanjutkan ($count dipilih)",
-                            color = if (count >= 1) Color(0xFF0C0E11) else TextMuted,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
+            Text("Lanjutkan", color = Color(0xFF0C0E11), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color(0xFF0C0E11), modifier = Modifier.size(18.dp))
         }
     }
 }
 
+// ============================================================================
+// STEP 3: APPLE MUSIC BUBBLE ARTIST PICKER
+// ============================================================================
 @Composable
-private fun ArtistCircleItem(
-    name: String,
-    genre: String,
-    avatarUrl: String,
-    isSelected: Boolean,
-    onToggle: () -> Unit
+private fun AppleSelectArtistsContent(
+    allArtists: List<OnboardingArtistItem>,
+    selectedArtists: List<String>,
+    onArtistToggle: (String) -> Unit,
+    onNext: () -> Unit,
+    onBack: () -> Unit
 ) {
+    val canProceed = selectedArtists.size >= 3
+
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onToggle() }
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Box(
-            modifier = Modifier
-                .size(86.dp)
-                .clip(CircleShape)
-                .background(SurfaceContainerHigh)
-                .border(
-                    width = if (isSelected) 3.dp else 1.dp,
-                    color = if (isSelected) BrandGreen else SurfaceContainerHigh,
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (avatarUrl.isNotBlank()) {
-                AsyncImage(
-                    model = avatarUrl,
-                    contentDescription = name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali", tint = TextPrimary)
+                }
+
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(SurfaceContainer),
-                    contentAlignment = Alignment.Center
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(if (canProceed) BrandGreen else SurfaceContainerHigh)
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
                     Text(
-                        text = name.take(2).uppercase(),
-                        color = BrandGreenBright,
-                        fontSize = 20.sp,
+                        text = if (canProceed) "${selectedArtists.size} Dipilih ✓" else "Pilih minimal 3 (${selectedArtists.size}/3)",
+                        color = if (canProceed) Color(0xFF0C0E11) else TextSecondary,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            // Green Check Overlay when selected
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = "Pilih Artis Favorit",
+                color = TextPrimary,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = (-0.5).sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Algoritma MusicEuy akan menyusun rekomendasi beranda berdasarkan pilihanmu.",
+                color = TextSecondary,
+                fontSize = 13.sp,
+                lineHeight = 18.sp
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Artist Bubble Grid
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                contentPadding = PaddingValues(bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(allArtists, key = { it.name }) { artist ->
+                    val isSelected = selectedArtists.contains(artist.name)
+                    AppleArtistBubble(
+                        artist = artist,
+                        isSelected = isSelected,
+                        onClick = { onArtistToggle(artist.name) }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Button(
+            onClick = onNext,
+            enabled = canProceed,
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = BrandGreen,
+                disabledContainerColor = SurfaceContainerHigh
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+        ) {
+            Text(
+                text = if (canProceed) "Lanjutkan" else "Pilih ${3 - selectedArtists.size} Artis Lagi",
+                color = if (canProceed) Color(0xFF0C0E11) else TextMuted,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppleArtistBubble(
+    artist: OnboardingArtistItem,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(CircleShape)
+                .background(SurfaceContainer)
+                .border(
+                    width = if (isSelected) 3.dp else 1.dp,
+                    color = if (isSelected) BrandGreen else Color.Transparent,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = artist.avatarUrl,
+                contentDescription = artist.name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+
             if (isSelected) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.55f)),
+                        .background(Color.Black.copy(alpha = 0.45f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(32.dp)
                             .clip(CircleShape)
                             .background(BrandGreen),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Terpilih",
+                            Icons.Default.Check,
+                            contentDescription = "Selected",
                             tint = Color(0xFF0C0E11),
                             modifier = Modifier.size(20.dp)
                         )
@@ -706,25 +705,222 @@ private fun ArtistCircleItem(
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = name,
+            text = artist.name,
             color = if (isSelected) BrandGreenBright else TextPrimary,
             fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            textAlign = TextAlign.Center,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
         )
-
         Text(
-            text = genre,
+            text = artist.genre,
             color = TextMuted,
             fontSize = 10.sp,
-            textAlign = TextAlign.Center,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
         )
+    }
+}
+
+// ============================================================================
+// STEP 4: PROFILE SETUP (APPLE MUSIC ID CARD)
+// ============================================================================
+@Composable
+private fun AppleProfileSetupContent(
+    username: String,
+    onUsernameChange: (String) -> Unit,
+    selectedArtistsCount: Int,
+    isCalibrating: Boolean,
+    onComplete: () -> Unit,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali", tint = TextPrimary)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "Kartu Member MusicEuy",
+                color = TextPrimary,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = (-0.5).sp
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Akun personal lokalmu siap untuk streaming.",
+                color = TextSecondary,
+                fontSize = 14.sp
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Apple Style Glass Member Card
+            Card(
+                shape = RoundedCornerShape(26.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceContainerHigh),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Brush.horizontalGradient(listOf(BrandGreen.copy(alpha = 0.5f), Color(0xFFFC3C44).copy(alpha = 0.3f))), RoundedCornerShape(26.dp))
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "MUSICEUY PASS",
+                            color = BrandGreenBright,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp
+                        )
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_musiceuy_logo),
+                            contentDescription = null,
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(26.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(BrandGreen.copy(alpha = 0.2f))
+                                .border(2.dp, BrandGreen, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Person, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(32.dp))
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = username.ifBlank { "Sobat MusicEuy" },
+                                color = TextPrimary,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Text(
+                                text = "$selectedArtistsCount Artis Favorit • Hi-Res Audio",
+                                color = TextMuted,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("TAHUN GABUNG", color = TextMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                            Text("2026", color = TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("STATUS", color = TextMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                            Text("Bebas Iklan Selamanya", color = BrandGreen, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            OutlinedTextField(
+                value = username,
+                onValueChange = onUsernameChange,
+                label = { Text("Nama Pengguna / Nickname", color = TextSecondary, fontSize = 13.sp) },
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = BrandGreen,
+                    unfocusedBorderColor = SurfaceContainer,
+                    focusedContainerColor = SurfaceContainerHigh,
+                    unfocusedContainerColor = SurfaceContainerHigh,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        Button(
+            onClick = onComplete,
+            enabled = !isCalibrating,
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp)
+        ) {
+            if (isCalibrating) {
+                CircularProgressIndicator(color = Color(0xFF0C0E11), modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                Spacer(modifier = Modifier.width(10.dp))
+                Text("Menyiapkan Beranda...", color = Color(0xFF0C0E11), fontWeight = FontWeight.Bold)
+            } else {
+                Text("Selesai & Masuk ke MusicEuy", color = Color(0xFF0C0E11), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppleFeatureCard(
+    icon: ImageVector,
+    iconColor: Color,
+    title: String,
+    description: String
+) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerHigh),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(iconColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp))
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(description, color = TextMuted, fontSize = 12.sp, lineHeight = 16.sp)
+            }
+        }
     }
 }

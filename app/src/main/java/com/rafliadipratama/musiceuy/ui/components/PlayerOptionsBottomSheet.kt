@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
@@ -58,7 +59,8 @@ fun PlayerOptionsBottomSheet(
     onShareStoryClick: () -> Unit,
     onAddToPlaylistClick: () -> Unit,
     onEqualizerClick: () -> Unit,
-    onOpenArtistClick: () -> Unit
+    onOpenArtistClick: () -> Unit,
+    onNotInterestedClick: () -> Unit = {}
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -196,6 +198,16 @@ fun PlayerOptionsBottomSheet(
                 onClick = {
                     onDismiss()
                     onOpenArtistClick()
+                }
+            )
+
+            OptionItem(
+                icon = Icons.Default.Block,
+                title = "Tidak Tertarik dengan Lagu Ini",
+                subtitle = "Sembunyikan lagu & kurangi rekomendasi ${track.artist.name}",
+                onClick = {
+                    onDismiss()
+                    onNotInterestedClick()
                 }
             )
 

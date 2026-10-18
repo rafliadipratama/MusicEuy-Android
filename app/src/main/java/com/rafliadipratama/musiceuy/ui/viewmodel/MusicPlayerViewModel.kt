@@ -64,6 +64,7 @@ data class PlayerUiState(
     val artistAlbums: List<Album> = emptyList(),
     val isLoadingArtist: Boolean = false,
     val isLoadingAlbums: Boolean = false,
+    val isLoadingPlaylist: Boolean = false,
     val isAddToPlaylistSheetVisible: Boolean = false,
     val trackToAddToPlaylist: Track? = null,
     val trackForContextMenu: Track? = null,
@@ -94,6 +95,19 @@ data class PlayerUiState(
     val downloadedSizeBytes: Long = 0L,
     val isOnboardingCompleted: Boolean = true,
     val isCalibratingOnboarding: Boolean = false,
+    val isRefreshingHome: Boolean = false,
+    val notInterestedTrackIds: Set<String> = emptySet(),
+    val notInterestedArtists: Set<String> = emptySet(),
+    val searchHistory: List<String> = emptyList(),
+    val lastPlayedTrack: Track? = null,
+    val lastPlayedPositionMs: Long = 0L,
+    val currentLanguageCode: String = "system",
+    val isLanguageDialogVisible: Boolean = false,
+    val isProfileVisible: Boolean = false,
+    val userProfile: com.rafliadipratama.musiceuy.data.local.UserProfile = com.rafliadipratama.musiceuy.data.local.UserProfile(),
+    val isLyricsShareDialogVisible: Boolean = false,
+    val selectedLyricForShare: String = "",
+    val isOnline: Boolean = true,
     val error: String? = null
 )
 
@@ -104,6 +118,8 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     val historyManager = LocalMusicHistoryManager(application)
     val downloadManager = com.rafliadipratama.musiceuy.data.local.MusicDownloadManager(application)
     val playlistImporter = com.rafliadipratama.musiceuy.data.network.PlaylistImporter()
+    val connectivityObserver = com.rafliadipratama.musiceuy.util.NetworkConnectivityObserver(application)
+    val userProfileManager = com.rafliadipratama.musiceuy.data.local.UserProfileManager(application)
     private val lrcClient = LrcLibClient(cacheDir = application.filesDir)
     private var sleepTimerJob: Job? = null
 
@@ -117,7 +133,44 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     init {
         com.rafliadipratama.musiceuy.audio.AudioEffectManager.initFromPrefs(application)
-        _uiState.update { it.copy(isOnboardingCompleted = historyManager.isOnboardingCompleted()) }
+        val initialLang = com.rafliadipratama.musiceuy.util.LanguageHelper.getSavedLanguageCode(application)
+        val initialProfile = userProfileManager.getProfile()
+        val savedLastPlayed = historyManager.getLastPlayedTrack()
+        val savedQueue = historyManager.getLastPlaybackQueue()
+        val initialTrack = savedLastPlayed?.first
+        val initialPos = savedLastPlayed?.second ?: 0L
+        val initialDuration = initialTrack?.let { it.durationSec * 1000L } ?: 0L
+        val initialOnline = connectivityObserver.isCurrentlyConnected()
+
+        _uiState.update {
+            it.copy(
+                isOnboardingCompleted = historyManager.isOnboardingCompleted(),
+                currentLanguageCode = initialLang,
+                userProfile = initialProfile,
+                isOnline = initialOnline,
+                lastPlayedTrack = initialTrack,
+                lastPlayedPositionMs = initialPos,
+                currentTrack = initialTrack,
+                currentPositionMs = initialPos,
+                durationMs = initialDuration,
+                queue = if (savedQueue.isNotEmpty()) savedQueue else if (initialTrack != null) listOf(initialTrack) else emptyList(),
+                isPlaying = false
+            )
+        }
+
+        viewModelScope.launch {
+            connectivityObserver.observe().collect { online ->
+                val wasOnline = _uiState.value.isOnline
+                _uiState.update { it.copy(isOnline = online) }
+                if (!wasOnline && online) {
+                    loadDownloadedTracks()
+                    if (_uiState.value.trendingTracks.isEmpty()) {
+                        refreshHomeContent()
+                    }
+                }
+            }
+        }
+
         com.rafliadipratama.musiceuy.widget.MusicWidgetProvider.playbackActionHandler = { action ->
             when (action) {
                 com.rafliadipratama.musiceuy.widget.MusicWidgetProvider.ACTION_PLAY_PAUSE -> togglePlayPause()
@@ -172,6 +225,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     private fun startProgressTracker() {
         progressJob?.cancel()
         progressJob = viewModelScope.launch {
+            var counter = 0
             while (isActive) {
                 val pos = mediaController?.currentPosition ?: 0L
                 val dur = mediaController?.duration ?: 0L
@@ -180,6 +234,12 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                         currentPositionMs = pos,
                         durationMs = if (dur > 0) dur else it.durationMs
                     )
+                }
+                counter++
+                if (counter % 15 == 0) { // every ~4.5 seconds
+                    _uiState.value.currentTrack?.let { cur ->
+                        historyManager.saveLastPlaybackState(cur, pos, _uiState.value.queue)
+                    }
                 }
                 delay(300)
             }
@@ -206,8 +266,27 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun search(query: String) {
         if (query.isBlank()) return
+        historyManager.saveSearchQuery(query)
         viewModelScope.launch {
-            _uiState.update { it.copy(isSearching = true, error = null) }
+            _uiState.update { it.copy(isSearching = true, searchHistory = historyManager.getSearchHistory(), error = null) }
+            
+            if (!_uiState.value.isOnline) {
+                val qLower = query.trim().lowercase()
+                val localResults = _uiState.value.downloadedTracks.filter {
+                    it.title.lowercase().contains(qLower) || it.artist.name.lowercase().contains(qLower)
+                }
+                _uiState.update {
+                    it.copy(
+                        searchResults = localResults,
+                        searchResultArtists = emptyList(),
+                        searchResultAlbums = emptyList(),
+                        isSearching = false,
+                        error = if (localResults.isEmpty()) "Tidak ditemukan lagu terunduh untuk '$query'." else null
+                    )
+                }
+                return@launch
+            }
+
             val allResults = withContext(Dispatchers.IO) {
                 val pluginTracks = pluginManager.search(query)
                 if (pluginTracks.isNotEmpty()) {
@@ -235,13 +314,51 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun removeSearchHistory(query: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            historyManager.removeSearchQuery(query)
+            _uiState.update { it.copy(searchHistory = historyManager.getSearchHistory()) }
+        }
+    }
+
+    fun clearSearchHistory() {
+        viewModelScope.launch(Dispatchers.IO) {
+            historyManager.clearSearchHistory()
+            _uiState.update { it.copy(searchHistory = emptyList()) }
+        }
+    }
+
+    fun resumeLastPlayedTrack() {
+        val trackToPlay = _uiState.value.currentTrack ?: _uiState.value.lastPlayedTrack ?: return
+        val pos = if (_uiState.value.currentPositionMs > 0) _uiState.value.currentPositionMs else _uiState.value.lastPlayedPositionMs
+        if (_uiState.value.currentTrack?.id == trackToPlay.id && _uiState.value.isPlaying) {
+            mediaController?.pause()
+            return
+        }
+        playTrack(trackToPlay)
+        if (pos > 0) {
+            viewModelScope.launch {
+                delay(700)
+                seekTo(pos)
+            }
+        }
+    }
+
     fun loadInitialData() {
         viewModelScope.launch {
+            val notInterestedIds = withContext(Dispatchers.IO) { historyManager.getNotInterestedTrackIds() }
+            val notInterestedArtists = withContext(Dispatchers.IO) { historyManager.getNotInterestedArtists() }
+
             val mostPlayed = withContext(Dispatchers.IO) {
-                historyManager.getMostPlayedTracks()
+                historyManager.getMostPlayedTracks().filter { track ->
+                    !notInterestedIds.contains(track.id) &&
+                    !notInterestedArtists.contains(track.artist.name.trim().lowercase())
+                }
             }
             val favArtists = withContext(Dispatchers.IO) {
-                historyManager.getFavoriteArtists()
+                historyManager.getFavoriteArtists().filter { artist ->
+                    !notInterestedArtists.contains(artist.trim().lowercase())
+                }
             }
             val playlists = withContext(Dispatchers.IO) {
                 historyManager.getAllPlaylists()
@@ -250,13 +367,28 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 historyManager.getLikedTracks()
             }
             val likedIds = liked.map { it.id }.toSet()
-            _uiState.update {
-                it.copy(
+            val searchHistory = withContext(Dispatchers.IO) { historyManager.getSearchHistory() }
+            val lastPlayed = withContext(Dispatchers.IO) { historyManager.getLastPlayedTrack() }
+            val savedQueue = withContext(Dispatchers.IO) { historyManager.getLastPlaybackQueue() }
+
+            _uiState.update { current ->
+                val track = current.currentTrack ?: lastPlayed?.first
+                val pos = if (current.currentTrack == null) (lastPlayed?.second ?: 0L) else current.currentPositionMs
+                current.copy(
                     mostPlayedTracks = mostPlayed,
                     favoriteArtists = favArtists,
                     playlists = playlists,
                     likedTracks = liked,
-                    likedTrackIds = likedIds
+                    likedTrackIds = likedIds,
+                    notInterestedTrackIds = notInterestedIds,
+                    notInterestedArtists = notInterestedArtists,
+                    searchHistory = searchHistory,
+                    lastPlayedTrack = lastPlayed?.first,
+                    lastPlayedPositionMs = lastPlayed?.second ?: 0L,
+                    currentTrack = track,
+                    currentPositionMs = pos,
+                    durationMs = if (current.currentTrack == null && track != null) track.durationSec * 1000L else current.durationMs,
+                    queue = if (current.queue.isNotEmpty()) current.queue else (if (savedQueue.isNotEmpty()) savedQueue else if (track != null) listOf(track) else emptyList())
                 )
             }
 
@@ -265,13 +397,151 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
             // Muat data Explore YouTube Music (Trending, Rilisan Baru, Musisi Populer)
             val explore = withContext(Dispatchers.IO) {
-                streamSource.fetchExploreHome()
+                streamSource.fetchExploreHome(favArtists)
+            }
+            val filteredTrending = explore.trendingTracks.filter { track ->
+                !notInterestedIds.contains(track.id) &&
+                !notInterestedArtists.contains(track.artist.name.trim().lowercase())
+            }
+            val filteredArtists = explore.popularArtists.filter { artist ->
+                !notInterestedArtists.contains(artist.name.trim().lowercase())
+            }
+            val sortedArtists = withContext(Dispatchers.IO) {
+                historyManager.getSortedPopularArtists(filteredArtists)
             }
             _uiState.update {
                 it.copy(
-                    trendingTracks = explore.trendingTracks,
+                    trendingTracks = filteredTrending,
                     newReleases = explore.newReleases,
-                    popularArtists = explore.popularArtists
+                    popularArtists = sortedArtists,
+                    favoriteArtists = favArtists
+                )
+            }
+            resolveMissingArtistAvatars(sortedArtists)
+        }
+    }
+
+    fun refreshHomeContent() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshingHome = true) }
+            try {
+                val notInterestedIds = withContext(Dispatchers.IO) { historyManager.getNotInterestedTrackIds() }
+                val notInterestedArtists = withContext(Dispatchers.IO) { historyManager.getNotInterestedArtists() }
+
+                val favArtists = withContext(Dispatchers.IO) {
+                    historyManager.getFavoriteArtists().filter { artist ->
+                        !notInterestedArtists.contains(artist.trim().lowercase())
+                    }
+                }
+
+                val explore = withContext(Dispatchers.IO) {
+                    streamSource.fetchExploreHome(favArtists)
+                }
+                val filteredTrending = explore.trendingTracks.filter { track ->
+                    !notInterestedIds.contains(track.id) &&
+                    !notInterestedArtists.contains(track.artist.name.trim().lowercase())
+                }
+                val filteredArtists = explore.popularArtists.filter { artist ->
+                    !notInterestedArtists.contains(artist.name.trim().lowercase())
+                }
+                val sortedArtists = withContext(Dispatchers.IO) {
+                    historyManager.getSortedPopularArtists(filteredArtists)
+                }
+
+                val mostPlayed = withContext(Dispatchers.IO) {
+                    historyManager.getMostPlayedTracks().filter { track ->
+                        !notInterestedIds.contains(track.id) &&
+                        !notInterestedArtists.contains(track.artist.name.trim().lowercase())
+                    }
+                }
+
+                _uiState.update {
+                    it.copy(
+                        isRefreshingHome = false,
+                        trendingTracks = filteredTrending,
+                        mostPlayedTracks = mostPlayed,
+                        newReleases = explore.newReleases,
+                        popularArtists = sortedArtists,
+                        favoriteArtists = favArtists,
+                        notInterestedTrackIds = notInterestedIds,
+                        notInterestedArtists = notInterestedArtists,
+                        downloadNotificationMessage = "Beranda berhasil disegarkan."
+                    )
+                }
+                resolveMissingArtistAvatars(sortedArtists)
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isRefreshingHome = false,
+                        error = "Gagal memperbarui beranda: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    private fun resolveMissingArtistAvatars(artists: List<Artist>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            var anyResolved = false
+            val updatedList = _uiState.value.popularArtists.map { artist ->
+                val currentAvatar = artist.avatarUrl?.takeIf { it.isNotBlank() }
+                    ?: com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl(artist.name)
+                    ?: historyManager.getCachedArtistAvatar(artist.name)
+
+                if (currentAvatar.isNullOrBlank()) {
+                    val resolved = streamSource.resolveArtistAvatar(artist.name)
+                    if (!resolved.isNullOrBlank()) {
+                        historyManager.updateArtistAvatar(artist.name, resolved)
+                        com.rafliadipratama.musiceuy.data.network.ArtistCatalog.cacheAvatar(artist.name, resolved)
+                        anyResolved = true
+                        artist.copy(avatarUrl = resolved)
+                    } else artist
+                } else if (artist.avatarUrl != currentAvatar) {
+                    anyResolved = true
+                    artist.copy(avatarUrl = currentAvatar)
+                } else artist
+            }
+            if (anyResolved) {
+                _uiState.update { it.copy(popularArtists = updatedList) }
+            }
+        }
+    }
+
+    fun markTrackNotInterested(track: Track) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                historyManager.markTrackNotInterested(track.id, track.artist.name)
+            }
+            val notInterestedIds = historyManager.getNotInterestedTrackIds()
+            val notInterestedArtists = historyManager.getNotInterestedArtists()
+
+            // Jika lagu yang ditandai sedang diputar, otomatis lewati ke trek berikutnya
+            if (_uiState.value.currentTrack?.id == track.id) {
+                nextTrack()
+            }
+
+            _uiState.update { current ->
+                val filteredTrending = current.trendingTracks.filter {
+                    it.id != track.id && !it.artist.name.equals(track.artist.name, ignoreCase = true)
+                }
+                val filteredMostPlayed = current.mostPlayedTracks.filter {
+                    it.id != track.id && !it.artist.name.equals(track.artist.name, ignoreCase = true)
+                }
+                val filteredSearchResults = current.searchResults.filter {
+                    it.id != track.id && !it.artist.name.equals(track.artist.name, ignoreCase = true)
+                }
+                val filteredQueue = current.queue.filter {
+                    it.id != track.id && !it.artist.name.equals(track.artist.name, ignoreCase = true)
+                }
+
+                current.copy(
+                    trendingTracks = filteredTrending,
+                    mostPlayedTracks = filteredMostPlayed,
+                    searchResults = filteredSearchResults,
+                    queue = filteredQueue,
+                    notInterestedTrackIds = notInterestedIds,
+                    notInterestedArtists = notInterestedArtists,
+                    downloadNotificationMessage = "Lagu '${track.title}' & musisi ${track.artist.name} disembunyikan dari rekomendasi."
                 )
             }
         }
@@ -326,22 +596,32 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             }
         }
 
-        // Record locally for offline recommendation & history
+        // Record locally for offline recommendation & history & last played
         viewModelScope.launch(Dispatchers.IO) {
             historyManager.recordTrackPlayed(track)
+            historyManager.saveLastPlaybackState(track, 0L, _uiState.value.queue)
             val updatedMostPlayed = historyManager.getMostPlayedTracks()
             val updatedFavArtists = historyManager.getFavoriteArtists()
+            val reSortedArtists = historyManager.getSortedPopularArtists(_uiState.value.popularArtists)
             _uiState.update {
                 it.copy(
                     mostPlayedTracks = updatedMostPlayed,
-                    favoriteArtists = updatedFavArtists
+                    favoriteArtists = updatedFavArtists,
+                    popularArtists = reSortedArtists,
+                    lastPlayedTrack = track,
+                    lastPlayedPositionMs = 0L
                 )
             }
         }
 
-        // Fetch synchronized lyrics in background
+        // Fetch synchronized lyrics in background if plugin enabled
         viewModelScope.launch {
-            val lyrics = lrcClient.fetchLyrics(track.artist.name, track.title)
+            val lrcPlugin = pluginManager.getLrcLibPlugin()
+            if (lrcPlugin == null || !lrcPlugin.isEnabled) {
+                _uiState.update { it.copy(lyrics = com.rafliadipratama.musiceuy.data.model.Lyrics(), isLoadingLyrics = false) }
+                return@launch
+            }
+            val lyrics = lrcPlugin.fetchLyrics(track.artist.name, track.title)
             _uiState.update { it.copy(lyrics = lyrics, isLoadingLyrics = false) }
         }
 
@@ -350,7 +630,29 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
             android.util.Log.d("MusicEuy", "playTrack: title=${track.title}, artist=${track.artist.name}, initialUrl=${track.audioUrl}")
 
-            val isLocalAudio = activeAudioUri.startsWith("content://") || activeAudioUri.startsWith("file://")
+            var isLocalAudio = activeAudioUri.startsWith("content://") || activeAudioUri.startsWith("file://")
+
+            // Check if track matches a locally downloaded track
+            if (!isLocalAudio) {
+                val downloadedMatch = _uiState.value.downloadedTracks.firstOrNull {
+                    it.id == track.id || (it.title.equals(track.title, ignoreCase = true) && it.artist.name.equals(track.artist.name, ignoreCase = true))
+                }
+                if (downloadedMatch != null && (downloadedMatch.audioUrl.startsWith("content://") || downloadedMatch.audioUrl.startsWith("file://"))) {
+                    activeAudioUri = downloadedMatch.audioUrl
+                    isLocalAudio = true
+                }
+            }
+
+            // Gracefully handle playback when offline and track is not local
+            if (!isLocalAudio && !_uiState.value.isOnline) {
+                _uiState.update {
+                    it.copy(
+                        isPlaying = false,
+                        downloadNotificationMessage = "Lagu ini memerlukan koneksi internet. Unduh terlebih dahulu untuk memutar offline."
+                    )
+                }
+                return@launch
+            }
 
             // If audioUrl is a placeholder (e.g. yt:ID), resolve via active plugins
             if (!isLocalAudio && !activeAudioUri.startsWith("http")) {
@@ -428,17 +730,34 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun togglePlayPause() {
-        val controller = mediaController ?: return
+        val controller = mediaController
+        if (controller == null) {
+            val current = _uiState.value.currentTrack
+            if (current != null) {
+                resumeLastPlayedTrack()
+            }
+            return
+        }
         if (controller.isPlaying) {
             controller.pause()
+            _uiState.value.currentTrack?.let { cur ->
+                historyManager.saveLastPlaybackState(cur, controller.currentPosition, _uiState.value.queue)
+            }
         } else {
-            controller.play()
+            if (controller.currentMediaItem == null && _uiState.value.currentTrack != null) {
+                resumeLastPlayedTrack()
+            } else {
+                controller.play()
+            }
         }
     }
 
     fun seekTo(positionMs: Long) {
         mediaController?.seekTo(positionMs)
         _uiState.update { it.copy(currentPositionMs = positionMs) }
+        _uiState.value.currentTrack?.let { cur ->
+            historyManager.saveLastPlaybackState(cur, positionMs, _uiState.value.queue)
+        }
     }
 
     fun nextTrack() {
@@ -467,6 +786,16 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun handleTrackEnded() {
         val state = _uiState.value
+
+        // Trigger Last.fm Scrobbler plugin if enabled
+        state.currentTrack?.let { completedTrack ->
+            val lastFm = pluginManager.getLastFmPlugin()
+            if (lastFm != null && lastFm.isEnabled) {
+                viewModelScope.launch {
+                    lastFm.scrobbleTrack(completedTrack)
+                }
+            }
+        }
 
         // Check if sleep timer is set to stop at the end of track
         if (state.isSleepTimerEndOfTrack) {
@@ -499,7 +828,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     fun triggerAutoplay(endedTrack: Track) {
         viewModelScope.launch {
             val related = withContext(Dispatchers.IO) {
-                streamSource.searchTracks(endedTrack.artist.name)
+                streamSource.fetchSongRadio(endedTrack)
             }
             val existingIds = _uiState.value.queue.map { it.id }.toSet()
             val candidate = related.firstOrNull { !existingIds.contains(it.id) && it.id != endedTrack.id }
@@ -571,6 +900,66 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         _uiState.update { state ->
             val current = state.currentTrack
             state.copy(queue = if (current != null) listOf(current) else emptyList())
+        }
+    }
+
+    fun reorderQueue(fromIndex: Int, toIndex: Int) {
+        _uiState.update { state ->
+            val list = state.queue.toMutableList()
+            if (fromIndex in list.indices && toIndex in list.indices && fromIndex != toIndex) {
+                val item = list.removeAt(fromIndex)
+                list.add(toIndex, item)
+                state.copy(queue = list)
+            } else {
+                state
+            }
+        }
+    }
+
+    fun reorderUpcomingTracks(fromUpcomingIndex: Int, toUpcomingIndex: Int) {
+        _uiState.update { state ->
+            val currentTrack = state.currentTrack ?: return@update state
+            val currentQueue = state.queue.toMutableList()
+            val currentIndex = currentQueue.indexOfFirst { it.id == currentTrack.id }
+            if (currentIndex == -1) {
+                if (fromUpcomingIndex in currentQueue.indices && toUpcomingIndex in currentQueue.indices && fromUpcomingIndex != toUpcomingIndex) {
+                    val item = currentQueue.removeAt(fromUpcomingIndex)
+                    currentQueue.add(toUpcomingIndex, item)
+                    return@update state.copy(queue = currentQueue)
+                }
+                return@update state
+            }
+
+            val played = currentQueue.subList(0, currentIndex + 1)
+            val upcoming = currentQueue.subList(currentIndex + 1, currentQueue.size).toMutableList()
+
+            if (fromUpcomingIndex in upcoming.indices && toUpcomingIndex in upcoming.indices && fromUpcomingIndex != toUpcomingIndex) {
+                val item = upcoming.removeAt(fromUpcomingIndex)
+                upcoming.add(toUpcomingIndex, item)
+                state.copy(queue = played + upcoming)
+            } else {
+                state
+            }
+        }
+    }
+
+    fun moveTrackToNext(trackId: String) {
+        _uiState.update { state ->
+            val currentTrack = state.currentTrack ?: return@update state
+            val currentIndex = state.queue.indexOfFirst { it.id == currentTrack.id }
+            val targetIndex = state.queue.indexOfFirst { it.id == trackId }
+            if (currentIndex != -1 && targetIndex != -1 && targetIndex != currentIndex + 1) {
+                val list = state.queue.toMutableList()
+                val item = list.removeAt(targetIndex)
+                val insertIndex = if (targetIndex < currentIndex) currentIndex else currentIndex + 1
+                list.add(insertIndex.coerceIn(0, list.size), item)
+                state.copy(
+                    queue = list,
+                    downloadNotificationMessage = "'${item.title}' diprioritaskan untuk diputar berikutnya."
+                )
+            } else {
+                state
+            }
         }
     }
 
@@ -646,7 +1035,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun closePlaylist() {
-        _uiState.update { it.copy(selectedPlaylist = null) }
+        _uiState.update { it.copy(selectedPlaylist = null, isLoadingPlaylist = false) }
     }
 
     fun showAddToPlaylist(track: Track) {
@@ -748,7 +1137,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             }
             launch {
                 val results = withContext(Dispatchers.IO) {
-                    pluginManager.search(artist.name).ifEmpty { streamSource.searchTracks(artist.name) }
+                    streamSource.getArtistTopTracks(artist.name)
                 }
                 _uiState.update {
                     it.copy(
@@ -761,11 +1150,22 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 val (fullArtist, albums) = withContext(Dispatchers.IO) {
                     streamSource.getArtistProfileAndAlbums(artist.name)
                 }
-                _uiState.update {
-                    it.copy(
-                        selectedArtist = fullArtist,
+                val resolvedAvatar = fullArtist?.avatarUrl?.takeIf { it.isNotBlank() }
+                if (resolvedAvatar != null) {
+                    historyManager.updateArtistAvatar(artist.name, resolvedAvatar)
+                    com.rafliadipratama.musiceuy.data.network.ArtistCatalog.cacheAvatar(artist.name, resolvedAvatar)
+                }
+                _uiState.update { state ->
+                    val updatedPopular = state.popularArtists.map { a ->
+                        if (a.name.equals(artist.name, ignoreCase = true) && resolvedAvatar != null) {
+                            a.copy(avatarUrl = resolvedAvatar)
+                        } else a
+                    }
+                    state.copy(
+                        selectedArtist = fullArtist ?: state.selectedArtist,
                         artistAlbums = albums,
-                        isLoadingAlbums = false
+                        isLoadingAlbums = false,
+                        popularArtists = updatedPopular
                     )
                 }
             }
@@ -774,13 +1174,15 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun openAlbum(album: Album) {
         viewModelScope.launch {
+            val effectiveYear = if (album.year.isNotBlank() && album.year >= "2025") album.year else "2026"
             _uiState.update {
                 it.copy(
                     isPlayerExpanded = false,
+                    isLoadingPlaylist = true,
                     selectedPlaylist = Playlist(
                         id = album.id,
                         name = album.title,
-                        description = "Album • ${album.year.ifBlank { "YouTube Music" }} • ${album.artistName}",
+                        description = "Album • $effectiveYear • ${album.artistName}",
                         coverUrl = album.coverUrl,
                         tracks = emptyList()
                     )
@@ -792,6 +1194,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             _uiState.update { state ->
                 if (state.selectedPlaylist?.id == album.id) {
                     state.copy(
+                        isLoadingPlaylist = false,
                         selectedPlaylist = state.selectedPlaylist.copy(tracks = tracks)
                     )
                 } else state
@@ -1096,12 +1499,14 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         _uiState.update { it.copy(selectedHomeFilter = category) }
         viewModelScope.launch {
             if (category == "Semua") {
-                val homeData = streamSource.fetchExploreHome()
+                val favArtists = withContext(Dispatchers.IO) { historyManager.getFavoriteArtists() }
+                val homeData = withContext(Dispatchers.IO) { streamSource.fetchExploreHome(favArtists) }
+                val sortedArtists = withContext(Dispatchers.IO) { historyManager.getSortedPopularArtists(homeData.popularArtists) }
                 _uiState.update {
                     it.copy(
                         trendingTracks = homeData.trendingTracks,
                         newReleases = homeData.newReleases,
-                        popularArtists = homeData.popularArtists
+                        popularArtists = sortedArtists
                     )
                 }
             } else {
@@ -1113,14 +1518,41 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun playOfficialChart(chartName: String) {
+    fun openOfficialChart(chartName: String, browseId: String, subtitle: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(downloadNotificationMessage = "Memuat $chartName...") }
-            val chartTracks = streamSource.fetchOfficialChart(chartName)
-            if (chartTracks.isNotEmpty()) {
-                playTrack(chartTracks.first(), chartTracks)
+            _uiState.update {
+                it.copy(
+                    isPlayerExpanded = false,
+                    isLoadingPlaylist = true,
+                    selectedPlaylist = Playlist(
+                        id = browseId,
+                        name = chartName,
+                        description = "$subtitle • Tangga Lagu Resmi 2026",
+                        coverUrl = "",
+                        tracks = emptyList()
+                    )
+                )
+            }
+            val tracks = withContext(Dispatchers.IO) {
+                streamSource.fetchOfficialChart(chartName)
+            }
+            _uiState.update { state ->
+                if (state.selectedPlaylist?.id == browseId) {
+                    val cover = tracks.firstOrNull()?.coverUrl ?: ""
+                    state.copy(
+                        isLoadingPlaylist = false,
+                        selectedPlaylist = state.selectedPlaylist.copy(
+                            tracks = tracks,
+                            coverUrl = cover
+                        )
+                    )
+                } else state
             }
         }
+    }
+
+    fun playOfficialChart(chartName: String) {
+        openOfficialChart(chartName, "chart_${chartName.hashCode()}", "YouTube Music Official")
     }
 
     fun showImportPlaylistDialog() {
@@ -1152,6 +1584,10 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun importExternalPlaylist(url: String, customName: String? = null) {
+        importPlaylistFromUrl(url, customName) { _, _ -> }
+    }
+
     fun showRecapDialog() {
         val stats = historyManager.getListeningStats()
         _uiState.update { it.copy(isRecapDialogVisible = true, listeningStats = stats) }
@@ -1175,6 +1611,24 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun dismissStorageDialog() {
         _uiState.update { it.copy(isStorageDialogVisible = false) }
+    }
+
+    fun showLanguageDialog() {
+        _uiState.update { it.copy(isLanguageDialogVisible = true) }
+    }
+
+    fun dismissLanguageDialog() {
+        _uiState.update { it.copy(isLanguageDialogVisible = false) }
+    }
+
+    fun setLanguage(languageCode: String) {
+        com.rafliadipratama.musiceuy.util.LanguageHelper.applyLanguage(getApplication(), languageCode)
+        _uiState.update {
+            it.copy(
+                currentLanguageCode = languageCode,
+                isLanguageDialogVisible = false
+            )
+        }
     }
 
     fun clearAudioCache() {
@@ -1234,6 +1688,38 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun restartOnboarding() {
         _uiState.update { it.copy(isOnboardingCompleted = false) }
+    }
+
+    fun playAllDownloadedTracks() {
+        val downloaded = _uiState.value.downloadedTracks
+        if (downloaded.isNotEmpty()) {
+            playTrack(downloaded.first(), downloaded)
+        }
+    }
+
+    fun openProfile() {
+        _uiState.update { it.copy(isProfileVisible = true) }
+    }
+
+    fun closeProfile() {
+        _uiState.update { it.copy(isProfileVisible = false) }
+    }
+
+    fun getUserProfile(): com.rafliadipratama.musiceuy.data.local.UserProfile {
+        return userProfileManager.getProfile()
+    }
+
+    fun saveUserProfile(profile: com.rafliadipratama.musiceuy.data.local.UserProfile) {
+        userProfileManager.updateProfile(profile)
+        _uiState.update { it.copy(userProfile = profile) }
+    }
+
+    fun openLyricsShare(snippet: String) {
+        _uiState.update { it.copy(isLyricsShareDialogVisible = true, selectedLyricForShare = snippet) }
+    }
+
+    fun closeLyricsShare() {
+        _uiState.update { it.copy(isLyricsShareDialogVisible = false) }
     }
 
     override fun onCleared() {

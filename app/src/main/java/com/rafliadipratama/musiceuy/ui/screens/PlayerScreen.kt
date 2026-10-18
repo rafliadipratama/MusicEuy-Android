@@ -59,10 +59,17 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import com.rafliadipratama.musiceuy.ui.components.LikeBurst
+import com.rafliadipratama.musiceuy.lyrics.LyricsInterludeDots
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -117,16 +124,26 @@ fun PlayerScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isTablet = configuration.screenWidthDp >= 600
 
-    // Root Container - 100% Solid Opaque (No background transparency)
+    // Root Container - Apple Music Inspired Fluid Ambient Glow Backdrop
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkBackground) // Opaque solid base
+            .background(DarkBackground)
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(
+                        dominantColor.copy(alpha = 0.55f),
+                        dominantColor.copy(alpha = 0.20f),
+                        DarkBackground
+                    ),
+                    radius = 1600f
+                )
+            )
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        dominantColor, // Solid 1.0f alpha
-                        DarkBackground,
+                        Color.Transparent,
+                        DarkBackground.copy(alpha = 0.65f),
                         DarkBackground
                     )
                 )
@@ -166,7 +183,8 @@ fun PlayerScreen(
                 onToggleRepeat = { viewModel.toggleRepeatMode() },
                 onToggleLike = { viewModel.toggleLike(track) },
                 onDownload = { viewModel.downloadTrack(track) },
-                onOpenArtist = { viewModel.openArtistDetail(track.artist) }
+                onOpenArtist = { viewModel.openArtistDetail(track.artist) },
+                onSeekToLine = { posMs -> viewModel.seekTo(posMs) }
             )
         } else {
             // ==================== PORTRAIT LAYOUT (Mobile & Tablet) ====================
@@ -200,7 +218,8 @@ fun PlayerScreen(
                 onToggleRepeat = { viewModel.toggleRepeatMode() },
                 onToggleLike = { viewModel.toggleLike(track) },
                 onDownload = { viewModel.downloadTrack(track) },
-                onOpenArtist = { viewModel.openArtistDetail(track.artist) }
+                onOpenArtist = { viewModel.openArtistDetail(track.artist) },
+                onSeekToLine = { posMs -> viewModel.seekTo(posMs) }
             )
         }
 
@@ -217,7 +236,8 @@ fun PlayerScreen(
                 onShareStoryClick = { viewModel.shareCurrentTrackStory() },
                 onAddToPlaylistClick = { viewModel.showAddToPlaylist(track) },
                 onEqualizerClick = { viewModel.showEqualizer() },
-                onOpenArtistClick = { viewModel.openArtistDetail(track.artist) }
+                onOpenArtistClick = { viewModel.openArtistDetail(track.artist) },
+                onNotInterestedClick = { viewModel.markTrackNotInterested(track) }
             )
         }
 
@@ -256,7 +276,8 @@ private fun PortraitPlayerLayout(
     onToggleRepeat: () -> Unit,
     onToggleLike: () -> Unit,
     onDownload: () -> Unit,
-    onOpenArtist: () -> Unit
+    onOpenArtist: () -> Unit,
+    onSeekToLine: (Long) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -345,7 +366,7 @@ private fun PortraitPlayerLayout(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // --- 2. Center Area: Large Artwork or Realtime Lyrics ---
+        // --- 2. Center Area: Large Artwork or Realtime Lyrics (Apple Music Style) ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -356,18 +377,38 @@ private fun PortraitPlayerLayout(
                 SyncedLyricsView(
                     uiState = uiState,
                     currentMs = currentMs,
-                    lyricsListState = lyricsListState
+                    lyricsListState = lyricsListState,
+                    onSeekToLine = onSeekToLine
                 )
             } else {
-                AsyncImage(
-                    model = track.coverUrl,
-                    contentDescription = track.title,
-                    contentScale = ContentScale.Crop,
+                val artworkScale by animateFloatAsState(
+                    targetValue = if (uiState.isPlaying) 1.0f else 0.92f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    ),
+                    label = "AppleMusicArtworkScale"
+                )
+
+                Box(
                     modifier = Modifier
                         .fillMaxWidth(if (isTablet) 0.72f else 0.88f)
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(22.dp))
-                )
+                        .graphicsLayer {
+                            scaleX = artworkScale
+                            scaleY = artworkScale
+                        }
+                        .clip(RoundedCornerShape(26.dp))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(26.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = track.coverUrl,
+                        contentDescription = track.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
 
@@ -451,7 +492,8 @@ private fun LandscapePlayerLayout(
     onToggleRepeat: () -> Unit,
     onToggleLike: () -> Unit,
     onDownload: () -> Unit,
-    onOpenArtist: () -> Unit
+    onOpenArtist: () -> Unit,
+    onSeekToLine: (Long) -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -589,7 +631,8 @@ private fun LandscapePlayerLayout(
                     SyncedLyricsView(
                         uiState = uiState,
                         currentMs = currentMs,
-                        lyricsListState = lyricsListState
+                        lyricsListState = lyricsListState,
+                        onSeekToLine = onSeekToLine
                     )
                 }
             } else {
@@ -695,6 +738,50 @@ private fun TrackInfoRow(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                val tierBadge = if (track.id.startsWith("mono_") || uiState.userProfile.audioQualityTier.contains("FLAC")) {
+                    "Hi-Res Lossless • FLAC"
+                } else if (track.audioUrl.contains("opus") || track.id.startsWith("yt:")) {
+                    "Lossless • Opus 320k"
+                } else {
+                    "AAC • 256kbps"
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = tierBadge,
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (uiState.userProfile.autoEqModel != "None") {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFF00C9FF).copy(alpha = 0.2f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "AutoEQ",
+                            color = Color(0xFF00C9FF),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -728,17 +815,19 @@ private fun TrackInfoRow(
                 }
             }
 
-            // Like Button
-            IconButton(
-                onClick = onToggleLike,
-                modifier = Modifier.size(42.dp)
-            ) {
-                Icon(
-                    imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (isLiked) "Hapus dari Favorit" else "Sukai",
-                    tint = if (isLiked) Color(0xFFE91E63) else TextSecondary,
-                    modifier = Modifier.size(24.dp)
-                )
+            // Like Button with Burst Animation
+            LikeBurst(trigger = isLiked) {
+                IconButton(
+                    onClick = onToggleLike,
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (isLiked) "Hapus dari Favorit" else "Sukai",
+                        tint = if (isLiked) Color(0xFFE91E63) else TextSecondary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
     }
@@ -777,8 +866,9 @@ private fun PlaybackSeekbar(
                 color = TextMuted,
                 fontSize = 12.sp
             )
+            val remainingMs = (durationMs - currentMs).coerceAtLeast(0L)
             Text(
-                text = formatMs(durationMs),
+                text = "-" + formatMs(remainingMs),
                 color = TextMuted,
                 fontSize = 12.sp
             )
@@ -944,7 +1034,8 @@ private fun BottomUtilityRow(
 private fun SyncedLyricsView(
     uiState: com.rafliadipratama.musiceuy.ui.viewmodel.PlayerUiState,
     currentMs: Long,
-    lyricsListState: androidx.compose.foundation.lazy.LazyListState
+    lyricsListState: androidx.compose.foundation.lazy.LazyListState,
+    onSeekToLine: (Long) -> Unit = {}
 ) {
     if (uiState.isLoadingLyrics) {
         Column(
@@ -972,20 +1063,22 @@ private fun SyncedLyricsView(
             state = lyricsListState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = 40.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             itemsIndexed(synced) { index, line ->
                 val isActive = index == activeIndex
                 Text(
                     text = line.text,
-                    color = if (isActive) TextPrimary else TextMuted.copy(alpha = 0.45f),
-                    fontSize = if (isActive) 20.sp else 16.sp,
-                    fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Medium,
+                    color = if (isActive) Color.White else TextMuted.copy(alpha = 0.35f),
+                    fontSize = if (isActive) 24.sp else 18.sp,
+                    fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onSeekToLine(line.timestampMs) }
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
                 )
             }
         }

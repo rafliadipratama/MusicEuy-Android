@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & General -->
+    <string name="app_name">MusicEuy</string>
+    <string name="widget_description">Pemutar musik ringkas di Layar Utama</string>
+    <string name="cancel">Batal</string>
+    <string name="ok">OK</string>
+    <string name="save">Simpan</string>
+    <string name="delete">Hapus</string>
+    <string name="confirm">Konfirmasi</string>
+    <string name="close">Tutup</string>
+    <string name="back">Kembali</string>
+    <string name="play">Putar</string>
+    <string name="pause">Jeda</string>
+    <string name="songs">lagu</string>
+    <string name="tracks">lagu</string>
+    <string name="plays">kali diputar</string>
+    <string name="unknown_artist">Artis Tidak Dikenal</string>
+    <string name="unknown_album">Album Tidak Dikenal</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_home">Beranda</string>
+    <string name="nav_search">Cari</string>
+    <string name="nav_library">Koleksi</string>
+    <string name="nav_plugins">Ekstensi</string>
+
+    <!-- Home Screen -->
+    <string name="home_continue_listening">Lanjutkan Mendengarkan</string>
+    <string name="home_resume">Lanjut Putar</string>
+    <string name="home_last_stopped">Terhenti di %s</string>
+    <string name="home_top_50">Top 50 Terpopuler</string>
+    <string name="home_top_50_subtitle">Musik teratas yang sedang tren di Indonesia &amp; Global</string>
+    <string name="home_popular_artists">Artis Populer</string>
+    <string name="home_popular_artists_subtitle">Musisi terverifikasi &amp; artis yang sering kamu dengar</string>
+    <string name="home_albums_singles">Album &amp; Single Pilihan</string>
+    <string name="home_albums_singles_subtitle">Koleksi album dan single hits terbaik saat ini</string>
+    <string name="home_play_all">Putar Semua</string>
+    <string name="home_shuffle">Acak</string>
+    <string name="home_loading_charts">Memuat tangga lagu...</string>
+    <string name="home_empty_title">Belum ada lagu yang dimuat</string>
+    <string name="home_empty_desc">Tekan tombol Segarkan untuk memuat tangga lagu terkini</string>
+    <string name="home_refresh">Segarkan Tangga Lagu</string>
+
+    <!-- Search Screen -->
+    <string name="search_placeholder">Cari lagu, artis, atau album...</string>
+    <string name="search_history_title">Riwayat Pencarian</string>
+    <string name="search_clear_all">Hapus Semua</string>
+    <string name="search_results_title">Hasil Pencarian</string>
+    <string name="search_empty_title">Temukan Musik Favoritmu</string>
+    <string name="search_empty_subtitle">Ketik judul lagu, musisi, atau album di atas</string>
+    <string name="search_no_results">Tidak ada hasil untuk \"%s\"</string>
+    <string name="search_searching">Mencari musik...</string>
+
+    <!-- Library Screen -->
+    <string name="library_title">Koleksi Musik</string>
+    <string name="library_subtitle">Playlist, genre, lagu favorit &amp; riwayat</string>
+    <string name="library_liked_songs">Lagu Disukai</string>
+    <string name="library_liked_songs_subtitle">%d lagu tersimpan</string>
+    <string name="library_downloaded_songs">Lagu Diunduh</string>
+    <string name="library_downloaded_songs_subtitle">Dengarkan offline</string>
+    <string name="library_most_played">Sering Diputar</string>
+    <string name="library_most_played_subtitle">Lagu favoritmu</string>
+    <string name="library_create_playlist">Buat Playlist Baru</string>
+    <string name="library_new_playlist_name">Nama playlist...</string>
+    <string name="library_new_playlist_desc">Deskripsi (opsional)...</string>
+    <string name="library_create">Buat</string>
+    <string name="library_my_playlists">Daftar Playlist Saya</string>
+    <string name="library_empty_playlists">Belum ada playlist dibuat</string>
+    <string name="library_empty_playlists_desc">Tekan tombol + di atas untuk membuat playlist pertamamu</string>
+    <string name="library_genre_stations">Stasiun Genre</string>
+    <string name="library_playback_history">Riwayat Putar</string>
+    <string name="library_clear_history">Hapus Riwayat</string>
+    <string name="library_history_empty">Belum ada riwayat putar</string>
+    <string name="library_history_empty_desc">Lagu yang kamu putar akan otomatis muncul di sini</string>
+
+    <!-- Language Selector -->
+    <string name="language_settings">Bahasa / Language</string>
+    <string name="language_dialog_title">Pilih Bahasa Aplikasi</string>
+    <string name="language_system">Ikuti Sistem HP</string>
+    <string name="language_system_desc">Gunakan bahasa pengaturan perangkat</string>
+    <string name="language_indonesian">Bahasa Indonesia</string>
+    <string name="language_indonesian_desc">Bahasa Indonesia</string>
+    <string name="language_english">English</string>
+    <string name="language_english_desc">Bahasa Inggris (Global)</string>
+
+    <!-- Player & Controls -->
+    <string name="player_lyrics">Lirik Karaoke</string>
+    <string name="player_lyrics_synced">Tersinkronisasi via LRCLIB</string>
+    <string name="player_no_lyrics">Lirik belum tersedia untuk lagu ini</string>
+    <string name="player_queue">Antrean Putar</string>
+    <string name="player_equalizer">Ekualiser</string>
+    <string name="player_sleep_timer">Pengatur Waktu Tidur</string>
+    <string name="player_download">Unduh Lagu</string>
+    <string name="player_share_story">Bagikan Kartu Cerita</string>
+    <string name="player_add_to_playlist">Tambah ke Playlist</string>
+    <string name="player_start_radio">Mulai Radio Lagu</string>
+    <string name="player_start_radio_desc">Putar lagu-lagu serupa berdasarkan vibe lagu ini</string>
+    <string name="player_view_artist">Lihat Profil Artis</string>
+    <string name="player_not_interested">Tidak Tertarik</string>
+    <string name="player_not_interested_desc">Sembunyikan lagu &amp; kurangi rekomendasi serupa</string>
+
+    <!-- Sleep Timer -->
+    <string name="sleep_timer_title">Pengatur Waktu Tidur</string>
+    <string name="sleep_timer_subtitle">Otomatis hentikan musik saat timer selesai</string>
+    <string name="sleep_timer_off">Matikan Pengatur Waktu</string>
+    <string name="sleep_timer_end_of_track">Akhir lagu ini</string>
+    <string name="sleep_timer_minutes">%d menit</string>
+    <string name="sleep_timer_active_badge">Timer: tersisa %s</string>
+
+    <!-- Context Menu Actions -->
+    <string name="menu_play_now">Putar Sekarang</string>
+    <string name="menu_play_now_desc">Langsung putar lagu ini</string>
+    <string name="menu_play_next">Putar Setelah Ini</string>
+    <string name="menu_play_next_desc">Mainkan berikutnya setelah lagu aktif selesai</string>
+    <string name="menu_add_to_queue">Tambahkan ke Antrean</string>
+    <string name="menu_add_to_queue_desc">Sisipkan ke akhir daftar putar</string>
+    <string name="menu_add_to_playlist">Tambah ke Playlist</string>
+    <string name="menu_add_to_playlist_desc">Simpan ke playlist favoritmu</string>
+    <string name="menu_download">Unduh Musik</string>
+    <string name="menu_download_desc">Simpan ke penyimpanan lokal HP</string>
+    <string name="menu_downloaded">Sudah Diunduh</string>
+    <string name="menu_downloaded_desc">Tersimpan di folder Musik</string>
+    <string name="menu_like">Sukai Lagu Ini</string>
+    <string name="menu_like_desc">Simpan ke daftar favorit</string>
+    <string name="menu_unlike">Hapus dari Lagu Disukai</string>
+    <string name="menu_unlike_desc">Keluarkan dari daftar favorit</string>
+    <string name="menu_view_artist">Lihat Detail Artis</string>
+    <string name="menu_view_artist_desc">Jelajahi diskografi dan lagu populer</string>
+
+    <!-- Downloaded Tracks Screen -->
+    <string name="downloads_title">Lagu Terunduh</string>
+    <string name="downloads_subtitle">Penyimpanan musik offline</string>
+    <string name="downloads_empty_title">Belum ada lagu yang diunduh</string>
+    <string name="downloads_empty_desc">Tekan ikon unduh pada lagu untuk mendengarkan secara offline tanpa kuota</string>
+    <string name="downloads_delete_confirm">Hapus dari penyimpanan?</string>
+    <string name="downloads_delete_desc">File lagu ini akan dihapus dari memori HP</string>
+
+    <!-- Plugins Screen -->
+    <string name="plugins_title">Pusat Plugin &amp; Mesin Audio</string>
+    <string name="plugins_subtitle">Ekstensi modular streaming, lirik &amp; pemrosesan audio</string>
+    <string name="plugins_active">Aktif</string>
+    <string name="plugins_disabled">Nonaktif</string>
+    <string name="plugins_update_ytdlp">Periksa / Update OTA</string>
+
+    <!-- Onboarding Screen -->
+    <string name="onboarding_title">Pilih Artis Favorit Kamu</string>
+    <string name="onboarding_subtitle">Pilih minimal 3 artis untuk mempersonalisasi tangga lagu dan rekomendasi beranda</string>
+    <string name="onboarding_skip">Lewati dulu</string>
+    <string name="onboarding_continue">Lanjutkan (%d dipilih)</string>
+    <string name="onboarding_search_hint">Cari artis...</string>
+
+    <!-- Offline Mode -->
+    <string name="offline_mode_title">Mode Offline Aktif</string>
+    <string name="offline_mode_desc">Tidak ada koneksi internet. Memutar lagu yang tersimpan di perangkat HP.</string>
+    <string name="offline_open_downloads">Buka Lagu Terunduh</string>
+    <string name="offline_play_all">Putar Semua Offline</string>
+    <string name="offline_downloaded_section_title">Tersimpan di Perangkat Ini</string>
+    <string name="offline_no_songs_title">Belum Ada Lagu Terunduh</string>
+    <string name="offline_no_songs_desc">Saat terhubung ke internet, ketuk titik tiga pada lagu dan pilih Unduh Lagu untuk memutar kapan saja tanpa kuota.</string>
+    <string name="offline_search_hint">Cari lagu terunduh...</string>
+    <string name="offline_search_banner">Mode Offline • Mencari lagu di penyimpanan perangkat</string>
+    <string name="offline_track_requires_internet">Lagu ini memerlukan koneksi internet. Hubungkan ke jaringan atau putar lagu terunduh.</string>
+    <string name="offline_back_online">Terhubung kembali online</string>
+    <string name="offline_songs_count">%d lagu offline</string>
+</resources>

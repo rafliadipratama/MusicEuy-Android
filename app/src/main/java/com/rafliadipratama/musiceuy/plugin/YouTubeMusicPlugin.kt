@@ -17,6 +17,8 @@ class YouTubeMusicPlugin(
     override val description: String = "Ekstraksi stream audio resmi YouTube Music (Opus 160-320kbps) dengan NewPipeExtractor v0.26.5"
     override val version: String = "1.2.0"
     override val author: String = "Team NewPipe & MusicEuy"
+    override val category: String = "Audio Stream"
+    override val githubUrl: String = "https://github.com/TeamNewPipe/NewPipeExtractor"
     override val isBuiltIn: Boolean = true
 
     override suspend fun search(query: String): List<Track> {

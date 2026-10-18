@@ -49,6 +49,18 @@ import com.rafliadipratama.musiceuy.ui.theme.TextMuted
 import com.rafliadipratama.musiceuy.ui.theme.TextPrimary
 import com.rafliadipratama.musiceuy.ui.theme.TextSecondary
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+
 @Composable
 fun QueueBottomSheet(
     currentTrack: Track?,
@@ -57,6 +69,8 @@ fun QueueBottomSheet(
     onTrackClick: (Track) -> Unit,
     onRemoveTrack: (String) -> Unit,
     onClearQueue: () -> Unit,
+    onReorderUpcoming: (fromIndex: Int, toIndex: Int) -> Unit = { _, _ -> },
+    onMoveTrackToNext: (trackId: String) -> Unit = {},
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -242,7 +256,8 @@ fun QueueBottomSheet(
                 }
 
                 // Section: Daftar Lagu Antrean
-                val upcomingTracks = queue.filter { it.id != currentTrack?.id }
+                val currentIndex = queue.indexOfFirst { it.id == currentTrack?.id }
+                val upcomingTracks = if (currentIndex != -1) queue.subList(currentIndex + 1, queue.size) else queue.filter { it.id != currentTrack?.id }
                 if (upcomingTracks.isEmpty()) {
                     item {
                         Box(
@@ -260,21 +275,79 @@ fun QueueBottomSheet(
                     }
                 } else {
                     itemsIndexed(upcomingTracks, key = { index, track -> "${track.id}_$index" }) { index, track ->
+                        var dragOffsetY by remember { mutableFloatStateOf(0f) }
+                        var isDraggingThis by remember { mutableStateOf(false) }
+                        val density = LocalDensity.current
+                        val itemHeightPx = with(density) { 56.dp.toPx() }
+
+                        val rowBg = if (isDraggingThis) {
+                            BrandGreen.copy(alpha = 0.22f)
+                        } else {
+                            SurfaceContainer.copy(alpha = 0.6f)
+                        }
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(SurfaceContainer.copy(alpha = 0.6f))
+                                .background(rowBg)
+                                .then(
+                                    if (isDraggingThis) Modifier.border(1.5.dp, BrandGreen, RoundedCornerShape(10.dp))
+                                    else Modifier
+                                )
                                 .clickable { onTrackClick(track) }
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                                .padding(horizontal = 8.dp, vertical = 7.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // Drag Handle (Touch & Drag vertically to reorder)
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .pointerInput(track.id, index) {
+                                        detectVerticalDragGestures(
+                                            onDragStart = {
+                                                isDraggingThis = true
+                                                dragOffsetY = 0f
+                                            },
+                                            onDragEnd = {
+                                                isDraggingThis = false
+                                                dragOffsetY = 0f
+                                            },
+                                            onDragCancel = {
+                                                isDraggingThis = false
+                                                dragOffsetY = 0f
+                                            },
+                                            onVerticalDrag = { change, dragAmount ->
+                                                change.consume()
+                                                dragOffsetY += dragAmount
+                                                if (dragOffsetY > itemHeightPx && index < upcomingTracks.size - 1) {
+                                                    onReorderUpcoming(index, index + 1)
+                                                    dragOffsetY -= itemHeightPx
+                                                } else if (dragOffsetY < -itemHeightPx && index > 0) {
+                                                    onReorderUpcoming(index, index - 1)
+                                                    dragOffsetY += itemHeightPx
+                                                }
+                                            }
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DragHandle,
+                                    contentDescription = "Geser Antrean",
+                                    tint = if (isDraggingThis) BrandGreen else TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(4.dp))
+
                             Text(
                                 text = "${index + 1}",
                                 color = TextMuted,
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.width(24.dp)
+                                modifier = Modifier.width(20.dp)
                             )
 
                             AsyncImage(
@@ -306,16 +379,31 @@ fun QueueBottomSheet(
                                 )
                             }
 
+                            // Quick Prioritize Button (Putar Berikutnya)
+                            if (index > 0) {
+                                IconButton(
+                                    onClick = { onMoveTrackToNext(track.id) },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardDoubleArrowUp,
+                                        contentDescription = "Dahulukan",
+                                        tint = BrandGreen,
+                                        modifier = Modifier.size(19.dp)
+                                    )
+                                }
+                            }
+
                             Text(
                                 text = track.durationFormatted,
                                 color = TextMuted,
                                 fontSize = 11.sp,
-                                modifier = Modifier.padding(end = 8.dp)
+                                modifier = Modifier.padding(horizontal = 4.dp)
                             )
 
                             IconButton(
                                 onClick = { onRemoveTrack(track.id) },
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(28.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,

@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +71,11 @@ fun ArtistDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     val currentArtist = uiState.selectedArtist ?: artist
+    val legitimateTracks = remember(uiState.artistTracks, currentArtist.name) {
+        uiState.artistTracks.filter { track ->
+            com.rafliadipratama.musiceuy.data.network.ArtistCatalog.isLegitimateArtistTrack(track, currentArtist.name)
+        }
+    }
 
     Box(
         modifier = modifier
@@ -136,9 +142,11 @@ fun ArtistDetailScreen(
                             .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (!currentArtist.avatarUrl.isNullOrBlank()) {
+                        val effectiveAvatar = currentArtist.avatarUrl?.takeIf { it.isNotBlank() }
+                            ?: com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl(currentArtist.name)
+                        if (!effectiveAvatar.isNullOrBlank()) {
                             AsyncImage(
-                                model = currentArtist.avatarUrl,
+                                model = effectiveAvatar,
                                 contentDescription = currentArtist.name,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
@@ -208,8 +216,8 @@ fun ArtistDetailScreen(
                 ) {
                     Button(
                         onClick = {
-                            if (uiState.artistTracks.isNotEmpty()) {
-                                viewModel.playTrack(uiState.artistTracks.first(), uiState.artistTracks)
+                            if (legitimateTracks.isNotEmpty()) {
+                                viewModel.playTrack(legitimateTracks.first(), legitimateTracks)
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
@@ -232,8 +240,8 @@ fun ArtistDetailScreen(
 
                     OutlinedButton(
                         onClick = {
-                            if (uiState.artistTracks.isNotEmpty()) {
-                                val shuffled = uiState.artistTracks.shuffled()
+                            if (legitimateTracks.isNotEmpty()) {
+                                val shuffled = legitimateTracks.shuffled()
                                 viewModel.playTrack(shuffled.first(), shuffled)
                             }
                         },
@@ -386,8 +394,23 @@ fun ArtistDetailScreen(
                         CircularProgressIndicator(color = BrandGreen)
                     }
                 }
+            } else if (legitimateTracks.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Belum ada daftar lagu resmi untuk ${currentArtist.name}.",
+                            color = TextMuted,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
             } else {
-                items(uiState.artistTracks, key = { it.id }) { track ->
+                items(legitimateTracks, key = { it.id }) { track ->
                     val isActive = uiState.currentTrack?.id == track.id
                     val isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked
                     Box(modifier = Modifier.padding(horizontal = 12.dp)) {
@@ -397,7 +420,7 @@ fun ArtistDetailScreen(
                             isActive = isActive,
                             isLiked = isLiked,
                             onClick = {
-                                viewModel.playTrack(track, uiState.artistTracks)
+                                viewModel.playTrack(track, legitimateTracks)
                             },
                             onToggleLikeClick = {
                                 viewModel.toggleLike(track)

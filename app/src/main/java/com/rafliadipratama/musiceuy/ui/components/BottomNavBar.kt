@@ -17,9 +17,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LibraryMusic
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,14 +41,18 @@ import com.rafliadipratama.musiceuy.ui.theme.SurfaceContainer
 import com.rafliadipratama.musiceuy.ui.theme.TextMuted
 import com.rafliadipratama.musiceuy.ui.theme.TextPrimary
 
+import androidx.compose.ui.res.stringResource
+import com.rafliadipratama.musiceuy.R
+
 enum class NavigationTab(
-    val title: String,
+    val titleResId: Int,
     val activeIcon: ImageVector,
     val inactiveIcon: ImageVector
 ) {
-    HOME("Beranda", Icons.Default.Home, Icons.Outlined.Home),
-    LIBRARY("Koleksi", Icons.Default.LibraryMusic, Icons.Outlined.LibraryMusic),
-    PLUGINS("Ekstensi", Icons.Default.Extension, Icons.Outlined.Extension)
+    HOME(R.string.nav_home, Icons.Default.Home, Icons.Outlined.Home),
+    SEARCH(R.string.nav_search, Icons.Default.Search, Icons.Outlined.Search),
+    LIBRARY(R.string.nav_library, Icons.Default.LibraryMusic, Icons.Outlined.LibraryMusic),
+    PLUGINS(R.string.nav_plugins, Icons.Default.Extension, Icons.Outlined.Extension)
 }
 
 @Composable
@@ -87,7 +93,7 @@ fun BottomNavBar(
                 ) {
                     Icon(
                         imageVector = if (isSelected) tab.activeIcon else tab.inactiveIcon,
-                        contentDescription = tab.title,
+                        contentDescription = stringResource(id = tab.titleResId),
                         tint = if (isSelected) BrandGreen else TextMuted,
                         modifier = Modifier.size(24.dp)
                     )
@@ -95,7 +101,7 @@ fun BottomNavBar(
                     Spacer(modifier = Modifier.height(3.dp))
 
                     Text(
-                        text = tab.title,
+                        text = stringResource(id = tab.titleResId),
                         color = if (isSelected) BrandGreen else TextMuted,
                         fontSize = 11.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
