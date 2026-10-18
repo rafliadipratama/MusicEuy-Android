@@ -35,9 +35,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rafliadipratama.musiceuy.ui.components.SmoothCornerShape
+import com.rafliadipratama.musiceuy.ui.components.pressBounce
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreen
 import com.rafliadipratama.musiceuy.ui.theme.ObsidianBackground
 import com.rafliadipratama.musiceuy.ui.theme.SurfaceContainer
+import com.rafliadipratama.musiceuy.ui.theme.SurfaceContainerLowest
 import com.rafliadipratama.musiceuy.ui.theme.TextMuted
 import com.rafliadipratama.musiceuy.ui.theme.TextPrimary
 
@@ -64,7 +67,7 @@ fun BottomNavBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(SurfaceContainer)
+            .background(SurfaceContainerLowest.copy(alpha = 0.96f))
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
         Row(
@@ -83,7 +86,8 @@ fun BottomNavBar(
                     verticalArrangement = Arrangement.Center,
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(SmoothCornerShape(12.dp))
+                        .pressBounce(interactionSource = interactionSource, pressedScale = 0.90f)
                         .clickable(
                             interactionSource = interactionSource,
                             indication = null,

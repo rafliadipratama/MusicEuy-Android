@@ -95,6 +95,7 @@ import com.rafliadipratama.musiceuy.ui.components.SmoothCornerShape
 import com.rafliadipratama.musiceuy.ui.components.TrackItem
 import com.rafliadipratama.musiceuy.ui.components.NewReleasesBottomSheet
 import com.rafliadipratama.musiceuy.ui.components.pressBounce
+import com.rafliadipratama.musiceuy.ui.components.press3D
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreen
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreenBright
 import com.rafliadipratama.musiceuy.ui.theme.ObsidianBackground
@@ -1004,9 +1005,9 @@ fun HomeVideoCard(
     Box(
         modifier = modifier
             .size(width = cardWidth, height = cardHeight)
+            .press3D(maxTilt = 5f, pressedScale = 0.97f)
             .clip(SmoothCornerShape(16.dp))
             .background(SurfaceContainerHigh)
-            .pressBounce(pressedScale = 0.96f)
             .clickable(onClick = onClick)
     ) {
         AsyncImage(
@@ -1225,9 +1226,9 @@ private fun AlbumSearchCard(
     Box(
         modifier = Modifier
             .width(130.dp)
-            .clip(SmoothCornerShape(14.dp))
+            .press3D(maxTilt = 6f, pressedScale = 0.96f)
+            .clip(SmoothCornerShape(18.dp))
             .background(SurfaceContainerHigh)
-            .pressBounce(pressedScale = 0.95f)
             .clickable { onClick() }
             .padding(8.dp)
     ) {
@@ -1284,9 +1285,9 @@ private fun PlaylistHomeCard(
     Box(
         modifier = Modifier
             .width(136.dp)
-            .clip(SmoothCornerShape(14.dp))
+            .press3D(maxTilt = 6f, pressedScale = 0.96f)
+            .clip(SmoothCornerShape(18.dp))
             .background(SurfaceContainerHigh)
-            .pressBounce(pressedScale = 0.95f)
             .clickable { onClick() }
             .padding(8.dp)
     ) {

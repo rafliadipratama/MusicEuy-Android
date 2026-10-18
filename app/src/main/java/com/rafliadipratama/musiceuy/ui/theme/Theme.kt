@@ -19,6 +19,7 @@ private val DarkColorScheme = darkColorScheme(
 fun MusicEuyTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = DarkColorScheme,
+        typography = MusicEuyTypography,
         content = content
     )
 }

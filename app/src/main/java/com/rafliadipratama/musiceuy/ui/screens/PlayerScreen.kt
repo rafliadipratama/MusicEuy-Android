@@ -81,6 +81,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import com.rafliadipratama.musiceuy.ui.components.LikeBurst
 import com.rafliadipratama.musiceuy.ui.components.DoubleTapHeartOverlay
+import com.rafliadipratama.musiceuy.ui.components.SmoothCornerShape
+import com.rafliadipratama.musiceuy.ui.components.press3D
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import com.rafliadipratama.musiceuy.lyrics.LyricsInterludeDots
@@ -437,8 +439,9 @@ private fun PortraitPlayerLayout(
                             scaleX = artworkScale
                             scaleY = artworkScale
                         }
-                        .clip(RoundedCornerShape(26.dp))
-                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(26.dp))
+                        .press3D(maxTilt = 6f, pressedScale = 0.98f)
+                        .clip(SmoothCornerShape(26.dp))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), SmoothCornerShape(26.dp))
                         .pointerInput(track.id) {
                             detectTapGestures(
                                 onDoubleTap = {
@@ -618,7 +621,8 @@ private fun LandscapePlayerLayout(
                     modifier = Modifier
                         .weight(1f)
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(18.dp))
+                        .press3D(maxTilt = 6f, pressedScale = 0.98f)
+                        .clip(SmoothCornerShape(18.dp))
                         .pointerInput(track.id) {
                             detectTapGestures(
                                 onDoubleTap = {

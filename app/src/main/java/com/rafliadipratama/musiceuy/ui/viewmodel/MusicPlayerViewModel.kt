@@ -1746,13 +1746,22 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 if (bmp != null) {
                     val palette = androidx.palette.graphics.Palette.from(bmp).generate()
                     val swatch = palette.darkVibrantSwatch ?: palette.dominantSwatch ?: palette.vibrantSwatch
-                    val colorVal = swatch?.rgb?.toLong()
-                    _uiState.update { it.copy(dominantColor = colorVal) }
+                    val rawRgb = swatch?.rgb
+                    val softenedColor = rawRgb?.let { softenColorForPlayerBackground(it).toLong() }
+                    _uiState.update { it.copy(dominantColor = softenedColor) }
                 }
             } catch (e: Exception) {
                 android.util.Log.w("MusicEuy", "Palette extraction failed: ${e.message}")
             }
         }
+    }
+
+    private fun softenColorForPlayerBackground(argb: Int): Int {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(argb, hsv)
+        hsv[1] = (hsv[1] * 0.52f).coerceIn(0.04f, 0.42f) // Saturasi dipotong setengah
+        hsv[2] = hsv[2].coerceIn(0.20f, 0.70f)          // Brightness dijaga tetap teduh
+        return android.graphics.Color.HSVToColor(hsv)
     }
 
     // ==================== Equalizer & Audio Effects ====================
