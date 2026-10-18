@@ -105,13 +105,207 @@ class MusicStreamSource(
         return artistMatch
     }
 
+    companion object {
+        // Fast in-memory TTL cache for audio stream URLs (videoId -> Pair(streamUrl, expireTimestampMs))
+        val songUrlCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
+
+        fun clearSongUrlCache() {
+            songUrlCache.clear()
+        }
+    }
+
+    private data class AudioStreamCandidate(
+        val url: String,
+        val bitrate: Int,
+        val itag: Int,
+        val mimeType: String
+    )
+
     /**
      * Resolves a YouTube video ID into an active direct audio stream URL
      * based on user's selected AudioQuality bitrate preference.
+     *
+     * 1. Checks in-memory TTL cache (0ms latency).
+     * 2. Resolves via high-speed direct InnerTube RPC with IOS/VISIONOS clients (~200ms, unthrottled, no cipher).
+     * 3. Falls back to NewPipeExtractor if InnerTube is inaccessible.
      */
     fun resolveYouTubeAudioStream(
         videoId: String,
         preferredQuality: com.rafliadipratama.musiceuy.audio.AudioQuality? = null
+    ): String? {
+        val cleanVid = videoId.removePrefix("yt:").removePrefix("mono_").trim()
+        if (cleanVid.isBlank()) return null
+
+        // 1. In-memory TTL cache check
+        val cached = songUrlCache[cleanVid]
+        if (cached != null && cached.second > System.currentTimeMillis() + 60_000L) {
+            android.util.Log.d("MusicEuy", "resolveYouTubeAudioStream: In-memory cache hit for $cleanVid (0ms latency)")
+            return cached.first
+        }
+
+        // 2. High-speed direct InnerTube resolution (adopted from Musicfy)
+        val innerTubeStream = resolveViaInnerTube(cleanVid, preferredQuality)
+        if (!innerTubeStream.isNullOrBlank()) {
+            return innerTubeStream
+        }
+
+        // 3. Fallback to NewPipeExtractor
+        android.util.Log.w("MusicEuy", "InnerTube resolution failed for $cleanVid, falling back to NewPipeExtractor")
+        return resolveViaNewPipe(cleanVid, preferredQuality)
+    }
+
+    private var visitorData: String? = null
+
+    private fun getOrFetchVisitorData(): String? {
+        if (!visitorData.isNullOrBlank()) return visitorData
+        return try {
+            val req = Request.Builder()
+                .url("https://music.youtube.com/sw.js_data")
+                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15")
+                .build()
+            client.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) return null
+                val text = resp.body?.string() ?: return null
+                if (text.length > 5) {
+                    val jsonStr = text.substring(5)
+                    val arr = JSONArray(jsonStr)
+                    val candidates = arr.optJSONArray(0)?.optJSONArray(2)
+                    if (candidates != null) {
+                        for (i in 0 until candidates.length()) {
+                            val item = candidates.opt(i)
+                            if (item is String && item.startsWith("Cgt")) {
+                                visitorData = item
+                                android.util.Log.d("MusicEuy", "Fetched visitorData for streaming: $item")
+                                return item
+                            }
+                        }
+                    }
+                }
+                null
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MusicEuy", "Could not fetch visitorData: ${e.message}")
+            null
+        }
+    }
+
+    private fun resolveViaInnerTube(
+        videoId: String,
+        preferredQuality: com.rafliadipratama.musiceuy.audio.AudioQuality?
+    ): String? {
+        val vData = getOrFetchVisitorData()
+
+        // 1. VISIONOS with visitorData: Unthrottled, serves the WHOLE file without truncation (adopted from Musicfy)
+        // 2. IOS as fallback
+        val clients = listOf(
+            Triple(
+                "VISIONOS",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+                JSONObject().apply {
+                    put("clientName", "VISIONOS")
+                    put("clientVersion", "0.1")
+                    put("osName", "visionOS")
+                    put("osVersion", "1.3.21O771")
+                    put("deviceMake", "Apple")
+                    put("deviceModel", "RealityDevice14,1")
+                    put("hl", "id")
+                    put("gl", "ID")
+                    if (!vData.isNullOrBlank()) {
+                        put("visitorData", vData)
+                    }
+                }
+            ),
+            Triple(
+                "IOS",
+                "com.google.ios.youtube/21.03.3 (iPad7,6; U; CPU iPadOS 17_7_10 like Mac OS X; en-US)",
+                JSONObject().apply {
+                    put("clientName", "IOS")
+                    put("clientVersion", "21.03.3")
+                    put("osName", "iPadOS")
+                    put("osVersion", "17.7.10.21H450")
+                    put("deviceMake", "Apple")
+                    put("deviceModel", "iPad7,6")
+                    put("hl", "id")
+                    put("gl", "ID")
+                }
+            )
+        )
+
+        for ((clientName, ua, clientContext) in clients) {
+            try {
+                val url = "https://music.youtube.com/youtubei/v1/player"
+                val payload = JSONObject().apply {
+                    put("context", JSONObject().apply {
+                        put("client", clientContext)
+                    })
+                    put("videoId", videoId)
+                }
+
+                val request = Request.Builder()
+                    .url(url)
+                    .header("Content-Type", "application/json")
+                    .header("User-Agent", ua)
+                    .post(payload.toString().toRequestBody("application/json".toMediaType()))
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@use
+                    val body = response.body?.string() ?: return@use
+                    val json = JSONObject(body)
+                    val status = json.optJSONObject("playabilityStatus")?.optString("status", "")
+                    if (status != "OK") {
+                        android.util.Log.w("MusicEuy", "InnerTube $clientName status=$status for $videoId")
+                        return@use
+                    }
+
+                    val streamingData = json.optJSONObject("streamingData") ?: return@use
+                    val adaptiveFormats = streamingData.optJSONArray("adaptiveFormats") ?: return@use
+                    val audioFormats = mutableListOf<AudioStreamCandidate>()
+
+                    for (i in 0 until adaptiveFormats.length()) {
+                        val f = adaptiveFormats.optJSONObject(i) ?: continue
+                        val mime = f.optString("mimeType", "")
+                        if (!mime.contains("audio")) continue
+                        val streamUrl = f.optString("url", "")
+                        if (streamUrl.isBlank()) continue
+                        val bitrate = f.optInt("bitrate", 0)
+                        val itag = f.optInt("itag", 0)
+                        audioFormats.add(AudioStreamCandidate(streamUrl, bitrate, itag, mime))
+                    }
+
+                    if (audioFormats.isEmpty()) return@use
+
+                    val chosen = when (preferredQuality) {
+                        com.rafliadipratama.musiceuy.audio.AudioQuality.HEMAT -> {
+                            audioFormats.minByOrNull { it.bitrate } ?: audioFormats.firstOrNull()
+                        }
+                        com.rafliadipratama.musiceuy.audio.AudioQuality.STANDAR -> {
+                            audioFormats.minByOrNull { kotlin.math.abs(it.bitrate - 128000) } ?: audioFormats.maxByOrNull { it.bitrate }
+                        }
+                        com.rafliadipratama.musiceuy.audio.AudioQuality.TINGGI, null -> {
+                            audioFormats.maxByOrNull { it.bitrate }
+                        }
+                    }
+
+                    val selectedUrl = chosen?.url ?: audioFormats.first().url
+                    val expireMatch = Regex("[?&]expire=(\\d+)").find(selectedUrl)
+                    val expireMs = expireMatch?.groupValues?.get(1)?.toLongOrNull()?.let { it * 1000L }
+                        ?: (System.currentTimeMillis() + 5 * 3600 * 1000L)
+
+                    songUrlCache[videoId] = Pair(selectedUrl, expireMs)
+                    android.util.Log.d("MusicEuy", "Resolved via InnerTube $clientName for $videoId (bitrate=${chosen?.bitrate}): $selectedUrl")
+                    return selectedUrl
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("MusicEuy", "InnerTube $clientName error for $videoId: ${e.message}")
+            }
+        }
+        return null
+    }
+
+    private fun resolveViaNewPipe(
+        videoId: String,
+        preferredQuality: com.rafliadipratama.musiceuy.audio.AudioQuality?
     ): String? {
         return try {
             val extractor = ServiceList.YouTube.getStreamExtractor("https://www.youtube.com/watch?v=$videoId") as? YoutubeStreamExtractor ?: return null
@@ -131,10 +325,16 @@ class MusicStreamSource(
                 }
             }
             val stream = selectedStream?.content ?: audioStreams.maxByOrNull { it.bitrate }?.content
-            android.util.Log.d("MusicEuy", "resolveYouTubeAudioStream for $videoId (quality=$preferredQuality, bitrate=${selectedStream?.bitrate}): streamUrl=$stream")
+            if (!stream.isNullOrBlank()) {
+                val expireMatch = Regex("[?&]expire=(\\d+)").find(stream)
+                val expireMs = expireMatch?.groupValues?.get(1)?.toLongOrNull()?.let { it * 1000L }
+                    ?: (System.currentTimeMillis() + 5 * 3600 * 1000L)
+                songUrlCache[videoId] = Pair(stream, expireMs)
+            }
+            android.util.Log.d("MusicEuy", "resolveViaNewPipe for $videoId (quality=$preferredQuality, bitrate=${selectedStream?.bitrate}): streamUrl=$stream")
             stream
         } catch (e: Exception) {
-            android.util.Log.e("MusicEuy", "resolveYouTubeAudioStream error for $videoId: ${e.javaClass.simpleName} - ${e.message}", e)
+            android.util.Log.e("MusicEuy", "resolveViaNewPipe error for $videoId: ${e.javaClass.simpleName} - ${e.message}", e)
             null
         }
     }

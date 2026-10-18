@@ -30,13 +30,17 @@ object MusicCacheManager {
 
     fun createCacheDataSourceFactory(context: Context): CacheDataSource.Factory {
         val cache = getCache(context)
-        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
-            .setAllowCrossProtocolRedirects(true)
-            .setConnectTimeoutMs(15000)
-            .setReadTimeoutMs(15000)
-            .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        val okHttpClient = okhttp3.OkHttpClient.Builder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
 
-        val upstreamFactory = DefaultDataSource.Factory(context.applicationContext, httpDataSourceFactory)
+        val okHttpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(okHttpClient)
+            .setUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15")
+
+        val upstreamFactory = DefaultDataSource.Factory(context.applicationContext, okHttpDataSourceFactory)
 
         return CacheDataSource.Factory()
             .setCache(cache)

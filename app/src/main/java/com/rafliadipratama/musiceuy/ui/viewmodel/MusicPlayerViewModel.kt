@@ -809,6 +809,36 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 controller.volume = 1.0f
                 controller.play()
             }
+
+            // High-speed background pre-resolution for the next track in queue (adopted from Musicfy)
+            preloadNextTrackInQueue(activeTrack, currentQueue)
+        }
+    }
+
+    private fun preloadNextTrackInQueue(current: Track, queue: List<Track>) {
+        if (queue.isEmpty() || !_uiState.value.isOnline) return
+        val currentIndex = queue.indexOfFirst { it.id == current.id }
+        val nextTrack = if (currentIndex != -1 && currentIndex < queue.size - 1) {
+            queue[currentIndex + 1]
+        } else if (_uiState.value.repeatMode == RepeatMode.ALL && queue.isNotEmpty()) {
+            queue.first()
+        } else null
+
+        if (nextTrack != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val audioUrl = nextTrack.audioUrl
+                    val isLocal = audioUrl.startsWith("content://") || audioUrl.startsWith("file://")
+                    if (!isLocal) {
+                        val quality = com.rafliadipratama.musiceuy.audio.AudioEffectManager.getAudioQuality(getApplication())
+                        val vid = nextTrack.id.removePrefix("yt:").removePrefix("mono_")
+                        android.util.Log.d("MusicEuy", "Preloading next track stream in background: ${nextTrack.title} ($vid)")
+                        streamSource.resolveYouTubeAudioStream(vid, quality)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("MusicEuy", "Preload next track failed: ${e.message}")
+                }
+            }
         }
     }
 
@@ -1193,6 +1223,15 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             val insertPos = if (currentIndex >= 0 && currentIndex < currentQueue.size) currentIndex + 1 else currentQueue.size
             currentQueue.add(insertPos, track)
             state.copy(queue = currentQueue, trackForContextMenu = null)
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                if (!track.audioUrl.startsWith("content://") && !track.audioUrl.startsWith("file://")) {
+                    val quality = com.rafliadipratama.musiceuy.audio.AudioEffectManager.getAudioQuality(getApplication())
+                    val vid = track.id.removePrefix("yt:").removePrefix("mono_")
+                    streamSource.resolveYouTubeAudioStream(vid, quality)
+                }
+            } catch (_: Exception) {}
         }
     }
 

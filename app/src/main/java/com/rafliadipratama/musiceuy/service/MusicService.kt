@@ -150,8 +150,20 @@ class MusicService : MediaLibraryService() {
         val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(this)
             .setDataSourceFactory(com.rafliadipratama.musiceuy.data.local.MusicCacheManager.createCacheDataSourceFactory(this))
 
+        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                /* minBufferMs = */ 15_000,
+                /* maxBufferMs = */ 50_000,
+                /* bufferForPlaybackMs = */ 500, // Instant playback: starts playing with just 500ms of audio buffer
+                /* bufferForPlaybackAfterRebufferMs = */ 1_000
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
+
         player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(mediaSourceFactory)
+            .setLoadControl(loadControl)
+            .setWakeMode(C.WAKE_MODE_NETWORK)
             .setAudioAttributes(audioAttributes, true) // automatic audio focus
             .setHandleAudioBecomingNoisy(true) // pause when headphones unplugged
             .build()
