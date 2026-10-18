@@ -1,12 +1,17 @@
 package com.rafliadipratama.musiceuy.data.network
 
 import android.util.Base64
+import com.rafliadipratama.musiceuy.data.local.TasteProfile
 import com.rafliadipratama.musiceuy.data.model.Album
 import com.rafliadipratama.musiceuy.data.model.Artist
 import com.rafliadipratama.musiceuy.data.model.Playlist
 import com.rafliadipratama.musiceuy.data.model.Track
+import com.rafliadipratama.musiceuy.data.model.HomeCategoryItem
+import com.rafliadipratama.musiceuy.data.model.HomeCategoryKind
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -25,14 +30,17 @@ import javax.crypto.spec.SecretKeySpec
 data class SearchAllResults(
     val tracks: List<Track> = emptyList(),
     val artists: List<Artist> = emptyList(),
-    val albums: List<Album> = emptyList()
+    val albums: List<Album> = emptyList(),
+    val videos: List<Track> = emptyList()
 )
 
 data class ExploreHomeData(
     val trendingTracks: List<Track> = emptyList(),
     val newReleases: List<Album> = emptyList(),
     val popularArtists: List<Artist> = emptyList(),
-    val communityPlaylists: List<Playlist> = emptyList()
+    val communityPlaylists: List<Playlist> = emptyList(),
+    val musicVideos: List<Track> = emptyList(),
+    val recommendationCategories: List<HomeCategoryItem> = emptyList()
 )
 
 class MusicStreamSource(
@@ -111,6 +119,9 @@ class MusicStreamSource(
         // Fast in-memory TTL cache for audio stream URLs (videoId -> Pair(streamUrl, expireTimestampMs))
         val songUrlCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
 
+        // Fast in-memory TTL cache for video stream URLs (videoId -> Pair(videoStreamUrl, expireTimestampMs))
+        val videoUrlCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
+
         // ReplayGain loudness tracking (videoId -> loudnessDb from InnerTube audioConfig)
         val songLoudnessCache = java.util.concurrent.ConcurrentHashMap<String, Float>()
 
@@ -126,6 +137,7 @@ class MusicStreamSource(
 
         fun clearSongUrlCache() {
             songUrlCache.clear()
+            videoUrlCache.clear()
             songLoudnessCache.clear()
             searchAllCache.clear()
             artistTracksCache.clear()
@@ -170,13 +182,21 @@ class MusicStreamSource(
 
         // 2. High-speed direct InnerTube resolution (adopted from Musicfy)
         val innerTubeStream = resolveViaInnerTube(cleanVid, preferredQuality)
-        if (!innerTubeStream.isNullOrBlank()) {
-            return innerTubeStream
-        }
-
         // 3. Fallback to NewPipeExtractor
         android.util.Log.w("MusicEuy", "InnerTube resolution failed for $cleanVid, falling back to NewPipeExtractor")
-        return resolveViaNewPipe(cleanVid, preferredQuality)
+        val newPipeStream = resolveViaNewPipe(cleanVid, preferredQuality)
+        if (!newPipeStream.isNullOrBlank()) {
+            return newPipeStream
+        }
+
+        // 4. Fallback to Piped API Rotation (Anti-Bot Throttling)
+        val pipedStream = resolveViaPiped(cleanVid, preferredQuality)
+        if (!pipedStream.isNullOrBlank()) {
+            return pipedStream
+        }
+
+        // 5. Fallback to Invidious API Rotation (Anti-Bot Throttling)
+        return resolveViaInvidious(cleanVid, preferredQuality)
     }
 
     private var visitorData: String? = null
@@ -377,6 +397,216 @@ class MusicStreamSource(
         }
     }
 
+    // Rotational Anti-Bot Throttling Proxy Endpoints
+    private val pipedInstances = listOf(
+        "https://pipedapi.kavin.rocks",
+        "https://api.piped.privacydev.net",
+        "https://piped-api.lunar.icu",
+        "https://pipedapi.tokhmi.xyz"
+    )
+
+    private val invidiousInstances = listOf(
+        "https://invidious.nerdvpn.de",
+        "https://inv.nadeko.net",
+        "https://invidious.protokolla.fi",
+        "https://invidious.f5.si"
+    )
+
+    private fun resolveViaPiped(
+        videoId: String,
+        preferredQuality: com.rafliadipratama.musiceuy.audio.AudioQuality?
+    ): String? {
+        for (inst in pipedInstances) {
+            try {
+                val req = Request.Builder()
+                    .url("$inst/streams/$videoId")
+                    .header("User-Agent", "Mozilla/5.0")
+                    .build()
+                client.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) return@use
+                    val body = resp.body?.string() ?: return@use
+                    val json = JSONObject(body)
+                    val audioStreams = json.optJSONArray("audioStreams") ?: return@use
+                    if (audioStreams.length() == 0) return@use
+
+                    var bestUrl: String? = null
+                    var bestBitrate = 0
+                    for (i in 0 until audioStreams.length()) {
+                        val stream = audioStreams.optJSONObject(i) ?: continue
+                        val url = stream.optString("url", "")
+                        if (url.isBlank()) continue
+                        val bitrate = stream.optInt("bitrate", 0)
+                        if (bitrate > bestBitrate) {
+                            bestBitrate = bitrate
+                            bestUrl = url
+                        }
+                    }
+                    if (!bestUrl.isNullOrBlank()) {
+                        songUrlCache[videoId] = Pair(bestUrl, System.currentTimeMillis() + 4 * 3600 * 1000L)
+                        android.util.Log.d("MusicEuy", "Resolved via Piped proxy ($inst) for $videoId")
+                        return bestUrl
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("MusicEuy", "Piped $inst failed for $videoId: ${e.message}")
+            }
+        }
+        return null
+    }
+
+    private fun resolveViaInvidious(
+        videoId: String,
+        preferredQuality: com.rafliadipratama.musiceuy.audio.AudioQuality?
+    ): String? {
+        for (inst in invidiousInstances) {
+            try {
+                val req = Request.Builder()
+                    .url("$inst/api/v1/videos/$videoId?fields=adaptiveFormats,formatStreams")
+                    .header("User-Agent", "Mozilla/5.0")
+                    .build()
+                client.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) return@use
+                    val body = resp.body?.string() ?: return@use
+                    val json = JSONObject(body)
+                    val adaptive = json.optJSONArray("adaptiveFormats")
+                    if (adaptive != null && adaptive.length() > 0) {
+                        for (i in 0 until adaptive.length()) {
+                            val f = adaptive.optJSONObject(i) ?: continue
+                            val type = f.optString("type", "")
+                            if (type.contains("audio")) {
+                                val url = f.optString("url", "")
+                                if (url.isNotBlank()) {
+                                    songUrlCache[videoId] = Pair(url, System.currentTimeMillis() + 4 * 3600 * 1000L)
+                                    android.util.Log.d("MusicEuy", "Resolved via Invidious proxy ($inst) for $videoId")
+                                    return url
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("MusicEuy", "Invidious $inst failed for $videoId: ${e.message}")
+            }
+        }
+        return null
+    }
+
+    /**
+     * Resolves a direct video stream MP4 URL for in-player video clip playback.
+     */
+    fun resolveYouTubeVideoStream(videoId: String): String? {
+        val cleanVid = videoId.removePrefix("yt:").removePrefix("mono_").trim()
+        if (cleanVid.isBlank()) return null
+
+        val cached = videoUrlCache[cleanVid]
+        if (cached != null && cached.second > System.currentTimeMillis() + 60_000L) {
+            return cached.first
+        }
+
+        // 1. Try NewPipeExtractor video streams
+        try {
+            val extractor = ServiceList.YouTube.getStreamExtractor("https://www.youtube.com/watch?v=$cleanVid") as? YoutubeStreamExtractor
+            if (extractor != null) {
+                extractor.fetchPage()
+                val videoStreams = extractor.videoStreams
+                if (!videoStreams.isNullOrEmpty()) {
+                    val chosen = videoStreams.find { it.resolution.contains("720") }
+                        ?: videoStreams.find { it.resolution.contains("480") }
+                        ?: videoStreams.find { it.resolution.contains("360") }
+                        ?: videoStreams.firstOrNull()
+                    val url = chosen?.content
+                    if (!url.isNullOrBlank()) {
+                        videoUrlCache[cleanVid] = Pair(url, System.currentTimeMillis() + 4 * 3600 * 1000L)
+                        android.util.Log.d("MusicEuy", "resolveYouTubeVideoStream via NewPipe for $cleanVid: ${chosen?.resolution}")
+                        return url
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MusicEuy", "NewPipe video resolve error: ${e.message}")
+        }
+
+        // 2. Try InnerTube muxed formats
+        try {
+            val vData = getOrFetchVisitorData()
+            val url = "https://music.youtube.com/youtubei/v1/player"
+            val payload = JSONObject().apply {
+                put("context", JSONObject().apply {
+                    put("client", JSONObject().apply {
+                        put("clientName", "VISIONOS")
+                        put("clientVersion", "0.1")
+                        put("osName", "visionOS")
+                        put("osVersion", "1.3.21O771")
+                        put("deviceMake", "Apple")
+                        put("deviceModel", "RealityDevice14,1")
+                        put("hl", "id")
+                        put("gl", "ID")
+                        if (!vData.isNullOrBlank()) put("visitorData", vData)
+                    })
+                })
+                put("videoId", cleanVid)
+            }
+            val request = Request.Builder()
+                .url(url)
+                .header("Content-Type", "application/json")
+                .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15")
+                .post(payload.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val json = JSONObject(body)
+                        val streamingData = json.optJSONObject("streamingData")
+                        val formats = streamingData?.optJSONArray("formats")
+                        if (formats != null && formats.length() > 0) {
+                            for (i in 0 until formats.length()) {
+                                val f = formats.optJSONObject(i) ?: continue
+                                val streamUrl = f.optString("url", "")
+                                val mime = f.optString("mimeType", "")
+                                if (streamUrl.isNotBlank() && mime.contains("video/mp4")) {
+                                    videoUrlCache[cleanVid] = Pair(streamUrl, System.currentTimeMillis() + 4 * 3600 * 1000L)
+                                    android.util.Log.d("MusicEuy", "resolveYouTubeVideoStream via InnerTube formats for $cleanVid")
+                                    return streamUrl
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MusicEuy", "InnerTube video resolve error: ${e.message}")
+        }
+
+        // 3. Try Piped video streams
+        for (inst in pipedInstances) {
+            try {
+                val req = Request.Builder()
+                    .url("$inst/streams/$cleanVid")
+                    .header("User-Agent", "Mozilla/5.0")
+                    .build()
+                client.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) return@use
+                    val body = resp.body?.string() ?: return@use
+                    val json = JSONObject(body)
+                    val videoStreams = json.optJSONArray("videoStreams") ?: return@use
+                    for (i in 0 until videoStreams.length()) {
+                        val stream = videoStreams.optJSONObject(i) ?: continue
+                        val vUrl = stream.optString("url", "")
+                        val quality = stream.optString("quality", "")
+                        if (vUrl.isNotBlank() && (quality.contains("720") || quality.contains("480") || quality.contains("360"))) {
+                            videoUrlCache[cleanVid] = Pair(vUrl, System.currentTimeMillis() + 4 * 3600 * 1000L)
+                            android.util.Log.d("MusicEuy", "resolveYouTubeVideoStream via Piped ($inst) for $cleanVid: $quality")
+                            return vUrl
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
+        return null
+    }
+
     /**
      * Primary YouTube Music search via InnerTube API.
      * Returns 100% verified official songs, real artist names, accurate duration,
@@ -494,16 +724,25 @@ class MusicStreamSource(
                                     var thumbUrl = thumbs?.optJSONObject(thumbs.length() - 1)?.optString("url", "") ?: ""
                                     thumbUrl = thumbUrl.replace(Regex("=w\\d+-h\\d+"), "=w500-h500")
 
+                                    val (primaryArtist, featured) = ArtistCatalog.parseCollaborators(title, artist)
+                                    val isVid = title.contains(Regex("""\b(official\s*(?:music\s*)?video|video\s*musik|music\s*video|mv|m/v)\b""", RegexOption.IGNORE_CASE))
+
                                     tracks.add(
                                         Track(
                                             id = "yt:$videoId",
                                             title = title,
-                                            artist = Artist(id = videoId, name = artist),
+                                            artist = Artist(
+                                                id = "art_${primaryArtist.hashCode()}",
+                                                name = primaryArtist,
+                                                avatarUrl = ArtistCatalog.getVerifiedAvatarUrl(primaryArtist)
+                                            ),
                                             albumTitle = album,
                                             durationSec = durationSec,
                                             audioUrl = "yt:$videoId", // Resolved by NewPipe on play
                                             coverUrl = thumbUrl,
-                                            playCount = playCount
+                                            playCount = playCount,
+                                            featuredArtists = featured,
+                                            isVideo = isVid
                                         )
                                     )
                                 }
@@ -759,13 +998,15 @@ class MusicStreamSource(
         val tracksDef = async { searchTracks(cleanQ) }
         val artistsDef = async { searchArtists(cleanQ) }
         val albumsDef = async { searchAlbums(cleanQ) }
+        val videosDef = async { searchMusicVideos(cleanQ) }
 
         val result = SearchAllResults(
             tracks = tracksDef.await(),
             artists = artistsDef.await(),
-            albums = albumsDef.await()
+            albums = albumsDef.await(),
+            videos = videosDef.await()
         )
-        if (result.tracks.isNotEmpty() || result.artists.isNotEmpty() || result.albums.isNotEmpty()) {
+        if (result.tracks.isNotEmpty() || result.artists.isNotEmpty() || result.albums.isNotEmpty() || result.videos.isNotEmpty()) {
             searchAllCache[cacheKey] = result
         }
         result
@@ -1028,7 +1269,8 @@ class MusicStreamSource(
 
     suspend fun fetchExploreHome(
         favoriteArtists: List<String> = emptyList(),
-        forceRefresh: Boolean = false
+        forceRefresh: Boolean = false,
+        tasteProfile: TasteProfile? = null
     ): ExploreHomeData = withContext(Dispatchers.IO) {
         if (!forceRefresh) {
             val cached = homeExploreCache
@@ -1206,6 +1448,9 @@ class MusicStreamSource(
         val homeJson = homeDef.await()
         val trending = trendingDef.await()
 
+        val videosDef = async { fetchMusicVideosForArtists(favoriteArtists) }
+        val recsDef = async { fetchHomeRecommendations(favoriteArtists, trending.take(4), tasteProfile) }
+
         val dynamicArtists = if (chartsJson != null) parsePopularArtistsFromCharts(chartsJson) else emptyList()
         val finalArtists = if (dynamicArtists.isNotEmpty()) dynamicArtists else ArtistCatalog.getCuratedPopularArtists()
 
@@ -1219,7 +1464,9 @@ class MusicStreamSource(
             trendingTracks = trending.ifEmpty { fetchTrending() },
             newReleases = finalNewReleases,
             popularArtists = finalArtists,
-            communityPlaylists = finalPlaylists
+            communityPlaylists = finalPlaylists,
+            musicVideos = videosDef.await(),
+            recommendationCategories = recsDef.await()
         )
         homeExploreCache = Pair(result, System.currentTimeMillis())
         result
@@ -1917,18 +2164,28 @@ class MusicStreamSource(
                                     }
 
                                     if (videoId.isNotBlank()) {
+                                        val (primaryArtist, featured) = ArtistCatalog.parseCollaborators(title, effectiveArtist)
+                                        val isVid = title.contains(Regex("""\b(official\s*(?:music\s*)?video|video\s*musik|music\s*video|mv|m/v)\b""", RegexOption.IGNORE_CASE))
+
                                         tracks.add(
                                             Track(
                                                 id = "yt:$videoId",
                                                 title = title,
-                                                artist = Artist(id = "art_${effectiveArtist.hashCode()}", name = effectiveArtist, isVerified = true),
+                                                artist = Artist(
+                                                    id = "art_${primaryArtist.hashCode()}",
+                                                    name = primaryArtist,
+                                                    avatarUrl = ArtistCatalog.getVerifiedAvatarUrl(primaryArtist),
+                                                    isVerified = true
+                                                ),
                                                 albumTitle = albumTitle.ifBlank { "YouTube Music" },
                                                 durationSec = durationSec,
                                                 audioUrl = "yt:$videoId",
                                                 coverUrl = finalCover,
                                                 isVerified = true,
                                                 playCount = playCount,
-                                                sourceLabel = "YouTube Music"
+                                                sourceLabel = "YouTube Music",
+                                                featuredArtists = featured,
+                                                isVideo = isVid
                                             )
                                         )
                                     }
@@ -2087,5 +2344,292 @@ class MusicStreamSource(
             }
             searchYouTubeMusic(query)
         }
+    }
+
+    /**
+     * Searches specifically for official music videos on YouTube Music.
+     */
+    suspend fun searchMusicVideos(query: String): List<Track> = withContext(Dispatchers.IO) {
+        val cleanQ = query.trim()
+        if (cleanQ.isBlank()) return@withContext emptyList()
+        val videoQuery = if (cleanQ.contains("video", ignoreCase = true)) cleanQ else "$cleanQ official music video"
+        val raw = searchYouTubeMusic(videoQuery)
+        raw.map { track ->
+            val vId = track.id.removePrefix("yt:")
+            track.copy(
+                isVideo = true,
+                coverUrl = "https://i.ytimg.com/vi/$vId/hqdefault.jpg"
+            )
+        }
+    }
+
+    /**
+     * Fetches official music videos for user's favorite / top artists for the Home banner shelf.
+     */
+    suspend fun fetchMusicVideosForArtists(artists: List<String>): List<Track> = withContext(Dispatchers.IO) {
+        val seedArtists = if (artists.isNotEmpty()) artists.take(4) else listOf("Bernadya", "Sheila On 7", "Hindia", "Coldplay", "Radiohead")
+        coroutineScope {
+            val defs = seedArtists.map { artist ->
+                async {
+                    try {
+                        val results = searchYouTubeMusic("$artist official music video").take(3)
+                        results.map { track ->
+                            val vId = track.id.removePrefix("yt:")
+                            track.copy(
+                                isVideo = true,
+                                coverUrl = "https://i.ytimg.com/vi/$vId/hqdefault.jpg"
+                            )
+                        }
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+                }
+            }
+            defs.awaitAll().flatten()
+        }.distinctBy { it.id }
+    }
+
+    /**
+     * Fetches official music videos for a specific artist for the Artist Detail screen.
+     */
+    suspend fun getArtistMusicVideos(artistName: String): List<Track> = withContext(Dispatchers.IO) {
+        try {
+            val results = searchYouTubeMusic("$artistName official music video").take(8)
+            results.map { track ->
+                val vId = track.id.removePrefix("yt:")
+                track.copy(
+                    isVideo = true,
+                    coverUrl = "https://i.ytimg.com/vi/$vId/hqdefault.jpg"
+                )
+            }.distinctBy { it.id }
+        } catch (e: Exception) {
+            android.util.Log.e("MusicEuy", "Error fetching artist music videos: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /**
+     * Musicfy track picking algorithm:
+     * - Filters out avoided songs and avoided artists.
+     * - Partitions into heard vs unheard tracks:
+     *   Keeps a balanced familiar ratio (familiar = (limit / 4).coerceAtLeast(1)),
+     *   filling the remaining with unheard discoveries.
+     * - Enforces [perArtist] limit to spread diverse artists across the shelf.
+     */
+    private fun pickDiverseTracks(
+        songs: List<Track>,
+        heardIds: Set<String>,
+        avoidSongs: Set<String>,
+        avoidArtists: Set<String>,
+        limit: Int = 10,
+        perArtist: Int = 2
+    ): List<Track> {
+        val usable = songs.filter { track ->
+            track.id !in avoidSongs &&
+            track.artist.name.trim().lowercase() !in avoidArtists
+        }.distinctBy { it.id }
+
+        val (heard, unheard) = usable.partition { it.id in heardIds }
+        val familiar = (limit / 4).coerceAtLeast(1)
+        val chosenUnheard = unheard.take(limit * 2).shuffled().take(limit - kotlin.math.min(familiar, heard.size))
+        val chosenHeard = heard.shuffled().take(familiar)
+        val combined = (chosenUnheard + chosenHeard).shuffled()
+
+        val perArtistCount = HashMap<String, Int>()
+        val filtered = mutableListOf<Track>()
+        for (track in combined) {
+            val key = track.artist.name.trim().lowercase()
+            val count = perArtistCount.getOrDefault(key, 0)
+            if (count < perArtist) {
+                perArtistCount[key] = count + 1
+                filtered.add(track)
+                if (filtered.size >= limit) break
+            }
+        }
+        return filtered
+    }
+
+    /**
+     * Builds Musicfy-style dynamic recommendation shelves synchronized with YouTube Music:
+     * 1. Because You Like <Song>: related tracks minus the song, partitioned for discovery.
+     * 2. More Like <Artist>: artist radio filtered to exclude the artist itself (pure peer artists).
+     * 3. Because You Listen to <Genre> & Try Something New: top user genres + fresh unexplored genres.
+     * 4. Musicfy interleaved row arrangement with across-row deduplication.
+     */
+    suspend fun fetchHomeRecommendations(
+        favoriteArtists: List<String>,
+        seedTracks: List<Track>,
+        tasteProfile: TasteProfile? = null
+    ): List<HomeCategoryItem> = withContext(Dispatchers.IO) {
+        val heard = tasteProfile?.heard ?: emptySet()
+        val avoidSongs = tasteProfile?.avoidSongs ?: emptySet()
+        val avoidArtists = tasteProfile?.avoidArtists ?: emptySet()
+
+        val becauseShelves = mutableListOf<HomeCategoryItem>()
+        val moreLikeShelves = mutableListOf<HomeCategoryItem>()
+        val genreShelves = mutableListOf<HomeCategoryItem>()
+
+        // 1. "Because You Like <Song>" shelves (Tri-directional song seeds)
+        val songSeeds = if (!tasteProfile?.songSeeds.isNullOrEmpty()) {
+            tasteProfile!!.songSeeds.take(3)
+        } else {
+            seedTracks.take(2)
+        }
+
+        coroutineScope {
+            val songJobs = songSeeds.map { seed ->
+                async {
+                    try {
+                        val rawRadio = fetchSongRadio(seed)
+                        val candidates = rawRadio.filter { it.id != seed.id }
+                        val picked = pickDiverseTracks(
+                            songs = candidates,
+                            heardIds = heard,
+                            avoidSongs = avoidSongs,
+                            avoidArtists = avoidArtists,
+                            limit = 10,
+                            perArtist = 2
+                        )
+                        if (picked.size >= 4) {
+                            HomeCategoryItem(
+                                id = "because_${seed.id}",
+                                kind = HomeCategoryKind.BECAUSE_YOU_LIKE,
+                                label = "KARENA KAMU MENYUKAI",
+                                title = seed.title,
+                                thumbnailUrl = seed.coverUrl,
+                                tracks = picked
+                            )
+                        } else null
+                    } catch (_: Exception) { null }
+                }
+            }
+            becauseShelves.addAll(songJobs.awaitAll().filterNotNull())
+        }
+
+        // 2. "More Like <Artist>" shelves (Artist seeds minus the artist itself)
+        val artistSeeds = if (!tasteProfile?.topArtists.isNullOrEmpty()) {
+            tasteProfile!!.topArtists.take(3)
+        } else if (favoriteArtists.isNotEmpty()) {
+            favoriteArtists.take(2)
+        } else {
+            listOf("Bernadya", "Tulus")
+        }
+
+        coroutineScope {
+            val artistJobs = artistSeeds.map { seedArtist ->
+                async {
+                    try {
+                        val peerArtists = ArtistCatalog.getPeerArtists(seedArtist)
+                        val query = if (peerArtists.isNotEmpty()) {
+                            "${peerArtists.shuffled().take(2).joinToString(" ")} hits radio"
+                        } else {
+                            "$seedArtist radio mix"
+                        }
+                        val rawResults = searchYouTubeMusic(query)
+                        // Musicfy's critical rule: strictly exclude tracks by the seed artist
+                        val peerTracks = rawResults.filter {
+                            !it.artist.name.equals(seedArtist, ignoreCase = true)
+                        }
+                        val picked = pickDiverseTracks(
+                            songs = peerTracks,
+                            heardIds = heard,
+                            avoidSongs = avoidSongs,
+                            avoidArtists = avoidArtists,
+                            limit = 10,
+                            perArtist = 1 // 1 track per peer artist spreads shelf across peers
+                        )
+                        if (picked.size >= 4) {
+                            HomeCategoryItem(
+                                id = "more_like_${seedArtist.hashCode()}",
+                                kind = HomeCategoryKind.MORE_LIKE_ARTIST,
+                                label = "MIRIP ${seedArtist.uppercase()}",
+                                title = "More Like $seedArtist",
+                                thumbnailUrl = ArtistCatalog.getVerifiedAvatarUrl(seedArtist),
+                                tracks = picked
+                            )
+                        } else null
+                    } catch (_: Exception) { null }
+                }
+            }
+            moreLikeShelves.addAll(artistJobs.awaitAll().filterNotNull())
+        }
+
+        // 3. User Genre & Try Something New
+        coroutineScope {
+            val genreJobs = listOf(
+                async {
+                    try {
+                        val genreTracks = searchYouTubeMusic("pop indonesia indie hits terbaik 2026")
+                        val picked = pickDiverseTracks(
+                            songs = genreTracks,
+                            heardIds = heard,
+                            avoidSongs = avoidSongs,
+                            avoidArtists = avoidArtists,
+                            limit = 10,
+                            perArtist = 2
+                        )
+                        if (picked.size >= 4) {
+                            HomeCategoryItem(
+                                id = "because_you_listen_pop",
+                                kind = HomeCategoryKind.BECAUSE_YOU_LISTEN,
+                                label = "KARENA KAMU MENDENGARKAN POP",
+                                title = "Pilihan Pop & Indie Terbaik",
+                                thumbnailUrl = picked.firstOrNull()?.coverUrl,
+                                tracks = picked
+                            )
+                        } else null
+                    } catch (_: Exception) { null }
+                },
+                async {
+                    try {
+                        val freshTracks = searchYouTubeMusic("lofi study chill acoustic beats relaxing")
+                        val picked = pickDiverseTracks(
+                            songs = freshTracks,
+                            heardIds = heard,
+                            avoidSongs = avoidSongs,
+                            avoidArtists = avoidArtists,
+                            limit = 10,
+                            perArtist = 2
+                        )
+                        if (picked.size >= 4) {
+                            HomeCategoryItem(
+                                id = "try_something_new",
+                                kind = HomeCategoryKind.TRY_SOMETHING_NEW,
+                                label = "COBA SESUATU YANG BARU",
+                                title = "Chill Lofi & Instrumental",
+                                thumbnailUrl = picked.firstOrNull()?.coverUrl,
+                                tracks = picked
+                            )
+                        } else null
+                    } catch (_: Exception) { null }
+                }
+            )
+            genreShelves.addAll(genreJobs.awaitAll().filterNotNull())
+        }
+
+        // 4. Musicfy Interleaved Arrangement + De-duplication across rows
+        val rounds = listOf(
+            ArrayDeque(becauseShelves),
+            ArrayDeque(moreLikeShelves),
+            ArrayDeque(genreShelves)
+        )
+        val orderedCategories = mutableListOf<HomeCategoryItem>()
+        while (rounds.any { it.isNotEmpty() }) {
+            rounds.forEach { queue ->
+                queue.removeFirstOrNull()?.let { orderedCategories.add(it) }
+            }
+        }
+
+        // Musicfy rule: A song only shows up in the first row that has it.
+        // If a row is left with fewer than 4 songs after dedup, drop it.
+        val seenSongIds = HashSet<String>()
+        val finalShelves = orderedCategories.mapNotNull { category ->
+            val uniqueTracks = category.tracks.filter { seenSongIds.add(it.id) }
+            if (uniqueTracks.size >= 4) {
+                category.copy(tracks = uniqueTracks)
+            } else null
+        }
+
+        finalShelves
     }
 }

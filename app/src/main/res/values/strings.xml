@@ -168,4 +168,9 @@
     <string name="music_player_notification_desc">MusicEuy background playback notification</string>
     <string name="playing_status">Playing</string>
     <string name="paused_status">Paused</string>
+    <string name="action_like">Like</string>
+    <string name="action_remove_like">Remove like</string>
+    <string name="repeat_mode_off">Repeat off</string>
+    <string name="repeat_mode_one">Repeat current song</string>
+    <string name="repeat_mode_all">Repeat queue</string>
 </resources>

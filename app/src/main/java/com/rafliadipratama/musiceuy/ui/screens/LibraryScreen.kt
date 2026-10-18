@@ -1033,7 +1033,7 @@ fun LibraryScreen(
                         track = track,
                         isPlaying = uiState.isPlaying,
                         isActive = isActive,
-                        isLiked = true,
+                        isLiked = uiState.likedTrackIds.contains(track.id),
                         onClick = {
                             viewModel.playTrack(track, uiState.likedTracks)
                         },

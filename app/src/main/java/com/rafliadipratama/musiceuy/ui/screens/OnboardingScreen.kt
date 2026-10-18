@@ -119,24 +119,24 @@ fun OnboardingScreen(
     // Curated Verified Artists (500x500 CDN)
     val curatedArtists = remember {
         listOf(
-            OnboardingArtistItem("Hindia", "Indie Pop", "https://cdn-images.dzcdn.net/images/artist/b33a022fb4490dce3b6e12d1c19c0123/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Tulus", "Pop / Soul", "https://cdn-images.dzcdn.net/images/artist/c207c7f16afc162acca87e587e47b442/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Sheila On 7", "Pop Rock", "https://cdn-images.dzcdn.net/images/artist/9e6cc50e80a7dcb4dacc7eb15427335b/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Bernadya", "Pop / Indie", "https://cdn-images.dzcdn.net/images/artist/5bd274a72993ee8b8e72a7a8aedc12b5/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Mahalini", "Pop Ballad", "https://cdn-images.dzcdn.net/images/artist/bbb3c9932bf14c2ca059e24a041baf91/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Denny Caknan", "Dangdut Koplo", "https://cdn-images.dzcdn.net/images/artist/2e8a010d43c385b64bda3d17214566d1/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("NIKI", "R&B / Pop", "https://cdn-images.dzcdn.net/images/artist/324c50c04a5a944117cd3daa0963fc63/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Taylor Swift", "Pop Global", "https://cdn-images.dzcdn.net/images/artist/cc2495870fe1a792ad0cdb05501ad5ec/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Coldplay", "Alternative Rock", "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Sal Priadi", "Art Pop", "https://cdn-images.dzcdn.net/images/artist/513217e1630470658eb37ac7d7eb1910/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Nadin Amizah", "Folk / Akustik", "https://cdn-images.dzcdn.net/images/artist/10a75e65ad84fcfadeca0b74d1a56d0c/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Juicy Luicy", "Pop Akustik", "https://cdn-images.dzcdn.net/images/artist/b94e4bb5570b617550f28dbe0012f973/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Bruno Mars", "Pop / Funk", "https://cdn-images.dzcdn.net/images/artist/90f0b5b11df4f87ee878f38569b5995b/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Feast", "Rock / Indie", "https://cdn-images.dzcdn.net/images/artist/39f07b5656c1061598b5d68d1c5f5cb1/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Fourtwnty", "Indie Folk", "https://cdn-images.dzcdn.net/images/artist/5ef14df8afed38e82e07143abf300185/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("NDX A.K.A", "Dangdut Hip-Hop", "https://cdn-images.dzcdn.net/images/artist/ff3c815aa0d594f7a8c76b0defb9063b/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Billie Eilish", "Alt Pop", "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/500x500-000000-80-0-0.jpg"),
-            OnboardingArtistItem("Lyodra", "Pop Diva", "https://cdn-images.dzcdn.net/images/artist/153076781614790ca9a7dd0177cad752/500x500-000000-80-0-0.jpg")
+            OnboardingArtistItem("Hindia", "Indie Pop", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Hindia") ?: ""),
+            OnboardingArtistItem("Tulus", "Pop / Soul", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Tulus") ?: ""),
+            OnboardingArtistItem("Sheila On 7", "Pop Rock", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Sheila On 7") ?: ""),
+            OnboardingArtistItem("Bernadya", "Pop / Indie", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Bernadya") ?: ""),
+            OnboardingArtistItem("Mahalini", "Pop Ballad", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Mahalini") ?: ""),
+            OnboardingArtistItem("Denny Caknan", "Dangdut Koplo", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Denny Caknan") ?: ""),
+            OnboardingArtistItem("NIKI", "R&B / Pop", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("NIKI") ?: ""),
+            OnboardingArtistItem("Taylor Swift", "Pop Global", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Taylor Swift") ?: ""),
+            OnboardingArtistItem("Coldplay", "Alternative Rock", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Coldplay") ?: ""),
+            OnboardingArtistItem("Sal Priadi", "Art Pop", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Sal Priadi") ?: ""),
+            OnboardingArtistItem("Nadin Amizah", "Folk / Akustik", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Nadin Amizah") ?: ""),
+            OnboardingArtistItem("Juicy Luicy", "Pop Akustik", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Juicy Luicy") ?: ""),
+            OnboardingArtistItem("Bruno Mars", "Pop / Funk", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Bruno Mars") ?: ""),
+            OnboardingArtistItem("Feast", "Rock / Indie", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Feast") ?: ""),
+            OnboardingArtistItem("Fourtwnty", "Indie Folk", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Fourtwnty") ?: ""),
+            OnboardingArtistItem("NDX A.K.A", "Dangdut Hip-Hop", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("NDX A.K.A") ?: ""),
+            OnboardingArtistItem("Billie Eilish", "Alt Pop", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Billie Eilish") ?: ""),
+            OnboardingArtistItem("Lyodra", "Pop Diva", com.rafliadipratama.musiceuy.data.network.ArtistCatalog.getVerifiedAvatarUrl("Lyodra") ?: "")
         )
     }
 

@@ -359,7 +359,7 @@ class MainActivity : ComponentActivity() {
                                 uiState.trackForContextMenu?.let { track ->
                                     TrackContextMenuBottomSheet(
                                         track = track,
-                                        isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked,
+                                        isLiked = uiState.likedTrackIds.contains(track.id),
                                         isDownloaded = uiState.downloadedTrackIds.contains(track.id),
                                         onPlayNow = {
                                             viewModel.playTrack(track)

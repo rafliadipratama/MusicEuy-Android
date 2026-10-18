@@ -123,7 +123,7 @@ fun MiniPlayer(
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = track.artist.name,
+                                text = track.fullArtistDisplay,
                                 color = TextSecondary,
                                 fontSize = 12.sp,
                                 maxLines = 1,

@@ -14,6 +14,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.rafliadipratama.musiceuy.data.model.Lyrics
 import com.rafliadipratama.musiceuy.data.model.Track
+import com.rafliadipratama.musiceuy.data.network.ArtistCatalog
 import com.rafliadipratama.musiceuy.data.network.LrcLibClient
 import com.rafliadipratama.musiceuy.data.network.MusicStreamSource
 import com.rafliadipratama.musiceuy.service.MusicService
@@ -51,12 +52,16 @@ data class PlayerUiState(
     val searchResults: List<Track> = emptyList(),
     val searchResultArtists: List<Artist> = emptyList(),
     val searchResultAlbums: List<Album> = emptyList(),
+    val searchResultVideos: List<Track> = emptyList(),
     val searchCategory: String = "Semua",
     val trendingTracks: List<Track> = emptyList(),
     val mostPlayedTracks: List<Track> = emptyList(),
     val newReleases: List<Album> = emptyList(),
     val popularArtists: List<Artist> = emptyList(),
     val communityPlaylists: List<Playlist> = emptyList(),
+    val musicVideos: List<Track> = emptyList(),
+    val recommendationCategories: List<com.rafliadipratama.musiceuy.data.model.HomeCategoryItem> = emptyList(),
+    val isNewReleasesSheetVisible: Boolean = false,
     val selectedHomeFilter: String = "Semua",
     val favoriteArtists: List<String> = emptyList(),
     val playlists: List<Playlist> = emptyList(),
@@ -64,8 +69,10 @@ data class PlayerUiState(
     val selectedArtist: Artist? = null,
     val artistTracks: List<Track> = emptyList(),
     val artistAlbums: List<Album> = emptyList(),
+    val artistVideos: List<Track> = emptyList(),
     val isLoadingArtist: Boolean = false,
     val isLoadingAlbums: Boolean = false,
+    val isLoadingArtistVideos: Boolean = false,
     val isLoadingPlaylist: Boolean = false,
     val isAddToPlaylistSheetVisible: Boolean = false,
     val trackToAddToPlaylist: Track? = null,
@@ -109,6 +116,9 @@ data class PlayerUiState(
     val userProfile: com.rafliadipratama.musiceuy.data.local.UserProfile = com.rafliadipratama.musiceuy.data.local.UserProfile(),
     val isLyricsShareDialogVisible: Boolean = false,
     val selectedLyricForShare: String = "",
+    val isVideoMode: Boolean = false,
+    val currentVideoStreamUrl: String? = null,
+    val isLoadingVideo: Boolean = false,
     val isOnline: Boolean = true,
     val error: String? = null
 )
@@ -199,6 +209,30 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             } catch (_: Exception) {
             }
         }, MoreExecutors.directExecutor())
+
+        // Connect bi-directional notification player controls matching Musicfy
+        MusicService.onNextCallback = {
+            viewModelScope.launch(Dispatchers.Main) { nextTrack() }
+        }
+        MusicService.onPrevCallback = {
+            viewModelScope.launch(Dispatchers.Main) { previousTrack() }
+        }
+        MusicService.onToggleLikeCallback = {
+            val cur = _uiState.value.currentTrack
+            if (cur != null) {
+                viewModelScope.launch(Dispatchers.Main) { toggleLike(cur) }
+                true
+            } else false
+        }
+        MusicService.onToggleRepeatCallback = { newMode ->
+            val rm = when (newMode) {
+                Player.REPEAT_MODE_OFF -> RepeatMode.OFF
+                Player.REPEAT_MODE_ONE -> RepeatMode.ONE
+                Player.REPEAT_MODE_ALL -> RepeatMode.ALL
+                else -> RepeatMode.OFF
+            }
+            _uiState.update { it.copy(repeatMode = rm) }
+        }
     }
 
     private fun setupPlayerListener() {
@@ -224,6 +258,16 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 } else if (playbackState == Player.STATE_ENDED) {
                     handleTrackEnded()
                 }
+            }
+
+            override fun onRepeatModeChanged(repeatMode: Int) {
+                val rm = when (repeatMode) {
+                    Player.REPEAT_MODE_OFF -> RepeatMode.OFF
+                    Player.REPEAT_MODE_ONE -> RepeatMode.ONE
+                    Player.REPEAT_MODE_ALL -> RepeatMode.ALL
+                    else -> RepeatMode.OFF
+                }
+                _uiState.update { it.copy(repeatMode = rm) }
             }
 
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
@@ -316,6 +360,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                         searchResults = localResults,
                         searchResultArtists = emptyList(),
                         searchResultAlbums = emptyList(),
+                        searchResultVideos = emptyList(),
                         isSearching = false,
                         error = if (localResults.isEmpty()) "Tidak ditemukan lagu terunduh untuk '$query'." else null
                     )
@@ -333,8 +378,9 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                     searchResults = official.tracks,
                     searchResultArtists = official.artists,
                     searchResultAlbums = official.albums,
+                    searchResultVideos = official.videos,
                     isSearching = false,
-                    error = if (official.tracks.isEmpty() && official.artists.isEmpty() && official.albums.isEmpty())
+                    error = if (official.tracks.isEmpty() && official.artists.isEmpty() && official.albums.isEmpty() && official.videos.isEmpty())
                         "Tidak ditemukan hasil untuk '$query'. Coba kata kunci lain." else null
                 )
             }
@@ -445,8 +491,9 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             loadDownloadedTracks()
 
             // Muat data Explore YouTube Music (Trending, Rilisan Baru, Musisi Populer)
+            val tasteProfile = withContext(Dispatchers.IO) { historyManager.getTasteProfile() }
             val explore = withContext(Dispatchers.IO) {
-                streamSource.fetchExploreHome(favArtists)
+                streamSource.fetchExploreHome(favArtists, tasteProfile = tasteProfile)
             }
             val filteredTrending = explore.trendingTracks.filter { track ->
                 !notInterestedIds.contains(track.id) &&
@@ -464,11 +511,17 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                     newReleases = explore.newReleases,
                     popularArtists = sortedArtists,
                     communityPlaylists = explore.communityPlaylists,
-                    favoriteArtists = favArtists
+                    favoriteArtists = favArtists,
+                    musicVideos = explore.musicVideos,
+                    recommendationCategories = explore.recommendationCategories
                 )
             }
             resolveMissingArtistAvatars(sortedArtists)
         }
+    }
+
+    fun toggleNewReleasesSheet(visible: Boolean) {
+        _uiState.update { it.copy(isNewReleasesSheetVisible = visible) }
     }
 
     fun refreshHomeContent() {
@@ -484,8 +537,9 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                     }
                 }
 
+                val tasteProfile = withContext(Dispatchers.IO) { historyManager.getTasteProfile() }
                 val explore = withContext(Dispatchers.IO) {
-                    streamSource.fetchExploreHome(favArtists, forceRefresh = true)
+                    streamSource.fetchExploreHome(favArtists, forceRefresh = true, tasteProfile = tasteProfile)
                 }
                 val filteredTrending = explore.trendingTracks.filter { track ->
                     !notInterestedIds.contains(track.id) &&
@@ -514,6 +568,8 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                         popularArtists = sortedArtists,
                         communityPlaylists = explore.communityPlaylists,
                         favoriteArtists = favArtists,
+                        musicVideos = explore.musicVideos,
+                        recommendationCategories = explore.recommendationCategories,
                         notInterestedTrackIds = notInterestedIds,
                         notInterestedArtists = notInterestedArtists,
                         downloadNotificationMessage = "Beranda berhasil disegarkan."
@@ -625,6 +681,19 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun playTrack(track: Track, newQueue: List<Track>? = null) {
         val controller = mediaController ?: return
+
+        // Musicfy negative signal: Track skipped after < 30 seconds of listening
+        val prevTrack = _uiState.value.currentTrack
+        val prevPosMs = _uiState.value.currentPositionMs
+        if (prevTrack != null && prevTrack.id != track.id) {
+            val durationMs = (prevTrack.durationSec * 1000L).coerceAtLeast(0L)
+            if (prevPosMs in 300..29_999L && (durationMs <= 0 || prevPosMs < durationMs / 2) && (durationMs == 0L || durationMs >= 40_000L)) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    historyManager.recordTrackSkipped(prevTrack)
+                }
+            }
+        }
+
         val currentQueue = newQueue ?: _uiState.value.queue.ifEmpty { listOf(track) }
         val isLiked = _uiState.value.likedTrackIds.contains(track.id)
         val activeTrack = track.copy(isLiked = isLiked)
@@ -636,8 +705,13 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 currentPositionMs = 0L,
                 lyrics = Lyrics(),
                 isLoadingLyrics = true,
+                currentVideoStreamUrl = null,
                 error = null
             )
+        }
+
+        if (_uiState.value.isVideoMode) {
+            fetchVideoStream(activeTrack)
         }
 
         // Check if track is already downloaded to local storage
@@ -797,7 +871,16 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 .build()
 
             controller.setMediaItem(mediaItem)
+            val repeatModeInt = when (_uiState.value.repeatMode) {
+                RepeatMode.OFF -> Player.REPEAT_MODE_OFF
+                RepeatMode.ALL -> Player.REPEAT_MODE_ALL
+                RepeatMode.ONE -> Player.REPEAT_MODE_ONE
+            }
+            controller.repeatMode = repeatModeInt
             controller.prepare()
+
+            val isLiked = historyManager.isTrackLiked(track.id)
+            MusicService.instance?.updateCustomLayout(isLiked, repeatModeInt)
 
             // Apply EBU R128 / YouTube ReplayGain volume normalization
             val loudnessDb = com.rafliadipratama.musiceuy.data.network.MusicStreamSource.getLoudnessDb(track.id)
@@ -948,15 +1031,22 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun triggerAutoplay(endedTrack: Track) {
         viewModelScope.launch {
+            val tasteProfile = withContext(Dispatchers.IO) { historyManager.getTasteProfile() }
             val related = withContext(Dispatchers.IO) {
                 streamSource.fetchSongRadio(endedTrack)
             }
             val existingIds = _uiState.value.queue.map { it.id }.toSet()
-            val candidate = related.firstOrNull { !existingIds.contains(it.id) && it.id != endedTrack.id }
-                ?: related.firstOrNull { it.id != endedTrack.id }
+            val validCandidates = related.filter {
+                it.id != endedTrack.id &&
+                !existingIds.contains(it.id) &&
+                it.id !in tasteProfile.avoidSongs &&
+                it.artist.name.trim().lowercase() !in tasteProfile.avoidArtists
+            }
+            val candidate = validCandidates.firstOrNull() ?: related.firstOrNull { it.id != endedTrack.id }
 
             if (candidate != null) {
-                _uiState.update { it.copy(queue = it.queue + candidate) }
+                val upcomingQueue = validCandidates.drop(1).take(10)
+                _uiState.update { it.copy(queue = it.queue + listOf(candidate) + upcomingQueue) }
                 playTrack(candidate)
             } else {
                 mediaController?.pause()
@@ -980,6 +1070,14 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             RepeatMode.ONE -> RepeatMode.OFF
         }
         _uiState.update { it.copy(repeatMode = nextMode) }
+        val playerRepeat = when (nextMode) {
+            RepeatMode.OFF -> Player.REPEAT_MODE_OFF
+            RepeatMode.ALL -> Player.REPEAT_MODE_ALL
+            RepeatMode.ONE -> Player.REPEAT_MODE_ONE
+        }
+        mediaController?.repeatMode = playerRepeat
+        val isLiked = _uiState.value.currentTrack?.let { historyManager.isTrackLiked(it.id) } ?: false
+        MusicService.instance?.updateCustomLayout(isLiked, playerRepeat)
     }
 
     fun toggleShuffle() {
@@ -1196,6 +1294,14 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                     selectedPlaylist = updatedSelectedPlaylist
                 )
             }
+            if (_uiState.value.currentTrack?.id == track.id) {
+                val repeatModeInt = when (_uiState.value.repeatMode) {
+                    RepeatMode.OFF -> Player.REPEAT_MODE_OFF
+                    RepeatMode.ALL -> Player.REPEAT_MODE_ALL
+                    RepeatMode.ONE -> Player.REPEAT_MODE_ONE
+                }
+                MusicService.instance?.updateCustomLayout(isNowLiked, repeatModeInt)
+            }
         }
     }
 
@@ -1221,6 +1327,45 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun dismissTrackContextMenu() {
         _uiState.update { it.copy(trackForContextMenu = null) }
+    }
+
+    // ==================== Audio / Video Toggle ====================
+
+    fun toggleVideoMode() {
+        val current = _uiState.value
+        val newMode = !current.isVideoMode
+        _uiState.update { it.copy(isVideoMode = newMode, isLyricsVisible = if (newMode) false else it.isLyricsVisible) }
+
+        if (newMode) {
+            val track = current.currentTrack ?: return
+            if (current.currentVideoStreamUrl == null) {
+                fetchVideoStream(track)
+            }
+        }
+    }
+
+    fun setVideoMode(enabled: Boolean) {
+        _uiState.update { it.copy(isVideoMode = enabled, isLyricsVisible = if (enabled) false else it.isLyricsVisible) }
+        if (enabled) {
+            val track = _uiState.value.currentTrack ?: return
+            if (_uiState.value.currentVideoStreamUrl == null) {
+                fetchVideoStream(track)
+            }
+        }
+    }
+
+    private fun fetchVideoStream(track: Track) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { it.copy(isLoadingVideo = true) }
+            val vid = track.id.removePrefix("yt:").removePrefix("mono_")
+            val videoUrl = streamSource.resolveYouTubeVideoStream(vid)
+            _uiState.update {
+                it.copy(
+                    currentVideoStreamUrl = videoUrl,
+                    isLoadingVideo = false
+                )
+            }
+        }
     }
 
     fun playNext(track: Track) {
@@ -1260,8 +1405,10 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                     selectedArtist = artist,
                     artistTracks = emptyList(),
                     artistAlbums = emptyList(),
+                    artistVideos = emptyList(),
                     isLoadingArtist = true,
                     isLoadingAlbums = true,
+                    isLoadingArtistVideos = true,
                     isPlayerExpanded = false
                 )
             }
@@ -1273,6 +1420,17 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                     it.copy(
                         artistTracks = results,
                         isLoadingArtist = false
+                    )
+                }
+            }
+            launch {
+                val videos = withContext(Dispatchers.IO) {
+                    streamSource.getArtistMusicVideos(artist.name)
+                }
+                _uiState.update {
+                    it.copy(
+                        artistVideos = videos,
+                        isLoadingArtistVideos = false
                     )
                 }
             }
@@ -1628,21 +1786,84 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     fun filterHomeCategory(category: String) {
         _uiState.update { it.copy(selectedHomeFilter = category) }
         viewModelScope.launch {
+            val tasteProfile = withContext(Dispatchers.IO) { historyManager.getTasteProfile() }
             if (category == "Semua") {
                 val favArtists = withContext(Dispatchers.IO) { historyManager.getFavoriteArtists() }
-                val homeData = withContext(Dispatchers.IO) { streamSource.fetchExploreHome(favArtists) }
+                val homeData = withContext(Dispatchers.IO) { streamSource.fetchExploreHome(favArtists, tasteProfile = tasteProfile) }
                 val sortedArtists = withContext(Dispatchers.IO) { historyManager.getSortedPopularArtists(homeData.popularArtists) }
                 _uiState.update {
                     it.copy(
                         trendingTracks = homeData.trendingTracks,
                         newReleases = homeData.newReleases,
-                        popularArtists = sortedArtists
+                        popularArtists = sortedArtists,
+                        recommendationCategories = homeData.recommendationCategories
                     )
                 }
             } else {
-                val tracks = streamSource.fetchMoodCategoryTracks(category)
-                if (tracks.isNotEmpty()) {
-                    _uiState.update { it.copy(trendingTracks = tracks) }
+                val favArtists = withContext(Dispatchers.IO) { historyManager.getFavoriteArtists() }
+                val isArtistFilter = favArtists.any { it.equals(category, ignoreCase = true) } ||
+                        _uiState.value.popularArtists.any { it.name.equals(category, ignoreCase = true) }
+
+                if (isArtistFilter) {
+                    val artistTracks = withContext(Dispatchers.IO) {
+                        streamSource.getArtistTopTracks(category).filter {
+                            it.id !in tasteProfile.avoidSongs
+                        }
+                    }
+                    val peerArtists = ArtistCatalog.getPeerArtists(category)
+                    val peerTracks = withContext(Dispatchers.IO) {
+                        val query = if (peerArtists.isNotEmpty()) "${peerArtists.shuffled().take(2).joinToString(" ")} hits radio" else "$category radio mix"
+                        streamSource.searchYouTubeMusic(query).filter {
+                            !it.artist.name.equals(category, ignoreCase = true) &&
+                            it.id !in tasteProfile.avoidSongs &&
+                            it.artist.name.trim().lowercase() !in tasteProfile.avoidArtists
+                        }
+                    }
+                    val artistShelf = if (peerTracks.isNotEmpty()) {
+                        listOf(
+                            com.rafliadipratama.musiceuy.data.model.HomeCategoryItem(
+                                id = "more_like_${category.hashCode()}",
+                                kind = com.rafliadipratama.musiceuy.data.model.HomeCategoryKind.MORE_LIKE_ARTIST,
+                                label = "MIRIP ${category.uppercase()}",
+                                title = "More Like $category",
+                                thumbnailUrl = ArtistCatalog.getVerifiedAvatarUrl(category),
+                                tracks = peerTracks.take(12)
+                            )
+                        )
+                    } else emptyList()
+
+                    _uiState.update {
+                        it.copy(
+                            trendingTracks = artistTracks.ifEmpty { it.trendingTracks },
+                            recommendationCategories = artistShelf
+                        )
+                    }
+                } else {
+                    val rawTracks = withContext(Dispatchers.IO) {
+                        streamSource.fetchMoodCategoryTracks(category).filter {
+                            it.id !in tasteProfile.avoidSongs &&
+                            it.artist.name.trim().lowercase() !in tasteProfile.avoidArtists
+                        }
+                    }
+                    val genreShelf = if (rawTracks.isNotEmpty()) {
+                        listOf(
+                            com.rafliadipratama.musiceuy.data.model.HomeCategoryItem(
+                                id = "genre_${category.hashCode()}",
+                                kind = com.rafliadipratama.musiceuy.data.model.HomeCategoryKind.BECAUSE_YOU_LISTEN,
+                                label = "PILIHAN GENRE: ${category.uppercase()}",
+                                title = "Lagu $category Terpopuler",
+                                thumbnailUrl = rawTracks.firstOrNull()?.coverUrl,
+                                tracks = rawTracks.take(12)
+                            )
+                        )
+                    } else emptyList()
+
+                    _uiState.update {
+                        it.copy(
+                            trendingTracks = rawTracks.ifEmpty { it.trendingTracks },
+                            recommendationCategories = genreShelf
+                        )
+                    }
                 }
             }
         }

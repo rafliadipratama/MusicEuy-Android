@@ -264,7 +264,138 @@ fun ArtistDetailScreen(
                 }
             }
 
-            // Albums & Discography Section
+            // 1. Lagu Populer (Swipe ke kiri 4-lagu per kolom style YouTube Music)
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Lagu Populer",
+                        color = TextPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (legitimateTracks.isNotEmpty()) {
+                        Text(
+                            text = "Geser ke kiri untuk lainnya",
+                            color = TextMuted,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            if (uiState.isLoadingArtist) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = BrandGreen,
+                            modifier = Modifier.size(28.dp),
+                            strokeWidth = 2.5.dp
+                        )
+                    }
+                }
+            } else if (legitimateTracks.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Belum ada daftar lagu resmi untuk ${currentArtist.name}.",
+                            color = TextMuted,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            } else {
+                item {
+                    HorizontalSongColumns(
+                        tracks = legitimateTracks,
+                        currentTrackId = uiState.currentTrack?.id,
+                        isPlaying = uiState.isPlaying,
+                        onTrackClick = { track, allTracks ->
+                            viewModel.playTrack(track, allTracks)
+                        },
+                        onTrackLongClick = { track ->
+                            viewModel.showTrackContextMenu(track)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // 2. Video Musik Resmi (Swipe ke kiri style YouTube Music)
+            if (uiState.isLoadingArtistVideos) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = BrandGreen,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                }
+            } else if (uiState.artistVideos.isNotEmpty()) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Video Musik Resmi",
+                            color = TextPrimary,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "${uiState.artistVideos.size} Video",
+                            color = TextMuted,
+                            fontSize = 12.sp
+                        )
+                    }
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        items(uiState.artistVideos, key = { "art_vid_${it.id}" }) { video ->
+                            HomeVideoCard(
+                                track = video,
+                                isActive = uiState.currentTrack?.id == video.id,
+                                isPlaying = uiState.isPlaying,
+                                onClick = {
+                                    viewModel.playTrack(video, uiState.artistVideos)
+                                }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // 3. Album & Diskografi Section
             item {
                 Row(
                     modifier = Modifier
@@ -368,71 +499,7 @@ fun ArtistDetailScreen(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-
-            // Popular Tracks Header
-            item {
-                Text(
-                    text = "Lagu Populer",
-                    color = TextPrimary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                )
-            }
-
-            if (uiState.isLoadingArtist) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = BrandGreen)
-                    }
-                }
-            } else if (legitimateTracks.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Belum ada daftar lagu resmi untuk ${currentArtist.name}.",
-                            color = TextMuted,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-            } else {
-                items(legitimateTracks, key = { it.id }) { track ->
-                    val isActive = uiState.currentTrack?.id == track.id
-                    val isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked
-                    Box(modifier = Modifier.padding(horizontal = 12.dp)) {
-                        TrackItem(
-                            track = track,
-                            isPlaying = uiState.isPlaying,
-                            isActive = isActive,
-                            isLiked = isLiked,
-                            onClick = {
-                                viewModel.playTrack(track, legitimateTracks)
-                            },
-                            onToggleLikeClick = {
-                                viewModel.toggleLike(track)
-                            },
-                            onLongClick = {
-                                viewModel.showTrackContextMenu(track)
-                            },
-                            onAddToPlaylistClick = {
-                                viewModel.showAddToPlaylist(track)
-                            }
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }

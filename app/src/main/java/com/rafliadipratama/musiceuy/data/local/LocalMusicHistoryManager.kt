@@ -16,6 +16,18 @@ data class ListeningStats(
 )
 
 /**
+ * Musicfy-style taste profile capturing mathematical time-decay listening weights,
+ * positive liked affinity, negative skip suppression, and tri-directional seed candidates.
+ */
+data class TasteProfile(
+    val heard: Set<String> = emptySet(),
+    val avoidSongs: Set<String> = emptySet(),
+    val avoidArtists: Set<String> = emptySet(),
+    val songSeeds: List<Track> = emptyList(),
+    val topArtists: List<String> = emptyList()
+)
+
+/**
  * Local database manager for user listening history, preferences, and playlists.
  * Operates 100% locally without requiring user accounts or cloud authentication.
  * Stores play counts, timestamps, most frequently played tracks, and custom playlists.
@@ -36,6 +48,8 @@ class LocalMusicHistoryManager(context: Context) {
         private const val KEY_LAST_PLAYED_TRACK = "last_played_track_json"
         private const val KEY_LAST_PLAYED_POS = "last_played_position_ms"
         private const val KEY_LAST_PLAYED_QUEUE = "last_played_queue_json"
+        private const val KEY_SKIPS = "listening_skips_json"
+        private const val MAX_SKIPS = 200
     }
 
     // ==================== Search History ====================
@@ -329,6 +343,156 @@ class LocalMusicHistoryManager(context: Context) {
             (playedArtists + onboarded).distinct().take(limit)
         } catch (_: Exception) {
             emptyList()
+        }
+    }
+
+    /**
+     * Musicfy algorithm: Records an early-skipped track (e.g. skipped in first 30 seconds).
+     * Skips are stored persistently (max 200) to keep avoided songs out of recommendations
+     * for 14 days, and artists skipped 3+ times completely suppressed.
+     */
+    fun recordTrackSkipped(track: Track) {
+        try {
+            val currentJson = prefs.getString(KEY_SKIPS, "[]") ?: "[]"
+            val arr = JSONArray(currentJson)
+            val skipObj = JSONObject().apply {
+                put("songId", track.id)
+                put("artist", track.artist.name)
+                put("at", System.currentTimeMillis())
+            }
+            val list = mutableListOf<JSONObject>()
+            for (i in 0 until arr.length()) {
+                list.add(arr.getJSONObject(i))
+            }
+            list.add(skipObj)
+            while (list.size > MAX_SKIPS) {
+                list.removeAt(0)
+            }
+            val newArr = JSONArray()
+            list.forEach { newArr.put(it) }
+            prefs.edit().putString(KEY_SKIPS, newArr.toString()).apply()
+        } catch (e: Exception) {
+            android.util.Log.e("MusicEuy", "Error recording track skip: ${e.message}")
+        }
+    }
+
+    /**
+     * Retrieves recent skips within [days] days as pairs of (songId, artistName).
+     */
+    fun getRecentSkips(days: Int = 14): List<Pair<String, String>> {
+        return try {
+            val currentJson = prefs.getString(KEY_SKIPS, "[]") ?: "[]"
+            val arr = JSONArray(currentJson)
+            val cutoff = System.currentTimeMillis() - (days * 86_400_000L)
+            val result = mutableListOf<Pair<String, String>>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                val at = obj.optLong("at", 0L)
+                if (at >= cutoff) {
+                    val sId = obj.optString("songId", "")
+                    val aName = obj.optString("artist", "")
+                    if (sId.isNotBlank()) {
+                        result.add(Pair(sId, aName))
+                    }
+                }
+            }
+            result
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    /**
+     * Musicfy Taste Profiler:
+     * 1. Mathematical Time-Decay Scoring: score = exp(-ageDays / 14.0) * playCount
+     * 2. Liked Tracks Affinity: +1.5 boost per liked track
+     * 3. Negative Taste Suppression: avoidSongs (<14 days skipped), avoidArtists (>=3 skips)
+     * 4. Tri-directional seed selection: Top candidates sampled via Efraimidis-Spirakis weighted sampling,
+     *    strictly 1 seed per artist to maximize diversity.
+     */
+    fun getTasteProfile(): TasteProfile {
+        return try {
+            val now = System.currentTimeMillis()
+            val currentMap = loadTracksMap()
+            val liked = getLikedTracks()
+            val recentSkips = getRecentSkips(14)
+            val notInterestedTracks = getNotInterestedTrackIds()
+            val notInterestedArtists = getNotInterestedArtists()
+
+            // 1. Skips & Avoidance
+            val avoidSongs = (recentSkips.map { it.first } + notInterestedTracks).toSet()
+            val avoidArtistsFromSkips = recentSkips.map { it.second.trim().lowercase() }
+                .filter { it.isNotBlank() }
+                .groupingBy { it }
+                .eachCount()
+                .filterValues { it >= 3 }
+                .keys
+            val avoidArtists = (avoidArtistsFromSkips + notInterestedArtists).toSet()
+
+            // 2. Mathematical Time-Decay scoring
+            val scores = HashMap<String, Double>()
+            val songs = HashMap<String, Track>()
+            val heard = mutableSetOf<String>()
+
+            for (entry in currentMap.values) {
+                val track = jsonToTrack(entry)
+                val lastPlayed = entry.optLong("lastPlayed", 0L)
+                val playCount = entry.optInt("playCount", 1).coerceAtLeast(1)
+                val ageDays = (now - lastPlayed) / 86_400_000.0
+
+                if (ageDays <= 90.0) {
+                    heard.add(track.id)
+                    val decayWeight = kotlin.math.exp(-ageDays / 14.0)
+                    val totalTrackWeight = decayWeight * kotlin.math.min(playCount, 5)
+                    scores[track.id] = (scores[track.id] ?: 0.0) + totalTrackWeight
+                    songs[track.id] = track
+                }
+            }
+
+            // Liked songs have strong signal (+1.5 boost)
+            liked.take(50).forEach { track ->
+                heard.add(track.id)
+                scores[track.id] = (scores[track.id] ?: 0.0) + 1.5
+                songs.putIfAbsent(track.id, track)
+            }
+
+            // 3. Tri-Directional Candidates (Filtered against skips & negative taste)
+            val validCandidates = scores.entries
+                .sortedByDescending { it.value }
+                .mapNotNull { (id, score) -> songs[id]?.let { it to score } }
+                .filter { (track, _) ->
+                    track.id !in avoidSongs &&
+                    track.artist.name.trim().lowercase() !in avoidArtists
+                }
+                .distinctBy { (track, _) -> track.artist.name.trim().lowercase() }
+                .take(14)
+
+            // Efraimidis-Spirakis weighted sampling (Musicfy formula)
+            // key = ln(Random(1e-9..1.0)) / score
+            val songSeeds = validCandidates
+                .map { (track, score) ->
+                    val r = kotlin.random.Random.nextDouble(1e-9, 1.0)
+                    val key = kotlin.math.ln(r) / score.coerceAtLeast(1e-6)
+                    track to key
+                }
+                .sortedByDescending { it.second }
+                .take(6)
+                .map { it.first }
+
+            // Top Artists for "More Like <Artist>" shelves
+            val topArtists = getFavoriteArtists(10)
+                .filter { it.trim().lowercase() !in avoidArtists }
+
+            TasteProfile(
+                heard = heard,
+                avoidSongs = avoidSongs,
+                avoidArtists = avoidArtists,
+                songSeeds = songSeeds,
+                topArtists = topArtists
+            )
+        } catch (e: Exception) {
+            android.util.Log.e("MusicEuy", "Error building taste profile: ${e.message}")
+            TasteProfile()
         }
     }
 

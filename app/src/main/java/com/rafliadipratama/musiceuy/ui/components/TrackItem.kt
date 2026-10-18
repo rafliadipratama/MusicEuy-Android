@@ -52,14 +52,14 @@ fun TrackItem(
     track: Track,
     isPlaying: Boolean,
     isActive: Boolean,
-    isLiked: Boolean = false,
+    isLiked: Boolean = track.isLiked,
     onClick: () -> Unit,
     onLongClick: ((Track) -> Unit)? = null,
     onArtistClick: ((Artist) -> Unit)? = null,
     onAddToPlaylistClick: ((Track) -> Unit)? = null,
     onToggleLikeClick: ((Track) -> Unit)? = null
 ) {
-    val effectiveLiked = isLiked || track.isLiked
+    val effectiveLiked = isLiked
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -152,7 +152,7 @@ fun TrackItem(
                             )
                     ) {
                         Text(
-                            text = track.artist.name,
+                            text = track.fullArtistDisplay,
                             color = TextSecondary,
                             fontSize = 13.sp,
                             maxLines = 1,
@@ -201,7 +201,7 @@ fun TrackItem(
                 Icon(
                     imageVector = if (effectiveLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = if (effectiveLiked) "Hapus dari Disukai" else "Sukai",
-                    tint = if (effectiveLiked) BrandGreen else TextSecondary.copy(alpha = 0.6f),
+                    tint = if (effectiveLiked) Color(0xFFFF2D55) else TextSecondary.copy(alpha = 0.6f),
                     modifier = Modifier.size(19.dp)
                 )
             }

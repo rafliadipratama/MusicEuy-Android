@@ -450,7 +450,7 @@ fun PlaylistDetailScreen(
             } else {
                 items(filteredTracks, key = { it.id }) { track ->
                     val isActive = uiState.currentTrack?.id == track.id
-                    val isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked
+                    val isLiked = uiState.likedTrackIds.contains(track.id)
                     Box(modifier = Modifier.padding(horizontal = 12.dp)) {
                         TrackItem(
                             track = track,

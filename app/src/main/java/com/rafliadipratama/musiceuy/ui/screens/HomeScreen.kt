@@ -93,6 +93,7 @@ import com.rafliadipratama.musiceuy.data.model.Track
 import com.rafliadipratama.musiceuy.ui.components.PlayingIndicator
 import com.rafliadipratama.musiceuy.ui.components.SmoothCornerShape
 import com.rafliadipratama.musiceuy.ui.components.TrackItem
+import com.rafliadipratama.musiceuy.ui.components.NewReleasesBottomSheet
 import com.rafliadipratama.musiceuy.ui.components.pressBounce
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreen
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreenBright
@@ -128,7 +129,11 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    val homeFilterPills = listOf("Semua", "Fokus / Belajar", "Santai & Chill", "Workout", "Pesta", "Pop Indonesia", "Indie", "Rock", "Dangdut")
+    val homeFilterPills = remember(uiState.favoriteArtists) {
+        val userFavs = uiState.favoriteArtists.take(4)
+        val defaultPills = listOf("Pop Indonesia", "Indie", "Santai & Chill", "Fokus / Belajar", "Rock", "Dangdut", "Workout")
+        (listOf("Semua") + userFavs + defaultPills).distinct()
+    }
 
     val officialCharts = remember {
         listOf(
@@ -675,10 +680,15 @@ fun HomeScreen(
                             }
                         }
 
-                        // 5. Album & Single Rilisan Terbaru (Carousel Cover Persegi)
+                        // 5. Album & Single Rilisan Terbaru (Carousel Cover Persegi dengan Shortcut "Lihat Semua")
                         if (uiState.newReleases.isNotEmpty()) {
                             item {
-                                SectionHeader(title = stringResource(id = R.string.home_albums_singles), icon = Icons.Default.Album)
+                                SectionHeader(
+                                    title = stringResource(id = R.string.home_albums_singles),
+                                    icon = Icons.Default.Album,
+                                    actionText = "Lihat Semua",
+                                    onActionClick = { viewModel.toggleNewReleasesSheet(true) }
+                                )
                                 LazyRow(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -696,10 +706,67 @@ fun HomeScreen(
                             }
                         }
 
-                        // 5. Top Trending di Indonesia (Swipe ke kiri 4-lagu per kolom style Musicfy & YouTube Music)
+                        // 6. Video Musik Resmi (16:9 Banner Card Style Musicfy)
+                        if (uiState.musicVideos.isNotEmpty()) {
+                            item {
+                                SectionHeader(
+                                    title = "Video Musik Untukmu",
+                                    icon = Icons.Default.PlayArrow
+                                )
+                                LazyRow(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    items(uiState.musicVideos, key = { "home_vid_${it.id}" }) { video ->
+                                        HomeVideoCard(
+                                            track = video,
+                                            isActive = uiState.currentTrack?.id == video.id,
+                                            isPlaying = uiState.isPlaying,
+                                            onClick = { viewModel.playTrack(video, uiState.musicVideos) }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(18.dp))
+                            }
+                        }
+
+                        // 7. Dynamic Recommendation Shelves (More Like <Artist>, Because You Listen, Try Something New)
+                        uiState.recommendationCategories.forEach { category ->
+                            if (category.tracks.isNotEmpty()) {
+                                item(key = "rec_cat_${category.id}") {
+                                    SectionHeader(
+                                        title = category.title,
+                                        label = category.label,
+                                        avatarUrl = category.thumbnailUrl
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    HorizontalSongColumns(
+                                        tracks = category.tracks,
+                                        currentTrackId = uiState.currentTrack?.id,
+                                        isPlaying = uiState.isPlaying,
+                                        onTrackClick = { track, allTracks ->
+                                            viewModel.playTrack(track, allTracks)
+                                        },
+                                        onTrackLongClick = { track ->
+                                            viewModel.showTrackContextMenu(track)
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.height(18.dp))
+                                }
+                            }
+                        }
+
+                        // 8. Top Trending di Indonesia (Swipe ke kiri 4-lagu per kolom style Musicfy & YouTube Music)
                         if (uiState.trendingTracks.isNotEmpty()) {
                             item {
-                                SectionHeader(title = "Top Trending di Indonesia", icon = Icons.Default.Whatshot)
+                                val trendingTitle = if (uiState.selectedHomeFilter != "Semua") {
+                                    "Pilihan: ${uiState.selectedHomeFilter}"
+                                } else {
+                                    "Top Trending di Indonesia"
+                                }
+                                SectionHeader(title = trendingTitle, icon = Icons.Default.Whatshot)
                                 Spacer(modifier = Modifier.height(6.dp))
                                 HorizontalSongColumns(
                                     tracks = uiState.trendingTracks,
@@ -825,33 +892,248 @@ fun HomeScreen(
                 containerColor = Color(0xFF161B22)
             )
         }
+
+        if (uiState.isNewReleasesSheetVisible) {
+            NewReleasesBottomSheet(
+                albums = uiState.newReleases,
+                onDismiss = { viewModel.toggleNewReleasesSheet(false) },
+                onAlbumClick = { album ->
+                    viewModel.openAlbum(album)
+                    viewModel.toggleNewReleasesSheet(false)
+                }
+            )
+        }
     }
 }
 
 @Composable
 private fun SectionHeader(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    label: String? = null,
+    avatarUrl: String? = null,
+    actionText: String? = null,
+    onActionClick: (() -> Unit)? = null
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 6.dp)
     ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = BrandGreen,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f, fill = false)
+        ) {
+            if (!avatarUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = avatarUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .border(1.5.dp, BrandGreen.copy(alpha = 0.6f), CircleShape)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+            } else if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = BrandGreen,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+
+            Column {
+                if (!label.isNullOrBlank()) {
+                    Text(
+                        text = label,
+                        color = BrandGreenBright,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(1.dp))
+                }
+                Text(
+                    text = title,
+                    color = TextPrimary,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
-        Text(
-            text = title,
-            color = TextPrimary,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold
+
+        if (actionText != null && onActionClick != null) {
+            TextButton(
+                onClick = onActionClick,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = actionText,
+                    color = BrandGreen,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeVideoCard(
+    track: Track,
+    isActive: Boolean,
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val videoId = track.id.removePrefix("yt:")
+    val cardWidth = 280.dp
+    val cardHeight = 158.dp // 16:9 ratio
+    var useFallback by remember(videoId) { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier
+            .size(width = cardWidth, height = cardHeight)
+            .clip(SmoothCornerShape(16.dp))
+            .background(SurfaceContainerHigh)
+            .pressBounce(pressedScale = 0.96f)
+            .clickable(onClick = onClick)
+    ) {
+        AsyncImage(
+            model = if (useFallback) track.coverUrl else "https://i.ytimg.com/vi/$videoId/hq720.jpg",
+            contentDescription = track.title,
+            contentScale = ContentScale.Crop,
+            onError = { if (!useFallback) useFallback = true },
+            modifier = Modifier.fillMaxSize()
         )
+
+        // Gradient Scrim for readable text
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.35f),
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.88f)
+                        )
+                    )
+                )
+        )
+
+        // Video Badge & Duration
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp)
+                .align(Alignment.TopStart),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xFFE50914).copy(alpha = 0.90f))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(10.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = "VIDEO",
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            if (track.durationFormatted.isNotBlank() && track.durationFormatted != "0:00") {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.Black.copy(alpha = 0.65f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = track.durationFormatted,
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        // Active playing indicator overlay in center if playing
+        if (isActive) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.60f)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isPlaying) {
+                    PlayingIndicator(
+                        color = BrandGreenBright,
+                        isPlaying = true,
+                        bars = 4,
+                        barWidth = 2.5.dp,
+                        maxHeight = 16.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = BrandGreen,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+
+        // Title and Artist Info at bottom
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            Text(
+                text = track.cleanTitle,
+                color = if (isActive) BrandGreenBright else Color.White,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = track.fullArtistDisplay,
+                color = Color.White.copy(alpha = 0.8f),
+                fontSize = 11.5.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -1054,7 +1336,7 @@ private fun PlaylistHomeCard(
 }
 
 @Composable
-private fun HorizontalSongColumns(
+fun HorizontalSongColumns(
     tracks: List<Track>,
     currentTrackId: String?,
     isPlaying: Boolean,
@@ -1090,7 +1372,7 @@ private fun HorizontalSongColumns(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CompactTrackItem(
+fun CompactTrackItem(
     track: Track,
     isPlaying: Boolean,
     isActive: Boolean,
@@ -1165,7 +1447,7 @@ private fun CompactTrackItem(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "${track.artist.name} • ${track.durationFormatted}",
+                text = "${track.fullArtistDisplay} • ${track.durationFormatted}",
                 color = TextSecondary,
                 fontSize = 11.sp,
                 maxLines = 1,

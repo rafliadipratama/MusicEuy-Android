@@ -44,6 +44,8 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -52,6 +54,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -73,10 +76,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import com.rafliadipratama.musiceuy.ui.components.LikeBurst
+import com.rafliadipratama.musiceuy.ui.components.DoubleTapHeartOverlay
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import com.rafliadipratama.musiceuy.lyrics.LyricsInterludeDots
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import android.view.ViewGroup
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -189,7 +203,8 @@ fun PlayerScreen(
                 onToggleLike = { viewModel.toggleLike(track) },
                 onDownload = { viewModel.downloadTrack(track) },
                 onOpenArtist = { viewModel.openArtistDetail(track.artist) },
-                onSeekToLine = { posMs -> viewModel.seekTo(posMs) }
+                onSeekToLine = { posMs -> viewModel.seekTo(posMs) },
+                onToggleVideoMode = { viewModel.setVideoMode(it) }
             )
         } else {
             // ==================== PORTRAIT LAYOUT (Mobile & Tablet) ====================
@@ -224,7 +239,8 @@ fun PlayerScreen(
                 onToggleLike = { viewModel.toggleLike(track) },
                 onDownload = { viewModel.downloadTrack(track) },
                 onOpenArtist = { viewModel.openArtistDetail(track.artist) },
-                onSeekToLine = { posMs -> viewModel.seekTo(posMs) }
+                onSeekToLine = { posMs -> viewModel.seekTo(posMs) },
+                onToggleVideoMode = { viewModel.setVideoMode(it) }
             )
         }
 
@@ -282,7 +298,8 @@ private fun PortraitPlayerLayout(
     onToggleLike: () -> Unit,
     onDownload: () -> Unit,
     onOpenArtist: () -> Unit,
-    onSeekToLine: (Long) -> Unit = {}
+    onSeekToLine: (Long) -> Unit = {},
+    onToggleVideoMode: (Boolean) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -370,7 +387,13 @@ private fun PortraitPlayerLayout(
             }
         }
 
-        // --- 2. Center Area: Large Artwork or Realtime Lyrics (Apple Music Style) ---
+        // --- 1.5. Audio / Video Switch Pill ---
+        AudioVideoToggleSwitch(
+            isVideoMode = uiState.isVideoMode,
+            onToggle = onToggleVideoMode
+        )
+
+        // --- 2. Center Area: Large Artwork or Realtime Lyrics or Video Surface ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -384,6 +407,19 @@ private fun PortraitPlayerLayout(
                     lyricsListState = lyricsListState,
                     onSeekToLine = onSeekToLine
                 )
+            } else if (uiState.isVideoMode) {
+                PlayerVideoSurface(
+                    streamUrl = uiState.currentVideoStreamUrl,
+                    isLoading = uiState.isLoadingVideo,
+                    isPlaying = uiState.isPlaying,
+                    currentPositionMs = currentMs,
+                    track = track,
+                    isLiked = uiState.likedTrackIds.contains(track.id),
+                    onToggleLike = onToggleLike,
+                    modifier = Modifier
+                        .fillMaxWidth(if (isTablet) 0.85f else 1f)
+                        .aspectRatio(16f / 10f)
+                )
             } else {
                 val artworkScale by animateFloatAsState(
                     targetValue = if (uiState.isPlaying) 1.0f else 0.92f,
@@ -394,6 +430,9 @@ private fun PortraitPlayerLayout(
                     label = "AppleMusicArtworkScale"
                 )
 
+                val isLiked = uiState.likedTrackIds.contains(track.id)
+                var showDoubleTapHeart by remember(track.id) { mutableStateOf(false) }
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(if (isTablet) 0.72f else 0.88f)
@@ -403,7 +442,17 @@ private fun PortraitPlayerLayout(
                             scaleY = artworkScale
                         }
                         .clip(RoundedCornerShape(26.dp))
-                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(26.dp)),
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(26.dp))
+                        .pointerInput(track.id) {
+                            detectTapGestures(
+                                onDoubleTap = {
+                                    if (!isLiked) {
+                                        onToggleLike()
+                                    }
+                                    showDoubleTapHeart = true
+                                }
+                            )
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     AsyncImage(
@@ -411,6 +460,10 @@ private fun PortraitPlayerLayout(
                         contentDescription = track.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
+                    )
+                    DoubleTapHeartOverlay(
+                        show = showDoubleTapHeart,
+                        onAnimationEnd = { showDoubleTapHeart = false }
                     )
                 }
             }
@@ -497,7 +550,8 @@ private fun LandscapePlayerLayout(
     onToggleLike: () -> Unit,
     onDownload: () -> Unit,
     onOpenArtist: () -> Unit,
-    onSeekToLine: (Long) -> Unit = {}
+    onSeekToLine: (Long) -> Unit = {},
+    onToggleVideoMode: (Boolean) -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -514,39 +568,84 @@ private fun LandscapePlayerLayout(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Top Bar: Collapse button & Label
+            // Top Bar: Collapse button & Label + Audio/Video Switch
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = onCollapse, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Tutup",
-                        tint = TextPrimary,
-                        modifier = Modifier.size(28.dp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onCollapse, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Tutup",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "SEDANG MEMUTAR",
+                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.4.sp
                     )
                 }
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "SEDANG MEMUTAR",
-                    color = TextSecondary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.4.sp
+
+                AudioVideoToggleSwitch(
+                    isVideoMode = uiState.isVideoMode,
+                    onToggle = onToggleVideoMode
                 )
             }
 
-            // Artwork
-            AsyncImage(
-                model = track.coverUrl,
-                contentDescription = track.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .weight(1f)
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(18.dp))
-            )
+            // Artwork or Video with Double-Tap to Like
+            val isLiked = uiState.likedTrackIds.contains(track.id)
+            var showDoubleTapHeart by remember(track.id) { mutableStateOf(false) }
+
+            if (uiState.isVideoMode) {
+                PlayerVideoSurface(
+                    streamUrl = uiState.currentVideoStreamUrl,
+                    isLoading = uiState.isLoadingVideo,
+                    isPlaying = uiState.isPlaying,
+                    currentPositionMs = currentMs,
+                    track = track,
+                    isLiked = isLiked,
+                    onToggleLike = onToggleLike,
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(16f / 10f)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(18.dp))
+                        .pointerInput(track.id) {
+                            detectTapGestures(
+                                onDoubleTap = {
+                                    if (!isLiked) {
+                                        onToggleLike()
+                                    }
+                                    showDoubleTapHeart = true
+                                }
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = track.coverUrl,
+                        contentDescription = track.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    DoubleTapHeartOverlay(
+                        show = showDoubleTapHeart,
+                        onAnimationEnd = { showDoubleTapHeart = false }
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -696,7 +795,7 @@ private fun TrackInfoRow(
     onToggleLike: () -> Unit,
     onDownload: () -> Unit
 ) {
-    val isLiked = uiState.likedTrackIds.contains(track.id) || track.isLiked
+    val isLiked = uiState.likedTrackIds.contains(track.id)
     val isDownloaded = uiState.downloadedTrackIds.contains(track.id)
     val downloadProgress = uiState.downloadingTrackIds[track.id]
     val isDownloading = downloadProgress != null
@@ -725,7 +824,7 @@ private fun TrackInfoRow(
                     .padding(vertical = 2.dp)
             ) {
                 Text(
-                    text = track.artist.name,
+                    text = track.fullArtistDisplay,
                     color = TextSecondary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
@@ -776,7 +875,7 @@ private fun TrackInfoRow(
             }
 
             // Like Button with Burst Animation
-            LikeBurst(trigger = isLiked) {
+            LikeBurst(trigger = isLiked, key = track.id, modifier = Modifier.size(42.dp)) {
                 IconButton(
                     onClick = onToggleLike,
                     modifier = Modifier.size(42.dp)
@@ -784,7 +883,7 @@ private fun TrackInfoRow(
                     Icon(
                         imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = if (isLiked) "Hapus dari Favorit" else "Sukai",
-                        tint = if (isLiked) Color(0xFFE91E63) else TextSecondary,
+                        tint = if (isLiked) Color(0xFFFF2D55) else TextSecondary,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -1130,4 +1229,193 @@ private fun formatMs(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return String.format("%02d:%02d", minutes, seconds)
+}
+
+// ============================================================================
+// AUDIO / VIDEO TOGGLE SWITCH
+// ============================================================================
+@Composable
+fun AudioVideoToggleSwitch(
+    isVideoMode: Boolean,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White.copy(alpha = 0.10f))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
+            .padding(3.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Option 1: Audio / Lagu
+        val audioBg = if (!isVideoMode) Color.White.copy(alpha = 0.22f) else Color.Transparent
+        val audioTint = if (!isVideoMode) Color.White else TextMuted
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(audioBg)
+                .clickable { onToggle(false) }
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.MusicNote,
+                contentDescription = "Audio",
+                tint = audioTint,
+                modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+                text = "Lagu",
+                color = audioTint,
+                fontSize = 12.sp,
+                fontWeight = if (!isVideoMode) FontWeight.Bold else FontWeight.Medium
+            )
+        }
+
+        // Option 2: Video
+        val videoBg = if (isVideoMode) AccentEmerald.copy(alpha = 0.35f) else Color.Transparent
+        val videoTint = if (isVideoMode) Color.White else TextMuted
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(videoBg)
+                .clickable { onToggle(true) }
+                .padding(horizontal = 14.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Videocam,
+                contentDescription = "Video",
+                tint = videoTint,
+                modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+                text = "Video",
+                color = videoTint,
+                fontSize = 12.sp,
+                fontWeight = if (isVideoMode) FontWeight.Bold else FontWeight.Medium
+            )
+        }
+    }
+}
+
+// ============================================================================
+// PLAYER VIDEO SURFACE
+// ============================================================================
+@Composable
+fun PlayerVideoSurface(
+    streamUrl: String?,
+    isLoading: Boolean,
+    isPlaying: Boolean,
+    currentPositionMs: Long,
+    track: Track,
+    isLiked: Boolean,
+    onToggleLike: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showDoubleTapHeart by remember(track.id) { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(26.dp))
+            .background(Color.Black)
+            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(26.dp))
+            .pointerInput(track.id) {
+                detectTapGestures(
+                    onDoubleTap = {
+                        if (!isLiked) {
+                            onToggleLike()
+                        }
+                        showDoubleTapHeart = true
+                    }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        if (streamUrl.isNullOrBlank() || isLoading) {
+            // Loading video state with cover backdrop
+            AsyncImage(
+                model = track.coverUrl,
+                contentDescription = track.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = 0.35f }
+            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator(
+                    color = AccentEmerald,
+                    modifier = Modifier.size(36.dp),
+                    strokeWidth = 3.dp
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "Menghubungkan video klip...",
+                    color = TextSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        } else {
+            val context = LocalContext.current
+            val exoPlayer = remember(streamUrl) {
+                ExoPlayer.Builder(context).build().apply {
+                    setMediaItem(MediaItem.fromUri(streamUrl))
+                    volume = 0f // Muted so audio foreground service handles music without echo
+                    repeatMode = Player.REPEAT_MODE_ALL
+                    videoScalingMode = androidx.media3.common.C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                    prepare()
+                }
+            }
+
+            DisposableEffect(exoPlayer) {
+                onDispose {
+                    exoPlayer.release()
+                }
+            }
+
+            LaunchedEffect(exoPlayer, isPlaying) {
+                exoPlayer.playWhenReady = isPlaying
+            }
+
+            // Keep in sync with audio position
+            LaunchedEffect(exoPlayer, currentPositionMs) {
+                val duration = exoPlayer.duration
+                if (duration > 0) {
+                    val target = currentPositionMs % duration
+                    if (kotlin.math.abs(exoPlayer.currentPosition - target) > 1000) {
+                        exoPlayer.seekTo(target.coerceIn(0, duration))
+                    }
+                }
+            }
+
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        player = exoPlayer
+                        useController = false
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        DoubleTapHeartOverlay(
+            show = showDoubleTapHeart,
+            onAnimationEnd = { showDoubleTapHeart = false }
+        )
+    }
 }

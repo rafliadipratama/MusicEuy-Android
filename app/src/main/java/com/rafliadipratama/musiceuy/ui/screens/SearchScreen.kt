@@ -73,6 +73,7 @@ import com.rafliadipratama.musiceuy.R
 import com.rafliadipratama.musiceuy.data.model.Album
 import com.rafliadipratama.musiceuy.data.model.Artist
 import com.rafliadipratama.musiceuy.data.model.Track
+import com.rafliadipratama.musiceuy.ui.components.PlayingIndicator
 import com.rafliadipratama.musiceuy.ui.components.SmoothCornerShape
 import com.rafliadipratama.musiceuy.ui.components.TrackItem
 import com.rafliadipratama.musiceuy.ui.components.pressBounce
@@ -102,7 +103,7 @@ fun SearchScreen(
     var searchInput by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val searchCategoryPills = listOf("Semua", "Lagu", "Artis", "Album")
+    val searchCategoryPills = listOf("Semua", "Lagu", "Video", "Artis", "Album")
 
     val trendingKeywords = remember {
         listOf(
@@ -133,7 +134,8 @@ fun SearchScreen(
     }
 
     val isSearchActive = searchInput.isNotBlank() || uiState.searchResults.isNotEmpty() ||
-            uiState.searchResultArtists.isNotEmpty() || uiState.searchResultAlbums.isNotEmpty()
+            uiState.searchResultArtists.isNotEmpty() || uiState.searchResultAlbums.isNotEmpty() ||
+            uiState.searchResultVideos.isNotEmpty()
 
     // Determine Top Result Track
     val topResultTrack = remember(uiState.searchResults, searchInput) {
@@ -551,6 +553,51 @@ fun SearchScreen(
                         }
                     }
 
+                    // VIDEO RESULTS (When in "Semua")
+                    if (uiState.searchCategory == "Semua") {
+                        if (uiState.searchResultVideos.isNotEmpty()) {
+                            item {
+                                SearchSectionHeader(title = "Video", icon = Icons.Default.PlayArrow)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    items(uiState.searchResultVideos, key = { "search_vid_${it.id}" }) { video ->
+                                        val isActive = uiState.currentTrack?.id == video.id
+                                        SearchVideoCard(
+                                            track = video,
+                                            isActive = isActive,
+                                            isPlaying = uiState.isPlaying,
+                                            onClick = { viewModel.playTrack(video, uiState.searchResultVideos) }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(20.dp))
+                            }
+                        }
+                    }
+
+                    // EXCLUSIVE VIDEO TAB
+                    if (uiState.searchCategory == "Video") {
+                        if (uiState.searchResultVideos.isNotEmpty()) {
+                            item {
+                                SearchSectionHeader(title = "Video", icon = Icons.Default.PlayArrow)
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+
+                            items(uiState.searchResultVideos, key = { "tab_vid_${it.id}" }) { video ->
+                                val isActive = uiState.currentTrack?.id == video.id
+                                SearchVideoRow(
+                                    track = video,
+                                    isActive = isActive,
+                                    isPlaying = uiState.isPlaying,
+                                    onClick = { viewModel.playTrack(video, uiState.searchResultVideos) }
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                    }
+
                     // SONGS LIST
                     if (uiState.searchCategory == "Semua" || uiState.searchCategory == "Lagu") {
                         // Skip the first one if already shown in Top Result Card when in "Semua"
@@ -596,7 +643,8 @@ fun SearchScreen(
 
                     // EMPTY STATE
                     if (!uiState.isSearching && uiState.searchResults.isEmpty() &&
-                        uiState.searchResultArtists.isEmpty() && uiState.searchResultAlbums.isEmpty()
+                        uiState.searchResultArtists.isEmpty() && uiState.searchResultAlbums.isEmpty() &&
+                        uiState.searchResultVideos.isEmpty()
                     ) {
                         item {
                             Box(
@@ -698,23 +746,10 @@ private fun TopResultCard(
             Spacer(modifier = Modifier.width(14.dp))
 
             // Metadata Column
-            Column(modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier
-                        .clip(SmoothCornerShape(6.dp))
-                        .background(BrandGreen.copy(alpha = 0.18f))
-                        .padding(horizontal = 7.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "Hasil Teratas",
-                        color = BrandGreenBright,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
                 Text(
                     text = track.title,
                     color = Color.White,
@@ -724,10 +759,10 @@ private fun TopResultCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "${track.artist.name} ${if (track.durationFormatted.isNotBlank()) "• ${track.durationFormatted}" else ""}",
+                    text = "${track.fullArtistDisplay} ${if (track.durationFormatted.isNotBlank()) "• ${track.durationFormatted}" else ""}",
                     color = TextSecondary,
                     fontSize = 13.sp,
                     maxLines = 1,
@@ -892,5 +927,256 @@ private fun AlbumSearchItemCard(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+@Composable
+private fun SearchVideoCard(
+    track: Track,
+    isActive: Boolean,
+    isPlaying: Boolean,
+    onClick: () -> Unit
+) {
+    val videoId = track.id.removePrefix("yt:")
+    val cardWidth = 260.dp
+    val cardHeight = 146.dp // 16:9 ratio
+    var useFallback by remember(videoId) { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .size(width = cardWidth, height = cardHeight)
+            .clip(SmoothCornerShape(14.dp))
+            .background(SurfaceContainerHigh)
+            .pressBounce(pressedScale = 0.95f)
+            .clickable(onClick = onClick)
+    ) {
+        AsyncImage(
+            model = if (useFallback) track.coverUrl else "https://i.ytimg.com/vi/$videoId/hq720.jpg",
+            contentDescription = track.title,
+            contentScale = ContentScale.Crop,
+            onError = { if (!useFallback) useFallback = true },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Gradient overlay
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.35f),
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.88f)
+                        )
+                    )
+                )
+        )
+
+        // Top Badges
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+                .align(Alignment.TopStart),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(Color(0xFFE50914).copy(alpha = 0.90f))
+                    .padding(horizontal = 5.dp, vertical = 2.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(10.dp)
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = "VIDEO",
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            if (track.durationFormatted.isNotBlank() && track.durationFormatted != "0:00") {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(Color.Black.copy(alpha = 0.65f))
+                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = track.durationFormatted,
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        // Center playing indicator if active
+        if (isActive) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.60f)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isPlaying) {
+                    PlayingIndicator(
+                        color = BrandGreenBright,
+                        isPlaying = true,
+                        bars = 4,
+                        barWidth = 2.dp,
+                        maxHeight = 14.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = BrandGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        // Title & artist info at bottom
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .padding(10.dp)
+        ) {
+            Text(
+                text = track.cleanTitle,
+                color = if (isActive) BrandGreenBright else Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = track.fullArtistDisplay,
+                color = Color.White.copy(alpha = 0.8f),
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchVideoRow(
+    track: Track,
+    isActive: Boolean,
+    isPlaying: Boolean,
+    onClick: () -> Unit
+) {
+    val videoId = track.id.removePrefix("yt:")
+    var useFallback by remember(videoId) { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isActive) SurfaceContainerHigh else SurfaceContainer.copy(alpha = 0.45f))
+            .pressBounce(pressedScale = 0.98f)
+            .clickable(onClick = onClick)
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .width(118.dp)
+                .height(66.dp) // 16:9 ratio
+                .clip(RoundedCornerShape(8.dp))
+                .background(SurfaceContainer)
+        ) {
+            AsyncImage(
+                model = if (useFallback) track.coverUrl else "https://i.ytimg.com/vi/$videoId/hq720.jpg",
+                contentDescription = track.title,
+                contentScale = ContentScale.Crop,
+                onError = { if (!useFallback) useFallback = true },
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // Duration badge at bottom right
+            if (track.durationFormatted.isNotBlank() && track.durationFormatted != "0:00") {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(4.dp)
+                        .background(Color.Black.copy(alpha = 0.70f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                ) {
+                    Text(
+                        text = track.durationFormatted,
+                        color = Color.White,
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            if (isActive) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.55f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isPlaying) {
+                        PlayingIndicator(
+                            color = BrandGreenBright,
+                            isPlaying = true,
+                            bars = 3,
+                            barWidth = 2.dp,
+                            maxHeight = 14.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = BrandGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = track.cleanTitle,
+                color = if (isActive) BrandGreen else TextPrimary,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = track.fullArtistDisplay,
+                color = TextSecondary,
+                fontSize = 11.5.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }

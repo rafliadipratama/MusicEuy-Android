@@ -10,62 +10,65 @@ object ArtistCatalog {
      * Guarantees 100% high-resolution (500x500) avatars even when offline or newly played.
      */
     private val MASTER_ARTIST_AVATARS = mapOf(
-        // Top Indonesian Artists
-        "sheila on 7" to "https://cdn-images.dzcdn.net/images/artist/9e6cc50e80a7dcb4dacc7eb15427335b/500x500-000000-80-0-0.jpg",
-        "bernadya" to "https://cdn-images.dzcdn.net/images/artist/5bd274a72993ee8b8e72a7a8aedc12b5/500x500-000000-80-0-0.jpg",
-        "hindia" to "https://cdn-images.dzcdn.net/images/artist/b33a022fb4490dce3b6e12d1c19c0123/500x500-000000-80-0-0.jpg",
-        "tulus" to "https://cdn-images.dzcdn.net/images/artist/c207c7f16afc162acca87e587e47b442/500x500-000000-80-0-0.jpg",
-        "mahalini" to "https://cdn-images.dzcdn.net/images/artist/bbb3c9932bf14c2ca059e24a041baf91/500x500-000000-80-0-0.jpg",
-        "niki" to "https://cdn-images.dzcdn.net/images/artist/324c50c04a5a944117cd3daa0963fc63/500x500-000000-80-0-0.jpg",
-        "sal priadi" to "https://cdn-images.dzcdn.net/images/artist/513217e1630470658eb37ac7d7eb1910/500x500-000000-80-0-0.jpg",
-        "juicy luicy" to "https://cdn-images.dzcdn.net/images/artist/b94e4bb5570b617550f28dbe0012f973/500x500-000000-80-0-0.jpg",
-        "nadin amizah" to "https://cdn-images.dzcdn.net/images/artist/10a75e65ad84fcfadeca0b74d1a56d0c/500x500-000000-80-0-0.jpg",
-        "dewa 19" to "https://cdn-images.dzcdn.net/images/artist/7164efb4540b482dd5abac8bff423429/500x500-000000-80-0-0.jpg",
-        "noah" to "https://cdn-images.dzcdn.net/images/artist/d0bdfce850235546343bead12c1d2689/500x500-000000-80-0-0.jpg",
-        "peterpan" to "https://cdn-images.dzcdn.net/images/artist/d0bdfce850235546343bead12c1d2689/500x500-000000-80-0-0.jpg",
-        "lyodra" to "https://cdn-images.dzcdn.net/images/artist/153076781614790ca9a7dd0177cad752/500x500-000000-80-0-0.jpg",
-        "tiara andini" to "https://cdn-images.dzcdn.net/images/artist/88914c1499f102f0941cbb65850c4886/500x500-000000-80-0-0.jpg",
-        "denny caknan" to "https://cdn-images.dzcdn.net/images/artist/2e8a010d43c385b64bda3d17214566d1/500x500-000000-80-0-0.jpg",
-        "guyon waton" to "https://cdn-images.dzcdn.net/images/artist/ba6e13e4f4056b3affdd5794caca1e0f/500x500-000000-80-0-0.jpg",
-        "feby putri" to "https://cdn-images.dzcdn.net/images/artist/0497658071183606d6ac0b0549c092a3/500x500-000000-80-0-0.jpg",
-        "pamungkas" to "https://cdn-images.dzcdn.net/images/artist/cf78395171e26a522ba28f4d41b5b6bc/500x500-000000-80-0-0.jpg",
-        "reality club" to "https://cdn-images.dzcdn.net/images/artist/be7235d469d786aa4e18c5e6d67b7e73/500x500-000000-80-0-0.jpg",
-        "fourtwnty" to "https://cdn-images.dzcdn.net/images/artist/5ef14df8afed38e82e07143abf300185/500x500-000000-80-0-0.jpg",
-        "padi" to "https://cdn-images.dzcdn.net/images/artist/9e6cc50e80a7dcb4dacc7eb15427335b/500x500-000000-80-0-0.jpg",
-        "raisa" to "https://cdn-images.dzcdn.net/images/artist/9312bb46a81bb01efbe94adcb581f18e/500x500-000000-80-0-0.jpg",
-        "afgan" to "https://cdn-images.dzcdn.net/images/artist/e71b29a2884c7f0709b119c676646736/500x500-000000-80-0-0.jpg",
-        "rizky febian" to "https://cdn-images.dzcdn.net/images/artist/04da839e559e8e2fa5160faea8ba2564/500x500-000000-80-0-0.jpg",
-        "idgitaf" to "https://cdn-images.dzcdn.net/images/artist/a16ee510804470b12bc1a8f0a0fc5b63/500x500-000000-80-0-0.jpg",
-        "fiersa besari" to "https://cdn-images.dzcdn.net/images/artist/cf842f1f83c078bfa7fdb1a868f0cb67/500x500-000000-80-0-0.jpg",
-        "eñau" to "https://yt3.googleusercontent.com/4_-ytwCqSUkPrYfjkSaY7Cs497XnahcMR7_vCcxoahaUjeoESN6XvxZlrg9FJ2sPYyL75oYZdDg2DPbw=w544-h544-l90-rj",
-        "enau" to "https://yt3.googleusercontent.com/4_-ytwCqSUkPrYfjkSaY7Cs497XnahcMR7_vCcxoahaUjeoESN6XvxZlrg9FJ2sPYyL75oYZdDg2DPbw=w544-h544-l90-rj",
-        ".feast" to "https://cdn-images.dzcdn.net/images/artist/39f07b5656c1061598b5d68d1c5f5cb1/500x500-000000-80-0-0.jpg",
-        "feast" to "https://cdn-images.dzcdn.net/images/artist/39f07b5656c1061598b5d68d1c5f5cb1/500x500-000000-80-0-0.jpg",
-        "ran" to "https://cdn-images.dzcdn.net/images/artist/27e997f804fc9a9a3b680516be85fb83/500x500-000000-80-0-0.jpg",
-        "maman fvndy" to "https://yt3.googleusercontent.com/jFp7Zv9tsj-9Q53PUX-FJq2MG9YoA5pmRMu_kpd3VqbyEoJ7GbQ7TkMRIa1I8CwPJ9a5zvfVN-CcgZGLPw=w544-h544-l90-rj",
-        "payung teduh" to "https://cdn-images.dzcdn.net/images/artist/e12d1b7d530eeffdbdf7bc1871a26f86/500x500-000000-80-0-0.jpg",
-        "danilla" to "https://cdn-images.dzcdn.net/images/artist/00642f4c39f02279f6fa1e13a483e587/500x500-000000-80-0-0.jpg",
+        // Top Indonesian Artists (100% Official YouTube Music Google CDN)
+        "sheila on 7" to "https://lh3.googleusercontent.com/ZBI5XEhdUvkE59Kr7HKZYIjoopuA_kC0uPAWNsEw-EmLfTtRaXuDEv-qYWTv_lahkpA8Yuhe7P-sO2Y=w544-h544-l90-rj",
+        "bernadya" to "https://lh3.googleusercontent.com/hxROE1fvLWSxUYAFV3IgMp5vvjN91Jx6oS6uwSVyYN9_fb3I6PLaRa3Ufb4A0awxq4J5UoPFQAQM-Q=w544-h544-l90-rj",
+        "hindia" to "https://yt3.googleusercontent.com/8ImMAMQSD4FA6-gdqCZWSFaB-drHvkdfiFcFAk7Mcyy56ctfWD-Xxno-CHfGC4L6Ql8aR61XT0vX0F4b=w544-h544-l90-rj",
+        "tulus" to "https://yt3.googleusercontent.com/h8P1jEIZLM8lkMxNA6Nbq98b43wcqllJSNmcZTCRPAB-F6rG_0Nqw5w7fwou0PN1QGwSW5viwWD5NV0=w544-h544-l90-rj",
+        "mahalini" to "https://yt3.googleusercontent.com/VdgLqr3Sno_U1IXj9qzk43azloCsjBeDy6MpFjfD8kMmco0AeL81qow0cpHynDfpaVlujCY11O7QO4d6=w544-h544-l90-rj",
+        "sal priadi" to "https://lh3.googleusercontent.com/wmItRT4hTCJrmnlsh_JBgOeBXww9mquXhrNR0oW3_hPW9LsZ5Z2grMij01EaENdt6ensOJfKm-OCBKqJ=w544-h544-l90-rj",
+        "niki" to "https://yt3.googleusercontent.com/gKAVVgmPq8rRVjGXzkiaSxnHjfBdOBbl3kf1Nz2cel7vobVD5yzSVPE-Xr4c3brFq2nZ9xbbloRbPg=w544-h544-l90-rj",
+        "juicy luicy" to "https://yt3.googleusercontent.com/DDebW5VciXI_oMRQC1cRIWlpDIWVaS8c_CbcCkf89YeHVziP9lkgA0xUZmmVRxGKmC3qmppuMtvIsa5U=w544-h544-l90-rj",
+        "nadin amizah" to "https://yt3.googleusercontent.com/1MrTMYk3XQeTy0EDkJOOkRaHwV2jo-8Es2y8ksOyDThn1btv3VrtzRJy8PbRzVY1V-xj9DBaELpR8jnS=w544-h544-l90-rj",
+        "dewa 19" to "https://yt3.googleusercontent.com/xFQbHjuH9LO_HkIMSAOf-vu1jMe-hH8y0L0VVEKPSkQn650JFu1Y46RWIIE4oF_kt0JTR5DlxI-NJwBc=w544-h544-l90-rj",
+        "noah" to "https://lh3.googleusercontent.com/6xEP8mOA5xguCiwfeNq08D1o0GK7iPSNMwp80jJpyxw4bwdOgo4EO-8T4rnb8gv3_283YEoQsZvRLD4k=w544-h544-l90-rj",
+        "peterpan" to "https://lh3.googleusercontent.com/6xEP8mOA5xguCiwfeNq08D1o0GK7iPSNMwp80jJpyxw4bwdOgo4EO-8T4rnb8gv3_283YEoQsZvRLD4k=w544-h544-l90-rj",
+        "lyodra" to "https://yt3.googleusercontent.com/fX1X2u4D_p36NXWXqmOJneksx8UuAC4YaZGU4IKShOMX4NtaA3CCKyMoFDh4B3WHEIjL6fg7Z4zwb0s=w544-h544-l90-rj",
+        "tiara andini" to "https://lh3.googleusercontent.com/gYD0RV885nA7hEE9gMEZyiB-aqbiOugfsXaVChO4zBXtOqzKsiiVFGBZin01zDizrp_LeBELRrSuRw=w544-h544-l90-rj",
+        "denny caknan" to "https://lh3.googleusercontent.com/woWOuYcLDhSRRyFn6kNHJtaiGpD3dW2SnYZanXVdqe96T9Qs1Bt1GchfV73HsIJq2R013krAX3DyLA=w544-h544-l90-rj",
+        "guyon waton" to "https://yt3.googleusercontent.com/BeY4sDpZ9zge0jFVH0s7v31UQoOb3FubZXQGQ3z_zgFraWot-MkUuF7JH3sSCjtEfzwDgjs3LDgnVsyDJg=w544-h544-l90-rj",
+        "feby putri" to "https://yt3.googleusercontent.com/BOaqGQqwh7TOLyGlLJI3QcIBezoMHpSHHN5Kn73bbvlqjhc1-hS4mDRYLs_N_yjR81RWrNi-ojwFlw=w544-h544-l90-rj",
+        "pamungkas" to "https://yt3.googleusercontent.com/taxtgIghV9GbhxPOJ2_Utqh8T72EEBcGynoNX2dw9z-sSurU2GIW7vEM06ZYHJLOtcIOXvQZTpkfoJc=w544-h544-l90-rj",
+        "reality club" to "https://lh3.googleusercontent.com/YfD3p4VViGZEJw-d5IrbyTjj7YFfd1LnpLP6BU2hFm0WGbHM25ot2BonJZHNV6CeGXjJ_zI5OZVXXyW0=w544-h544-l90-rj",
+        "fourtwnty" to "https://yt3.googleusercontent.com/2o9I4mMwti1cH7nILSQ4nu3X7f7scfSndSOKTqaJ7FGLo3bGLyXSadZOBIT6bSgbc6H8zYb_gQ=w544-h544-l90-rj",
+        "padi" to "https://yt3.ggpht.com/ytc/AIdro_l5JpQiYL1g25UijiewngWtu8o4imIch4x-YMFle1IY_Q=w544-h544-l90-rj",
+        "raisa" to "https://lh3.googleusercontent.com/HsZDqggC4CwKO3Jp3svqgLquXHRaMENJgx35ADX9ecZoozfxXSr1FgOOBEDIixwwsFWBTqpI1JLNvrho=w544-h544-l90-rj",
+        "afgan" to "https://yt3.googleusercontent.com/K5YkN0ruZFb_aqz2caPgencgflSqp0BqJYOSEhaCfVcjodcQS65vfH6_IO6JJUnaHI3D2s8v3i8AEyo=w544-h544-l90-rj",
+        "rizky febian" to "https://yt3.googleusercontent.com/uPbJD1rupFLyxWEOdwV7oO5joK_HbMKin5XsUR_hg1z0WZGp-u9_KtD6sF6X63qkdUZjkXXwabqmik_n=w544-h544-l90-rj",
+        "idgitaf" to "https://yt3.googleusercontent.com/UjGi4OiorRoR53C60a5AlpFgjno4czBHDD9b9GZXyVlhliSsA5ImOoLN9o2urdnGVmZ0hgkxQKAZkyU=w544-h544-l90-rj",
+        "fiersa besari" to "https://yt3.googleusercontent.com/uRhP7xgP0ceSFvwo3NP4sVL_iW1hn-NAdbmzl2i_iGvE0-8dwxWR6rhc5iFtoLUYK8EIFayp=w544-h544-l90-rj",
+        "eñau" to "https://lh3.googleusercontent.com/5_t9JRn7KopQJjyw8_1t8RFmaNSaX-P75wsHbUGDNqTNS3X-qUDvU8033AJn3D_y1IK-gSpIzBwX4w=w544-h544-l90-rj",
+        "enau" to "https://lh3.googleusercontent.com/5_t9JRn7KopQJjyw8_1t8RFmaNSaX-P75wsHbUGDNqTNS3X-qUDvU8033AJn3D_y1IK-gSpIzBwX4w=w544-h544-l90-rj",
+        ".feast" to "https://lh3.googleusercontent.com/v78O_zDgEMvUp35uR0s0fU9pyvRJkELYJKKfYS33Kg1NpQrE4W-dzuS3CHuwWTdYsIs5RzwNpkiekcE=w544-h544-l90-rj",
+        "feast" to "https://lh3.googleusercontent.com/v78O_zDgEMvUp35uR0s0fU9pyvRJkELYJKKfYS33Kg1NpQrE4W-dzuS3CHuwWTdYsIs5RzwNpkiekcE=w544-h544-l90-rj",
+        "ran" to "https://lh3.googleusercontent.com/Qg2Ai5oRQQkmcAkUsAuYtK3RUwqNUHMtEVwovMlcIN9VZdNhwkUaqSy6kKHYW9fhzsx1QvhZ2iW7Gg=w544-h544-l90-rj",
+        "maman fvndy" to "https://yt3.googleusercontent.com/eOf6QDdK2cP98WYKsbJg_BhvdbP1zoxIAmQTHquiUbwzPGBC5Ci0R8JV0mdKlpAMtIP4XeN9b7g=w544-h544-l90-rj",
+        "payung teduh" to "https://yt3.googleusercontent.com/QevM0AhNvLh0cPNeCRfyVToHCso_gCyOMlRMElvJXbx8j8BhzjEutfJhaBbDhJy_ebLOqsOOb5o=w544-h544-l90-rj",
+        "danilla" to "https://lh3.googleusercontent.com/TjGBboAUulSaDK48_nyOYQWm_CzSO792iDBmFPj5Bfo9fOdR4TxUTcLcrEOt_oeOKzTvzjkZTiK_qg=w544-h544-l90-rj",
+        "ndx a.k.a" to "https://yt3.googleusercontent.com/MyfVUOKWHpCifDs7cDKeoLuzJNnC4zicErRVFub3yprKe9xc4ncdlSOGlXNYbrqqDk8yKhoFFPL3x_T0=w544-h544-l90-rj",
+        "ndx aka" to "https://yt3.googleusercontent.com/MyfVUOKWHpCifDs7cDKeoLuzJNnC4zicErRVFub3yprKe9xc4ncdlSOGlXNYbrqqDk8yKhoFFPL3x_T0=w544-h544-l90-rj",
 
-        // Top Western Artists
-        "michael jackson" to "https://cdn-images.dzcdn.net/images/artist/ff1c8cf777db1efc2043b90d79dcbfc3/500x500-000000-80-0-0.jpg",
-        "bruno mars" to "https://cdn-images.dzcdn.net/images/artist/90f0b5b11df4f87ee878f38569b5995b/500x500-000000-80-0-0.jpg",
-        "taylor swift" to "https://cdn-images.dzcdn.net/images/artist/cc2495870fe1a792ad0cdb05501ad5ec/500x500-000000-80-0-0.jpg",
-        "billie eilish" to "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/500x500-000000-80-0-0.jpg",
-        "coldplay" to "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/500x500-000000-80-0-0.jpg",
-        "bleachers" to "https://cdn-images.dzcdn.net/images/artist/16b4bac07438d0616f2a29fac91d311b/500x500-000000-80-0-0.jpg",
-        "sabrina carpenter" to "https://cdn-images.dzcdn.net/images/artist/4a9cdc7737e2a0e59b4917b47884b859/500x500-000000-80-0-0.jpg",
-        "olivia rodrigo" to "https://cdn-images.dzcdn.net/images/artist/2c9e480317183c037eaebcd7ba96daf4/500x500-000000-80-0-0.jpg",
-        "the weeknd" to "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/500x500-000000-80-0-0.jpg",
-        "ed sheeran" to "https://cdn-images.dzcdn.net/images/artist/d6bb84390641d8ae9118228d9544e53d/500x500-000000-80-0-0.jpg",
-        "ariana grande" to "https://cdn-images.dzcdn.net/images/artist/721d8fab84b315502de422b8d0901509/500x500-000000-80-0-0.jpg",
-        "justin bieber" to "https://cdn-images.dzcdn.net/images/artist/fe097f693cebf1f882e3da79e99e3bf9/500x500-000000-80-0-0.jpg",
-        "dua lipa" to "https://cdn-images.dzcdn.net/images/artist/877872aaf75694f11d53c318700ab2b5/500x500-000000-80-0-0.jpg",
-        "maroon 5" to "https://cdn-images.dzcdn.net/images/artist/bbb526b9666c7e31dee295bcabbbdd8e/500x500-000000-80-0-0.jpg",
-        "lady gaga" to "https://cdn-images.dzcdn.net/images/artist/8b7245c117d74868e803c518ca47c0b0/500x500-000000-80-0-0.jpg",
-        "harry styles" to "https://cdn-images.dzcdn.net/images/artist/063f91f37929d2b24e65017409c99c55/500x500-000000-80-0-0.jpg",
-        "charlie puth" to "https://cdn-images.dzcdn.net/images/artist/a8d87a53c6e48ae2a8740df94916a048/500x500-000000-80-0-0.jpg",
-        "queen" to "https://cdn-images.dzcdn.net/images/artist/066d99ef8eb773531fb5a9cd28828b8a/500x500-000000-80-0-0.jpg",
-        "the beatles" to "https://cdn-images.dzcdn.net/images/artist/3b5936ca495d4e1302fb36be9f807217/500x500-000000-80-0-0.jpg"
+        // Top Western & Global Artists (100% Official YouTube Music Google CDN)
+        "radiohead" to "https://lh3.googleusercontent.com/G-Vsaq4pw6Bl5Ny4p_wV9obzu_eyZxynQycvCvQru4Wglzfxg4NO9owDKnSlKys_-WRzPEc0O6ydGA=w544-h544-l90-rj",
+        "michael jackson" to "https://lh3.googleusercontent.com/x-Z35q6HsBB98J85-4oNqPnOen4pZBaNCpHawzf_ejs-pkgh6Eh3D2Fu7S1T4gEj0yWZ0c6DOAHCpA=w544-h544-l90-rj",
+        "bruno mars" to "https://lh3.googleusercontent.com/hnefGBrazRhn4Z92bdSZBUENl40ONjRiVDsmZKZh-WZ2iCKE-2c7KKR7SNcZfzLHoRyB3E6as8L87YA=w544-h544-l90-rj",
+        "taylor swift" to "https://yt3.googleusercontent.com/RCpTA6EXJQyjVFDosWOKa2SMmqkua_lA9mHPDWWciLwgqpZLz-k8rXWRF_367trrQ7up9BUwCbk6kRk=w544-h544-l90-rj",
+        "billie eilish" to "https://lh3.googleusercontent.com/tQC4rOL6xz6FhmFr0ggQExxyGbYSOsyveXVSnPBh2WjEyIzQ9pMHablLJ-0GlMBrLBlBrbWQGmzrV6KN=w544-h544-l90-rj",
+        "coldplay" to "https://lh3.googleusercontent.com/IOKuXtp8PCQ_Fc-vaRKm3sKIXBxFV51gZheLTH5br-YGnWHFQf_Jywcuk7wbprYRoEbQyS_XZY6-nMJX=w544-h544-l90-rj",
+        "bleachers" to "https://lh3.googleusercontent.com/6v1HcN3P8VBOENfjZT5sHnkyp17yas1plImu6gKcGmSi2B7CqtLYRXN7HpmgNR-cES5Zu3n2tWrnGcA=w544-h544-l90-rj",
+        "sabrina carpenter" to "https://lh3.googleusercontent.com/FMh1mOI0ufvUCAkbUM6aUmU5WK7O5PnndyyXKP1-DCEip20SQz5eeYn3lZ29-ASb-19ZfBVc_NKe5Ko=w544-h544-l90-rj",
+        "olivia rodrigo" to "https://yt3.googleusercontent.com/41-4WZupE4yY88igineZefzBZ3ud2nrtlBMv61OBWOfOcATol8PhmI5OZ0fLlrTszyZ3Ul9I9sE=w544-h544-l90-rj",
+        "the weeknd" to "https://lh3.googleusercontent.com/U-SAmNOu4TynE818gLCfKsuHZ0U5YNEtO9mrjSI9WCCKERs98LzrCal5kajBBTQNwdcisoB2Bn-pHp4=w544-h544-l90-rj",
+        "ed sheeran" to "https://lh3.googleusercontent.com/jQoBIAS6JjFGpcqQY1M_Mh3AasOvFENCdVRxkgax1a0K6qiq7AgE3MbJ6Jtt-Jndcarvoawmrg66KTny=w544-h544-l90-rj",
+        "ariana grande" to "https://yt3.googleusercontent.com/DU6Kpr5TYKcW6QHvMnsJau5_8QSuix8LCLtf5UEaziZZdXw8SxvcxJ9YWmVIQuzhg2R-MVHYgjdGCQ=w544-h544-l90-rj",
+        "justin bieber" to "https://lh3.googleusercontent.com/4ULlRiFBFglNemZJyKn6_e2-iOIdJEbgBgq_79RQclndG6pge0yGgS2k2On6E1FkCJzenyHkHRzkvjFp=w544-h544-l90-rj",
+        "dua lipa" to "https://lh3.googleusercontent.com/aFx8s1fTuelgxONGbezmTG0EKR8r82uB5H-Q6ZJtssyCWLJWF8GfZNr4tHo84sXdFCPBKrA4R6zXOss=w544-h544-l90-rj",
+        "maroon 5" to "https://yt3.googleusercontent.com/7jndWy5UJwFJKueBCrizeFWOFwxKUOZZjRMIcPyRlv1X18tY9aJpkuSz_PpamnHVjbYV6s_oER8oi4g=w544-h544-l90-rj",
+        "lady gaga" to "https://lh3.googleusercontent.com/umSdMueKqbLBTq0jhiEzh1F82_C8hRVzkw2ZsxOqEktWjNXOKSCMPMGiJtu73myxd995RC4BqKL5fAXM=w544-h544-l90-rj",
+        "harry styles" to "https://lh3.googleusercontent.com/O6RvnokIzjsvwQzyRLLkKOx0mvxLXy1bEspu1YdG48jQ2s6o64wyr5Cd8MWjACGocpsl2zlN8iJoMg=w544-h544-l90-rj",
+        "charlie puth" to "https://lh3.googleusercontent.com/Wqr_bvGshelPD-n5OohFA1Au6r130npkqQX3BS0bEb4l373-FVX9ZhkhWykNKdq3CrNCF6ubJNTLVwI=w544-h544-l90-rj",
+        "queen" to "https://yt3.googleusercontent.com/_Qx50zW4-diO8SuAKhaccaNLyTvObgE-TQv1jYS4M9Kma6llb3s-IHpBBvuZAkPh88lHvXTQGaWS7aE=w544-h544-l90-rj",
+        "the beatles" to "https://lh3.googleusercontent.com/z8KZsHNKS-O1qYVyKlSErT_RLMSMwVht89USvSdFAd0EoRlBOppi9DOdRkv609Ye_tfq_Wp8WwhVJbw=w544-h544-l90-rj"
     )
 
     private val dynamicMemoryCache = java.util.concurrent.ConcurrentHashMap<String, String>()
@@ -147,7 +150,7 @@ object ArtistCatalog {
     )
 
     private val CLUSTER_WESTERN_POP_INDIE = listOf(
-        "bruno mars", "taylor swift", "billie eilish", "coldplay", "sabrina carpenter",
+        "radiohead", "bruno mars", "taylor swift", "billie eilish", "coldplay", "sabrina carpenter",
         "olivia rodrigo", "the weeknd", "ed sheeran", "ariana grande", "justin bieber",
         "dua lipa", "maroon 5", "bleachers", "harry styles", "charlie puth", "shawn mendes", "lady gaga"
     )
@@ -251,5 +254,68 @@ object ArtistCatalog {
         ) && titleClean != targetClean && !titleClean.startsWith("$targetClean -")
 
         return isExplicitCollabInTitle
+    }
+
+    /**
+     * Parses collaboration details from track title and artist name.
+     * Returns a pair of (primaryArtist, listOfFeaturedArtists).
+     * Handles:
+     * - Title: "Song Title (feat. Artist B)"
+     * - Title: "Song Title (ft. Artist B, Artist C)"
+     * - Title: "Song Title [feat. Artist B]"
+     * - Title: "Song Title with Artist B"
+     * - Artist: "Artist A & Artist B"
+     * - Artist: "Artist A, Artist B & Artist C"
+     * - Artist: "Artist A x Artist B"
+     * - Artist: "Artist A feat. Artist B"
+     */
+    fun parseCollaborators(rawTitle: String, rawArtist: String): Pair<String, List<String>> {
+        val collaborators = mutableListOf<String>()
+        var primaryArtist = rawArtist.trim()
+
+        try {
+            // 1. Extract from title: (feat. X), [ft. X], (with X)
+            val featTitleRegex = "\\s*[({\\[]\\s*(?:feat\\.?|ft\\.?|featuring|with)\\s+([^()\\[\\]{}]+)[)}\\]]".toRegex(RegexOption.IGNORE_CASE)
+            val titleMatch = featTitleRegex.find(rawTitle)
+            if (titleMatch != null) {
+                val collabStr = titleMatch.groupValues[1]
+                val splitCollabs = collabStr.split(Regex(""",\s*|\s*&\s*|\s+and\s+|\s+x\s+""", RegexOption.IGNORE_CASE))
+                for (c in splitCollabs) {
+                    val cleanC = c.trim()
+                    if (cleanC.isNotBlank() && !collaborators.contains(cleanC) && !cleanC.equals(primaryArtist, ignoreCase = true)) {
+                        collaborators.add(cleanC)
+                    }
+                }
+            }
+
+            // 2. Extract from artist string if it contains multiple artists
+            val featArtistRegex = Regex("""\s+(?:feat\.?|ft\.?|featuring|with)\s+""", RegexOption.IGNORE_CASE)
+            if (featArtistRegex.containsMatchIn(primaryArtist)) {
+                val parts = primaryArtist.split(featArtistRegex, limit = 2)
+                primaryArtist = parts[0].trim()
+                if (parts.size > 1) {
+                    val splitCollabs = parts[1].split(Regex(""",\s*|\s*&\s*|\s+and\s+|\s+x\s+""", RegexOption.IGNORE_CASE))
+                    for (c in splitCollabs) {
+                        val cleanC = c.trim()
+                        if (cleanC.isNotBlank() && !collaborators.contains(cleanC) && !cleanC.equals(primaryArtist, ignoreCase = true)) {
+                            collaborators.add(cleanC)
+                        }
+                    }
+                }
+            } else if (primaryArtist.contains(" & ") || primaryArtist.contains(", ") || primaryArtist.contains(" x ") || primaryArtist.contains(" X ")) {
+                val parts = primaryArtist.split(Regex(""",\s*|\s*&\s*|\s+x\s+|\s+X\s+"""))
+                if (parts.isNotEmpty()) {
+                    primaryArtist = parts[0].trim()
+                    for (i in 1 until parts.size) {
+                        val cleanC = parts[i].trim()
+                        if (cleanC.isNotBlank() && !collaborators.contains(cleanC)) {
+                            collaborators.add(cleanC)
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+
+        return Pair(primaryArtist, collaborators.distinct())
     }
 }

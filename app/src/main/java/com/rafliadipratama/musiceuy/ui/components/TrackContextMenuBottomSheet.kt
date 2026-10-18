@@ -183,7 +183,7 @@ fun TrackContextMenuBottomSheet(
 
             ContextMenuItem(
                 icon = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                iconTint = if (isLiked) BrandGreen else TextSecondary,
+                iconTint = if (isLiked) Color(0xFFFF2D55) else TextSecondary,
                 title = if (isLiked) "Hapus dari Lagu Disukai" else "Sukai Lagu Ini",
                 subtitle = if (isLiked) "Tersimpan di Koleksi" else "Simpan ke daftar favorit",
                 onClick = onToggleLike

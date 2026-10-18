@@ -21,7 +21,9 @@ data class Track(
     val isDownloaded: Boolean = false,
     val fileSizeBytes: Long = 0L,
     val playCount: String? = null,
-    val sourceLabel: String = "Lagu Resmi"
+    val sourceLabel: String = "Lagu Resmi",
+    val featuredArtists: List<String> = emptyList(),
+    val isVideo: Boolean = false
 ) {
     val durationFormatted: String
         get() {
@@ -35,5 +37,25 @@ data class Track(
             if (fileSizeBytes <= 0) return ""
             val mb = fileSizeBytes.toDouble() / (1024 * 1024)
             return String.format("%.1f MB", mb)
+        }
+
+    val cleanTitle: String
+        get() {
+            return try {
+                val videoNoiseRegex = "\\s*[({\\[]\\s*(?:official\\s*(?:music\\s*)?video|video\\s*musik|music\\s*video|official\\s*audio|lyric\\s*video|audio|mv|m/v|4k|hd|live|visualizer|lirik)\\s*[)}\\]]".toRegex(RegexOption.IGNORE_CASE)
+                val cleaned = title.replace(videoNoiseRegex, "").replace(Regex("\\s{2,}"), " ").trim()
+                cleaned.ifBlank { title }
+            } catch (_: Exception) {
+                title
+            }
+        }
+
+    val fullArtistDisplay: String
+        get() {
+            return if (featuredArtists.isNotEmpty()) {
+                "${artist.name}, ${featuredArtists.joinToString(", ")}"
+            } else {
+                artist.name
+            }
         }
 }
