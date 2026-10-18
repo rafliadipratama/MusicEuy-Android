@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material.icons.filled.SettingsBackupRestore
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Upload
 import coil.compose.AsyncImage
@@ -519,6 +520,24 @@ fun LibraryScreen(
                                 tint = BrandGreen,
                                 modifier = Modifier.size(22.dp)
                             )
+                        }
+
+                        // Pembaruan Aplikasi OTA
+                        IconButton(onClick = { viewModel.checkForUpdate(isManual = true) }) {
+                            if (uiState.isCheckingUpdate) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = BrandGreen,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.SystemUpdate,
+                                    contentDescription = "Periksa Pembaruan",
+                                    tint = Color(0xFF69F0AE),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
                         }
                     }
                 }

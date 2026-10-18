@@ -97,6 +97,9 @@ class MainActivity : ComponentActivity() {
                     BackHandler(enabled = uiState.isLanguageDialogVisible) {
                         viewModel.dismissLanguageDialog()
                     }
+                    BackHandler(enabled = uiState.updateInfo != null) {
+                        viewModel.dismissUpdateDialog()
+                    }
                     BackHandler(enabled = uiState.isProfileVisible) {
                         viewModel.closeProfile()
                     }
@@ -467,6 +470,16 @@ class MainActivity : ComponentActivity() {
                             dominantColor = uiState.dominantColor,
                             onDismiss = { viewModel.closeLyricsShare() }
                         )
+                    }
+
+                    // App Update Notification Bottom Sheet
+                    uiState.updateInfo?.let { updateInfo ->
+                        if (updateInfo.isUpdateAvailable) {
+                            com.rafliadipratama.musiceuy.ui.components.AppUpdateBottomSheet(
+                                updateInfo = updateInfo,
+                                onDismiss = { viewModel.dismissUpdateDialog() }
+                            )
+                        }
                     }
                 }
             }

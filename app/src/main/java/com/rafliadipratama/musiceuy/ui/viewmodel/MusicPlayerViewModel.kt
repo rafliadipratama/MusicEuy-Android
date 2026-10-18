@@ -122,6 +122,8 @@ data class PlayerUiState(
     val currentVideoStreamUrl: String? = null,
     val isLoadingVideo: Boolean = false,
     val lyricsOffsetMs: Long = 0L,
+    val updateInfo: com.rafliadipratama.musiceuy.data.network.AppUpdateInfo? = null,
+    val isCheckingUpdate: Boolean = false,
     val isOnline: Boolean = true,
     val error: String? = null
 )
@@ -135,6 +137,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     val playlistImporter = com.rafliadipratama.musiceuy.data.network.PlaylistImporter()
     val connectivityObserver = com.rafliadipratama.musiceuy.util.NetworkConnectivityObserver(application)
     val userProfileManager = com.rafliadipratama.musiceuy.data.local.UserProfileManager(application)
+    val appUpdateManager = com.rafliadipratama.musiceuy.data.network.AppUpdateManager(application)
     private val lrcClient = LrcLibClient(cacheDir = application.filesDir)
     private var sleepTimerJob: Job? = null
 
@@ -203,6 +206,13 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             com.rafliadipratama.musiceuy.audio.AudioEffectManager.state.collect { effectState ->
                 applyPlaybackParameters(effectState.playbackSpeed, effectState.pitchSemitones)
+            }
+        }
+
+        viewModelScope.launch {
+            delay(3500)
+            if (_uiState.value.isOnline) {
+                checkForUpdate(isManual = false)
             }
         }
     }
@@ -2164,6 +2174,45 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun closeLyricsShare() {
         _uiState.update { it.copy(isLyricsShareDialogVisible = false) }
+    }
+
+    fun getCurrentAppVersion(): String = appUpdateManager.getCurrentVersionName()
+
+    fun checkForUpdate(isManual: Boolean = false) {
+        viewModelScope.launch {
+            if (isManual) {
+                _uiState.update { it.copy(isCheckingUpdate = true) }
+            }
+            val info = withContext(Dispatchers.IO) {
+                appUpdateManager.checkForUpdate(isManual = isManual)
+            }
+            if (isManual) {
+                _uiState.update { it.copy(isCheckingUpdate = false) }
+                if (info != null && info.isUpdateAvailable) {
+                    _uiState.update { it.copy(updateInfo = info) }
+                } else if (info != null && !info.isUpdateAvailable) {
+                    _uiState.update {
+                        it.copy(
+                            downloadNotificationMessage = "MusicEuy sudah versi terbaru (v${info.currentVersion})"
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            downloadNotificationMessage = "Gagal memeriksa pembaruan. Silakan periksa koneksi Anda."
+                        )
+                    }
+                }
+            } else {
+                if (info != null && info.isUpdateAvailable) {
+                    _uiState.update { it.copy(updateInfo = info) }
+                }
+            }
+        }
+    }
+
+    fun dismissUpdateDialog() {
+        _uiState.update { it.copy(updateInfo = null) }
     }
 
     override fun onCleared() {

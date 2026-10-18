@@ -6,6 +6,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 
+import com.rafliadipratama.musiceuy.BuildConfig
+
 data class UpdateInfo(
     val hasUpdate: Boolean,
     val latestVersion: String,
@@ -16,7 +18,7 @@ data class UpdateInfo(
 object AppUpdater {
 
     private val client = OkHttpClient()
-    const val CURRENT_VERSION = "v2.5.0"
+    val CURRENT_VERSION: String get() = "v${BuildConfig.VERSION_NAME}"
 
     suspend fun checkForUpdates(): UpdateInfo = withContext(Dispatchers.IO) {
         try {
@@ -45,7 +47,7 @@ object AppUpdater {
                     }
                 }
 
-                val hasUpdate = tagName.isNotBlank() && tagName != CURRENT_VERSION
+                val hasUpdate = isNewerVersion(BuildConfig.VERSION_NAME, tagName)
                 return@withContext UpdateInfo(
                     hasUpdate = hasUpdate,
                     latestVersion = tagName.ifBlank { CURRENT_VERSION },
@@ -57,6 +59,28 @@ object AppUpdater {
             // Silently fallback if offline or API limit reached
         }
         noUpdate()
+    }
+
+    private fun isNewerVersion(current: String, latest: String): Boolean {
+        return try {
+            val currParts = current.removePrefix("v").removePrefix("V")
+                .split(".")
+                .map { part -> part.filter { it.isDigit() }.toIntOrNull() ?: 0 }
+            val latestParts = latest.removePrefix("v").removePrefix("V")
+                .split(".")
+                .map { part -> part.filter { it.isDigit() }.toIntOrNull() ?: 0 }
+
+            val maxLen = maxOf(currParts.size, latestParts.size)
+            for (i in 0 until maxLen) {
+                val c = currParts.getOrElse(i) { 0 }
+                val l = latestParts.getOrElse(i) { 0 }
+                if (l > c) return true
+                if (l < c) return false
+            }
+            false
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun noUpdate() = UpdateInfo(

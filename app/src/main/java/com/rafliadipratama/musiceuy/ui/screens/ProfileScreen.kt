@@ -649,21 +649,7 @@ fun ProfileScreen(
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(Color(0xFF1B222E))
                                     .clickable {
-                                        scope.launch {
-                                            isCheckingUpdate = true
-                                            updateResultText = null
-                                            val info = AppUpdater.checkForUpdates()
-                                            isCheckingUpdate = false
-                                            if (info.hasUpdate) {
-                                                updateResultText = "Versi baru ${info.latestVersion} tersedia!"
-                                                if (info.downloadUrl.isNotBlank()) {
-                                                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(info.downloadUrl))
-                                                    context.startActivity(browserIntent)
-                                                }
-                                            } else {
-                                                updateResultText = "MusicEuy ${AppUpdater.CURRENT_VERSION} adalah versi paling baru."
-                                            }
-                                        }
+                                        viewModel.checkForUpdate(isManual = true)
                                     }
                                     .padding(14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -685,14 +671,14 @@ fun ProfileScreen(
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = "Versi saat ini: ${AppUpdater.CURRENT_VERSION}",
+                                            text = "Versi saat ini: v${viewModel.getCurrentAppVersion()}",
                                             color = TextMuted,
                                             fontSize = 11.sp
                                         )
                                     }
                                 }
 
-                                if (isCheckingUpdate) {
+                                if (uiState.isCheckingUpdate) {
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(18.dp),
                                         color = BrandGreen,
