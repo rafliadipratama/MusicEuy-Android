@@ -3,6 +3,7 @@ package com.rafliadipratama.musiceuy.data.network
 import android.util.Base64
 import com.rafliadipratama.musiceuy.data.model.Album
 import com.rafliadipratama.musiceuy.data.model.Artist
+import com.rafliadipratama.musiceuy.data.model.Playlist
 import com.rafliadipratama.musiceuy.data.model.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -30,7 +31,8 @@ data class SearchAllResults(
 data class ExploreHomeData(
     val trendingTracks: List<Track> = emptyList(),
     val newReleases: List<Album> = emptyList(),
-    val popularArtists: List<Artist> = emptyList()
+    val popularArtists: List<Artist> = emptyList(),
+    val communityPlaylists: List<Playlist> = emptyList()
 )
 
 class MusicStreamSource(
@@ -119,12 +121,16 @@ class MusicStreamSource(
         val artistTracksCache = java.util.concurrent.ConcurrentHashMap<String, List<Track>>()
         val artistProfileCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Artist, List<Album>>>()
 
+        // Home explore cache (data, expireTimestampMs)
+        var homeExploreCache: Pair<ExploreHomeData, Long>? = null
+
         fun clearSongUrlCache() {
             songUrlCache.clear()
             songLoudnessCache.clear()
             searchAllCache.clear()
             artistTracksCache.clear()
             artistProfileCache.clear()
+            homeExploreCache = null
         }
 
         fun getLoudnessDb(videoId: String): Float? {
@@ -765,7 +771,272 @@ class MusicStreamSource(
         result
     }
 
-    suspend fun fetchExploreHome(favoriteArtists: List<String> = emptyList()): ExploreHomeData = withContext(Dispatchers.IO) {
+    private suspend fun browseInnerTube(browseId: String, params: String? = null): JSONObject? = withContext(Dispatchers.IO) {
+        try {
+            val url = "https://music.youtube.com/youtubei/v1/browse"
+            val payload = JSONObject().apply {
+                put("browseId", browseId)
+                if (!params.isNullOrBlank()) {
+                    put("params", params)
+                }
+                put("context", JSONObject().apply {
+                    put("client", JSONObject().apply {
+                        put("clientName", "WEB_REMIX")
+                        put("clientVersion", "1.20240724.01.00")
+                        put("hl", "id")
+                        put("gl", "ID")
+                    })
+                })
+            }
+            val req = Request.Builder()
+                .url(url)
+                .header("Content-Type", "application/json")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36")
+                .post(payload.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        return@withContext JSONObject(body)
+                    }
+                }
+            }
+        } catch (_: Exception) {
+        }
+        null
+    }
+
+    private fun parsePopularArtistsFromCharts(json: JSONObject): List<Artist> {
+        val artists = mutableListOf<Artist>()
+        try {
+            val tabs = json.optJSONObject("contents")
+                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                ?.optJSONArray("tabs")
+            val sections = tabs?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("contents") ?: return emptyList()
+
+            for (s in 0 until sections.length()) {
+                val shelf = sections.optJSONObject(s)?.optJSONObject("musicCarouselShelfRenderer") ?: continue
+                val headerTitle = shelf.optJSONObject("header")
+                    ?.optJSONObject("musicCarouselShelfBasicHeaderRenderer")
+                    ?.optJSONObject("title")
+                    ?.optJSONArray("runs")
+                    ?.optJSONObject(0)
+                    ?.optString("text", "") ?: ""
+
+                if (headerTitle.contains("Artis", ignoreCase = true)) {
+                    val items = shelf.optJSONArray("contents") ?: continue
+                    for (i in 0 until items.length()) {
+                        val item = items.optJSONObject(i)?.optJSONObject("musicResponsiveListItemRenderer") ?: continue
+                        val cols = item.optJSONArray("flexColumns") ?: continue
+                        if (cols.length() < 1) continue
+
+                        val name = cols.optJSONObject(0)
+                            ?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")
+                            ?.optJSONObject("text")
+                            ?.optJSONArray("runs")
+                            ?.optJSONObject(0)
+                            ?.optString("text", "")?.trim() ?: ""
+                        if (name.isBlank()) continue
+
+                        val subs = if (cols.length() > 1) {
+                            cols.optJSONObject(1)
+                                ?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")
+                                ?.optJSONObject("text")
+                                ?.optJSONArray("runs")
+                                ?.optJSONObject(0)
+                                ?.optString("text", "")?.trim()
+                        } else null
+
+                        val browseId = item.optJSONObject("navigationEndpoint")
+                            ?.optJSONObject("browseEndpoint")
+                            ?.optString("browseId", "") ?: "art_${name.hashCode()}"
+
+                        val thumbs = item.optJSONObject("thumbnail")
+                            ?.optJSONObject("musicThumbnailRenderer")
+                            ?.optJSONObject("thumbnail")
+                            ?.optJSONArray("thumbnails")
+                        var avatarUrl = thumbs?.optJSONObject(thumbs.length() - 1)?.optString("url", "") ?: ""
+                        if (avatarUrl.isNotBlank()) {
+                            avatarUrl = avatarUrl.replace(Regex("=w\\d+-h\\d+.*"), "=w500-h500-l90-rj")
+                                .replace(Regex("=s\\d+.*"), "=s500-c-k-c0x00000000-no-cc-rj")
+                        }
+
+                        artists.add(
+                            Artist(
+                                id = browseId,
+                                name = name,
+                                avatarUrl = avatarUrl.ifBlank { null },
+                                isVerified = true
+                            )
+                        )
+                    }
+                    break
+                }
+            }
+        } catch (_: Exception) {
+        }
+        return artists
+    }
+
+    private fun parseNewReleasesFromExplore(json: JSONObject): List<Album> {
+        val albums = mutableListOf<Album>()
+        try {
+            val tabs = json.optJSONObject("contents")
+                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                ?.optJSONArray("tabs")
+            val sections = tabs?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("contents") ?: return emptyList()
+
+            for (s in 0 until sections.length()) {
+                val shelf = sections.optJSONObject(s)?.optJSONObject("musicCarouselShelfRenderer") ?: continue
+                val headerTitle = shelf.optJSONObject("header")
+                    ?.optJSONObject("musicCarouselShelfBasicHeaderRenderer")
+                    ?.optJSONObject("title")
+                    ?.optJSONArray("runs")
+                    ?.optJSONObject(0)
+                    ?.optString("text", "") ?: ""
+
+                val browseIdHeader = shelf.optJSONObject("header")
+                    ?.optJSONObject("musicCarouselShelfBasicHeaderRenderer")
+                    ?.optJSONObject("moreContentButton")
+                    ?.optJSONObject("buttonRenderer")
+                    ?.optJSONObject("navigationEndpoint")
+                    ?.optJSONObject("browseEndpoint")
+                    ?.optString("browseId", "") ?: ""
+
+                if (headerTitle.contains("Album", ignoreCase = true) || browseIdHeader == "FEmusic_new_releases_albums") {
+                    val items = shelf.optJSONArray("contents") ?: continue
+                    for (i in 0 until items.length()) {
+                        val item = items.optJSONObject(i)?.optJSONObject("musicTwoRowItemRenderer") ?: continue
+                        val title = item.optJSONObject("title")
+                            ?.optJSONArray("runs")
+                            ?.optJSONObject(0)
+                            ?.optString("text", "")?.trim() ?: ""
+                        if (title.isBlank()) continue
+
+                        val subRuns = item.optJSONObject("subtitle")?.optJSONArray("runs")
+                        var artistName = ""
+                        if (subRuns != null) {
+                            for (r in 0 until subRuns.length()) {
+                                val txt = subRuns.optJSONObject(r)?.optString("text", "")?.trim() ?: ""
+                                if (txt.isBlank() || txt == "•" || txt.equals("Single", true) || txt.equals("Album", true) || txt.equals("EP", true)) continue
+                                if (artistName.isBlank()) {
+                                    artistName = txt
+                                    break
+                                }
+                            }
+                        }
+                        if (artistName.isBlank()) artistName = "Various Artists"
+
+                        val albumId = item.optJSONObject("navigationEndpoint")
+                            ?.optJSONObject("browseEndpoint")
+                            ?.optString("browseId", "") ?: "alb_${title.hashCode()}"
+
+                        val thumbs = item.optJSONObject("thumbnailRenderer")
+                            ?.optJSONObject("musicThumbnailRenderer")
+                            ?.optJSONObject("thumbnail")
+                            ?.optJSONArray("thumbnails")
+                        var coverUrl = thumbs?.optJSONObject(thumbs.length() - 1)?.optString("url", "") ?: ""
+                        if (coverUrl.isNotBlank()) {
+                            coverUrl = coverUrl.replace(Regex("=w\\d+-h\\d+.*"), "=w544-h544-l90-rj")
+                                .replace(Regex("=s\\d+.*"), "=s544-l90-rj")
+                        }
+
+                        albums.add(
+                            Album(
+                                id = albumId,
+                                title = title,
+                                artistName = artistName,
+                                year = "2026",
+                                coverUrl = coverUrl
+                            )
+                        )
+                    }
+                    break
+                }
+            }
+        } catch (_: Exception) {
+        }
+        return albums
+    }
+
+    private fun parseCommunityPlaylistsFromHome(json: JSONObject): List<Playlist> {
+        val playlists = mutableListOf<Playlist>()
+        try {
+            val tabs = json.optJSONObject("contents")
+                ?.optJSONObject("singleColumnBrowseResultsRenderer")
+                ?.optJSONArray("tabs")
+            val sections = tabs?.optJSONObject(0)
+                ?.optJSONObject("tabRenderer")
+                ?.optJSONObject("content")
+                ?.optJSONObject("sectionListRenderer")
+                ?.optJSONArray("contents") ?: return emptyList()
+
+            for (s in 0 until sections.length()) {
+                val shelf = sections.optJSONObject(s)?.optJSONObject("musicCarouselShelfRenderer") ?: continue
+                val items = shelf.optJSONArray("contents") ?: continue
+                for (i in 0 until items.length()) {
+                    val item = items.optJSONObject(i)?.optJSONObject("musicTwoRowItemRenderer") ?: continue
+                    val browseId = item.optJSONObject("navigationEndpoint")
+                        ?.optJSONObject("browseEndpoint")
+                        ?.optString("browseId", "") ?: ""
+                    if (!browseId.startsWith("VLPL") && !browseId.startsWith("VLOLAK")) continue
+
+                    val title = item.optJSONObject("title")
+                        ?.optJSONArray("runs")
+                        ?.optJSONObject(0)
+                        ?.optString("text", "")?.trim() ?: ""
+                    if (title.isBlank()) continue
+
+                    val subRuns = item.optJSONObject("subtitle")?.optJSONArray("runs")
+                    val author = subRuns?.optJSONObject(0)?.optString("text", "")?.trim() ?: "YouTube Music"
+
+                    val thumbs = item.optJSONObject("thumbnailRenderer")
+                        ?.optJSONObject("musicThumbnailRenderer")
+                        ?.optJSONObject("thumbnail")
+                        ?.optJSONArray("thumbnails")
+                    var coverUrl = thumbs?.optJSONObject(thumbs.length() - 1)?.optString("url", "") ?: ""
+                    if (coverUrl.isNotBlank()) {
+                        coverUrl = coverUrl.replace(Regex("=s\\d+.*"), "=s576")
+                            .replace(Regex("=w\\d+-h\\d+.*"), "=w544-h544-l90-rj")
+                    }
+
+                    playlists.add(
+                        Playlist(
+                            id = browseId,
+                            name = title,
+                            description = "Playlist oleh $author • YouTube Music",
+                            coverUrl = coverUrl,
+                            tracks = emptyList()
+                        )
+                    )
+                }
+            }
+        } catch (_: Exception) {
+        }
+        return playlists
+    }
+
+    suspend fun fetchExploreHome(
+        favoriteArtists: List<String> = emptyList(),
+        forceRefresh: Boolean = false
+    ): ExploreHomeData = withContext(Dispatchers.IO) {
+        if (!forceRefresh) {
+            val cached = homeExploreCache
+            if (cached != null && (System.currentTimeMillis() - cached.second) < 30 * 60 * 1000L) {
+                return@withContext cached.first
+            }
+        }
+
         val topReleasesCatalog = listOf(
             // Top Indonesian Releases
             Album(
@@ -824,8 +1095,6 @@ class MusicStreamSource(
                 year = "2026",
                 coverUrl = "https://yt3.googleusercontent.com/CnRlHvII5qQcoLQ8XW3_0b7qOLpBaDFtrCR-rQaCyKyQxuycqhLUc1PatxRtYFiEpDzZyzWqE1wdO0l9Cw=w544-h544-l90-rj"
             ),
-
-            // Top Western Releases
             Album(
                 id = "MPREb_x6rS8BJlVQW",
                 title = "THE TORTURED POETS DEPARTMENT",
@@ -870,54 +1139,90 @@ class MusicStreamSource(
             )
         )
 
-        // Shuffled & dynamically balanced mix of top Indonesian & Western releases
-        val indoReleases = topReleasesCatalog.filter { it.artistName in listOf("Bernadya", "Hindia", "Tulus", "Sheila On 7", "Mahalini", "NIKI", "Sal Priadi") }.shuffled()
-        val westernReleases = topReleasesCatalog.filter { it.artistName !in listOf("Bernadya", "Hindia", "Tulus", "Sheila On 7", "Mahalini", "NIKI", "Sal Priadi") }.shuffled()
-
-        val dynamicNewReleases = mutableListOf<Album>()
-        val maxPairs = maxOf(indoReleases.size, westernReleases.size)
-        for (idx in 0 until maxPairs) {
-            if (idx < indoReleases.size) dynamicNewReleases.add(indoReleases[idx])
-            if (idx < westernReleases.size) dynamicNewReleases.add(westernReleases[idx])
-        }
-
-        // Adaptive recommendation feed: mix user favorite artists' hits with top trending Indonesia
-        val trending = try {
-            val generalTrending = searchYouTubeMusic("Top Hits Indonesia Terpopuler 2026")
-            if (favoriteArtists.isNotEmpty()) {
-                val topFav = favoriteArtists.take(2).joinToString(" ")
-                val personalized = searchYouTubeMusic("$topFav hits lagu terpopuler")
-                if (personalized.isNotEmpty()) {
-                    val combined = mutableListOf<Track>()
-                    val seenIds = mutableSetOf<String>()
-                    val pIter = personalized.iterator()
-                    val gIter = generalTrending.iterator()
-                    while (pIter.hasNext() || gIter.hasNext()) {
-                        if (pIter.hasNext()) {
-                            val t = pIter.next()
-                            if (seenIds.add(t.id)) combined.add(t)
-                        }
-                        if (gIter.hasNext()) {
-                            val t = gIter.next()
-                            if (seenIds.add(t.id)) combined.add(t)
-                        }
-                    }
-                    combined
-                } else generalTrending
-            } else {
-                generalTrending.ifEmpty { fetchTrending() }
-            }
-        } catch (_: Exception) {
-            fetchTrending()
-        }
-
-        val popularArtists = ArtistCatalog.getCuratedPopularArtists()
-
-        ExploreHomeData(
-            trendingTracks = trending,
-            newReleases = dynamicNewReleases,
-            popularArtists = popularArtists
+        val fallbackPlaylistsCatalog = listOf(
+            Playlist(
+                id = "VLPL4fGSI1pDJn5QPpj0R4vVgRWk8sSq549G",
+                name = "Top 50 Indonesia",
+                description = "Charts Resmi YouTube Music Indonesia",
+                coverUrl = "https://yt3.googleusercontent.com/PR-EXqPEf4aHFFLHknd2II-rvvVINdq7mS_eaHe4NEX11w2P6N8SztkPlouSzvGX6gtuMeeJXro=s576"
+            ),
+            Playlist(
+                id = "VLPLOHoVaTp8R7dqEEhhaOG7yfDoj_y2BrZ4",
+                name = "Top 50 Global",
+                description = "Charts Global Terpopuler YouTube Music",
+                coverUrl = "https://yt3.googleusercontent.com/2908vJ0ZJUho_pXI5ZdX1068GnxX9sp2G8uFN7FqWTsKUNsxuMnCMo8FITvAI7Hapw0ebmmA6Q=s576"
+            ),
+            Playlist(
+                id = "VLOLAK5uy_n7Ig_LAUbKE6_ZeQ1pwHmJcEhwX7BekBo",
+                name = "Viral Hits Indonesia",
+                description = "Lagu Trending & Viral di Indonesia",
+                coverUrl = "https://yt3.googleusercontent.com/DOCADxsKgbDuuqrHTI68WWJd4Tl7q6YQnrKHH412aTaKvv_1IfIRmS3YRq4x548EmOrc-cxcZykz=s576"
+            ),
+            Playlist(
+                id = "VLPL4fGSI1pDJn4lW6MJA2q37CfnraqAizqE",
+                name = "Rilisan Baru 2026",
+                description = "Rilisan Musik Terbaru 2026",
+                coverUrl = "https://yt3.googleusercontent.com/cNzK_K-UoxOwBKfNZxYDwvSARAZMRqPoVMuTikYOYYmw3a6U83RiUg6PrLxRVsKCnztKraAi8kLX=s576"
+            )
         )
+
+        // 1. Concurrently fetch YouTube Music charts, explore, home, and trending
+        val chartsDef = async { browseInnerTube("FEmusic_charts") }
+        val exploreDef = async { browseInnerTube("FEmusic_explore") }
+        val homeDef = async { browseInnerTube("FEmusic_home") }
+        val trendingDef = async {
+            try {
+                val chartTracks = getAlbumTracks("VLPL4fGSI1pDJn5QPpj0R4vVgRWk8sSq549G", "YouTube Music Charts")
+                if (chartTracks.isNotEmpty()) {
+                    if (favoriteArtists.isNotEmpty()) {
+                        val topFav = favoriteArtists.take(2).joinToString(" ")
+                        val personalized = searchYouTubeMusic("$topFav hits lagu terpopuler")
+                        if (personalized.isNotEmpty()) {
+                            val combined = mutableListOf<Track>()
+                            val seenIds = mutableSetOf<String>()
+                            val pIter = personalized.iterator()
+                            val gIter = chartTracks.iterator()
+                            while (pIter.hasNext() || gIter.hasNext()) {
+                                if (pIter.hasNext()) {
+                                    val t = pIter.next()
+                                    if (seenIds.add(t.id)) combined.add(t)
+                                }
+                                if (gIter.hasNext()) {
+                                    val t = gIter.next()
+                                    if (seenIds.add(t.id)) combined.add(t)
+                                }
+                            }
+                            combined
+                        } else chartTracks
+                    } else chartTracks
+                } else searchYouTubeMusic("Top Hits Indonesia Terpopuler 2026")
+            } catch (_: Exception) {
+                fetchTrending()
+            }
+        }
+
+        val chartsJson = chartsDef.await()
+        val exploreJson = exploreDef.await()
+        val homeJson = homeDef.await()
+        val trending = trendingDef.await()
+
+        val dynamicArtists = if (chartsJson != null) parsePopularArtistsFromCharts(chartsJson) else emptyList()
+        val finalArtists = if (dynamicArtists.isNotEmpty()) dynamicArtists else ArtistCatalog.getCuratedPopularArtists()
+
+        val dynamicNewReleases = if (exploreJson != null) parseNewReleasesFromExplore(exploreJson) else emptyList()
+        val finalNewReleases = if (dynamicNewReleases.isNotEmpty()) dynamicNewReleases else topReleasesCatalog
+
+        val dynamicPlaylists = if (homeJson != null) parseCommunityPlaylistsFromHome(homeJson) else emptyList()
+        val finalPlaylists = if (dynamicPlaylists.isNotEmpty()) dynamicPlaylists else fallbackPlaylistsCatalog
+
+        val result = ExploreHomeData(
+            trendingTracks = trending.ifEmpty { fetchTrending() },
+            newReleases = finalNewReleases,
+            popularArtists = finalArtists,
+            communityPlaylists = finalPlaylists
+        )
+        homeExploreCache = Pair(result, System.currentTimeMillis())
+        result
     }
 
     suspend fun searchTracks(query: String): List<Track> = withContext(Dispatchers.IO) {
@@ -1756,17 +2061,21 @@ class MusicStreamSource(
     }
 
     /**
-     * Fetches official curated charts (Top 50 Indonesia, Top 50 Global, Viral Hits) from YouTube Music.
+     * Fetches official curated charts (Top 50 Indonesia, Top 50 Global, Viral Hits) or community playlists from YouTube Music.
      */
-    suspend fun fetchOfficialChart(chartName: String): List<Track> = withContext(Dispatchers.IO) {
-        val browseId = when {
-            chartName.contains("Indonesia", ignoreCase = true) && !chartName.contains("Viral", ignoreCase = true) -> "VLPL4fGSI1pDJn5QPpj0R4vVgRWk8sSq549G"
-            chartName.contains("Global", ignoreCase = true) -> "VLPLOHoVaTp8R7dqEEhhaOG7yfDoj_y2BrZ4"
-            chartName.contains("Viral", ignoreCase = true) -> "VLOLAK5uy_n7Ig_LAUbKE6_ZeQ1pwHmJcEhwX7BekBo"
-            chartName.contains("Rilis", ignoreCase = true) -> "VLPL4fGSI1pDJn4lW6MJA2q37CfnraqAizqE"
-            else -> "VLPL4fGSI1pDJn5QPpj0R4vVgRWk8sSq549G"
+    suspend fun fetchOfficialChart(chartName: String, directBrowseId: String? = null): List<Track> = withContext(Dispatchers.IO) {
+        val browseId = if (!directBrowseId.isNullOrBlank() && (directBrowseId.startsWith("VL") || directBrowseId.startsWith("PL") || directBrowseId.startsWith("MPREb_") || directBrowseId.startsWith("OLAK5uy_"))) {
+            directBrowseId
+        } else {
+            when {
+                chartName.contains("Indonesia", ignoreCase = true) && !chartName.contains("Viral", ignoreCase = true) -> "VLPL4fGSI1pDJn5QPpj0R4vVgRWk8sSq549G"
+                chartName.contains("Global", ignoreCase = true) -> "VLPLOHoVaTp8R7dqEEhhaOG7yfDoj_y2BrZ4"
+                chartName.contains("Viral", ignoreCase = true) -> "VLOLAK5uy_n7Ig_LAUbKE6_ZeQ1pwHmJcEhwX7BekBo"
+                chartName.contains("Rilis", ignoreCase = true) -> "VLPL4fGSI1pDJn4lW6MJA2q37CfnraqAizqE"
+                else -> "VLPL4fGSI1pDJn5QPpj0R4vVgRWk8sSq549G"
+            }
         }
-        val tracks = getAlbumTracks(browseId, "YouTube Music Charts")
+        val tracks = getAlbumTracks(browseId, "YouTube Music")
         if (tracks.isNotEmpty()) {
             tracks
         } else {
@@ -1774,7 +2083,7 @@ class MusicStreamSource(
                 chartName.contains("Indonesia", ignoreCase = true) -> "Top 50 Hits Indonesia Terpopuler 2026"
                 chartName.contains("Global", ignoreCase = true) -> "Top 50 Global Hits Billboard Official 2026"
                 chartName.contains("Viral", ignoreCase = true) -> "Viral Hits TikTok Indonesia Terbaru 2026"
-                else -> "Top Trending Indonesia 2026"
+                else -> "$chartName official playlist"
             }
             searchYouTubeMusic(query)
         }

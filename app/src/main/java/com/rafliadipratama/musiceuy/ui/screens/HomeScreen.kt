@@ -87,6 +87,7 @@ import coil.compose.AsyncImage
 import com.rafliadipratama.musiceuy.R
 import com.rafliadipratama.musiceuy.data.model.Album
 import com.rafliadipratama.musiceuy.data.model.Artist
+import com.rafliadipratama.musiceuy.data.model.Playlist
 import com.rafliadipratama.musiceuy.data.model.Track
 import com.rafliadipratama.musiceuy.ui.components.PlayingIndicator
 import com.rafliadipratama.musiceuy.ui.components.SmoothCornerShape
@@ -596,7 +597,28 @@ fun HomeScreen(
                             }
                         }
 
-                        // 4. Album & Single Rilisan Terbaru (Carousel Cover Persegi)
+                        // 4. Playlist Populer YouTube Music (Carousel Cover Persegi Style Musicfy & YouTube Music)
+                        if (uiState.communityPlaylists.isNotEmpty()) {
+                            item {
+                                SectionHeader(title = "Playlist Populer YouTube Music", icon = Icons.Default.Headphones)
+                                LazyRow(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    items(uiState.communityPlaylists, key = { it.id }) { playlist ->
+                                        PlaylistHomeCard(
+                                            playlist = playlist,
+                                            onClick = { viewModel.openPlaylistFromHome(playlist) }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(18.dp))
+                            }
+                        }
+
+                        // 5. Album & Single Rilisan Terbaru (Carousel Cover Persegi)
                         if (uiState.newReleases.isNotEmpty()) {
                             item {
                                 SectionHeader(title = stringResource(id = R.string.home_albums_singles), icon = Icons.Default.Album)
@@ -889,6 +911,65 @@ private fun AlbumSearchCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "${album.artistName} • ${if (!album.year.isNullOrBlank() && album.year >= "2025") album.year else "2026"}",
+                color = TextSecondary,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlaylistHomeCard(
+    playlist: Playlist,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .width(136.dp)
+            .clip(SmoothCornerShape(14.dp))
+            .background(SurfaceContainerHigh)
+            .pressBounce(pressedScale = 0.95f)
+            .clickable { onClick() }
+            .padding(8.dp)
+    ) {
+        Column {
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(SmoothCornerShape(10.dp))
+                    .background(SurfaceContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!playlist.coverUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = playlist.coverUrl,
+                        contentDescription = playlist.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Headphones,
+                        contentDescription = null,
+                        tint = BrandGreen,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = playlist.name,
+                color = TextPrimary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = playlist.description.ifBlank { "Playlist YouTube Music" },
                 color = TextSecondary,
                 fontSize = 11.sp,
                 maxLines = 1,

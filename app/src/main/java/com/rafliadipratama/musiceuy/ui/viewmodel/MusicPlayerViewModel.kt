@@ -56,6 +56,7 @@ data class PlayerUiState(
     val mostPlayedTracks: List<Track> = emptyList(),
     val newReleases: List<Album> = emptyList(),
     val popularArtists: List<Artist> = emptyList(),
+    val communityPlaylists: List<Playlist> = emptyList(),
     val selectedHomeFilter: String = "Semua",
     val favoriteArtists: List<String> = emptyList(),
     val playlists: List<Playlist> = emptyList(),
@@ -462,6 +463,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                     trendingTracks = filteredTrending,
                     newReleases = explore.newReleases,
                     popularArtists = sortedArtists,
+                    communityPlaylists = explore.communityPlaylists,
                     favoriteArtists = favArtists
                 )
             }
@@ -483,7 +485,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 }
 
                 val explore = withContext(Dispatchers.IO) {
-                    streamSource.fetchExploreHome(favArtists)
+                    streamSource.fetchExploreHome(favArtists, forceRefresh = true)
                 }
                 val filteredTrending = explore.trendingTracks.filter { track ->
                     !notInterestedIds.contains(track.id) &&
@@ -510,6 +512,7 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                         mostPlayedTracks = mostPlayed,
                         newReleases = explore.newReleases,
                         popularArtists = sortedArtists,
+                        communityPlaylists = explore.communityPlaylists,
                         favoriteArtists = favArtists,
                         notInterestedTrackIds = notInterestedIds,
                         notInterestedArtists = notInterestedArtists,
@@ -1661,11 +1664,38 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 )
             }
             val tracks = withContext(Dispatchers.IO) {
-                streamSource.fetchOfficialChart(chartName)
+                streamSource.fetchOfficialChart(chartName, browseId)
             }
             _uiState.update { state ->
                 if (state.selectedPlaylist?.id == browseId) {
                     val cover = tracks.firstOrNull()?.coverUrl ?: ""
+                    state.copy(
+                        isLoadingPlaylist = false,
+                        selectedPlaylist = state.selectedPlaylist.copy(
+                            tracks = tracks,
+                            coverUrl = cover
+                        )
+                    )
+                } else state
+            }
+        }
+    }
+
+    fun openPlaylistFromHome(playlist: Playlist) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isPlayerExpanded = false,
+                    isLoadingPlaylist = true,
+                    selectedPlaylist = playlist.copy(tracks = emptyList())
+                )
+            }
+            val tracks = withContext(Dispatchers.IO) {
+                streamSource.fetchOfficialChart(playlist.name, playlist.id)
+            }
+            _uiState.update { state ->
+                if (state.selectedPlaylist?.id == playlist.id) {
+                    val cover = playlist.coverUrl?.takeIf { it.isNotBlank() } ?: tracks.firstOrNull()?.coverUrl ?: ""
                     state.copy(
                         isLoadingPlaylist = false,
                         selectedPlaylist = state.selectedPlaylist.copy(
