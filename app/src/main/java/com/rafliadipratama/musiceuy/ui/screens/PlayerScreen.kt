@@ -1026,51 +1026,29 @@ private fun BottomUtilityRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 1. Lyrics Pill Toggle
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(if (isLyricsVisible) AccentEmerald.copy(alpha = 0.2f) else DarkSurface)
-                .clickable(onClick = onToggleLyrics)
-                .padding(horizontal = 14.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // 1. Lyrics Button (Clean Icon-only like Queue)
+        IconButton(
+            onClick = onToggleLyrics,
+            modifier = Modifier.size(38.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Lyrics,
-                contentDescription = null,
+                contentDescription = "Lirik",
                 tint = if (isLyricsVisible) AccentEmerald else TextSecondary,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = "Lirik",
-                color = if (isLyricsVisible) AccentEmerald else TextSecondary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold
+                modifier = Modifier.size(22.dp)
             )
         }
 
-        // 2. Autoplay Pill Toggle
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(if (isAutoplayEnabled) AccentEmerald.copy(alpha = 0.2f) else DarkSurface)
-                .clickable(onClick = onToggleAutoplay)
-                .padding(horizontal = 14.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // 2. Radio / Autoplay Button (Clean Icon-only like Queue)
+        IconButton(
+            onClick = onToggleAutoplay,
+            modifier = Modifier.size(38.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.AllInclusive,
-                contentDescription = null,
-                tint = if (isAutoplayEnabled) AccentEmerald else TextMuted,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = if (isAutoplayEnabled) "Radio Aktif" else "Radio Mati",
-                color = if (isAutoplayEnabled) AccentEmerald else TextMuted,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold
+                contentDescription = "Radio",
+                tint = if (isAutoplayEnabled) AccentEmerald else TextSecondary,
+                modifier = Modifier.size(22.dp)
             )
         }
 
