@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.rafliadipratama.musiceuy.ui.components.ParallaxCoverHeader
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -82,43 +84,21 @@ fun ArtistDetailScreen(
             .fillMaxSize()
             .background(ObsidianBackground)
     ) {
+        val listState = rememberLazyListState()
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 200.dp)
         ) {
             // Hero Header with Banner Image, Gradient & Artist Avatar
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
+                ParallaxCoverHeader(
+                    coverUrl = currentArtist.bannerUrl?.takeIf { it.isNotBlank() } ?: currentArtist.avatarUrl,
+                    lazyListState = listState,
+                    headerHeight = 300.dp,
+                    overlayColor = ObsidianBackground
                 ) {
-                    // 1. YouTube Music Banner
-                    if (!currentArtist.bannerUrl.isNullOrBlank()) {
-                        AsyncImage(
-                            model = currentArtist.bannerUrl,
-                            contentDescription = "Banner ${currentArtist.name}",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-
-                    // 2. Dark Scrim & Gradient Overlay
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.Black.copy(alpha = 0.45f),
-                                        Color(0xFF161B22).copy(alpha = 0.65f),
-                                        ObsidianBackground
-                                    )
-                                )
-                            )
-                    )
-
-                    // 3. Back Button
+                    // Back Button
                     IconButton(
                         onClick = onBackClick,
                         modifier = Modifier

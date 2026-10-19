@@ -1067,6 +1067,9 @@ fun LibraryScreen(
                         },
                         onAddToPlaylistClick = {
                             viewModel.showAddToPlaylist(track)
+                        },
+                        onQueueNext = {
+                            viewModel.queueNext(it)
                         }
                     )
                 }

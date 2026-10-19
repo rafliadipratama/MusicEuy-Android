@@ -406,6 +406,9 @@ fun HomeScreen(
                                     },
                                     onToggleLikeClick = {
                                         viewModel.toggleLike(activeTrack)
+                                    },
+                                    onQueueNext = {
+                                        viewModel.queueNext(it)
                                     }
                                 )
                             }

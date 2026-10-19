@@ -139,7 +139,7 @@ class MainActivity : ComponentActivity() {
 
                     LaunchedEffect(uiState.downloadNotificationMessage) {
                         uiState.downloadNotificationMessage?.let { msg ->
-                            Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                            com.rafliadipratama.musiceuy.ui.components.TopToaster.show(msg)
                             viewModel.clearDownloadMessage()
                         }
                     }
@@ -481,6 +481,9 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+
+                    // Floating Dynamic Island Top Toast Host
+                    com.rafliadipratama.musiceuy.ui.components.TopToastHost()
                 }
             }
         }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -57,17 +58,20 @@ fun TrackItem(
     onLongClick: ((Track) -> Unit)? = null,
     onArtistClick: ((Artist) -> Unit)? = null,
     onAddToPlaylistClick: ((Track) -> Unit)? = null,
-    onToggleLikeClick: ((Track) -> Unit)? = null
+    onToggleLikeClick: ((Track) -> Unit)? = null,
+    onQueueNext: ((Track) -> Unit)? = null
 ) {
     val effectiveLiked = isLiked
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (isActive) SurfaceContainerHigh else Color.Transparent)
-            .padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+
+    val itemContent = @Composable {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (isActive) SurfaceContainerHigh else Color.Transparent)
+                .padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
         // Main Clickable Area to Play Track
         Row(
             modifier = Modifier
@@ -233,5 +237,18 @@ fun TrackItem(
                 )
             }
         }
+    }
+}
+
+    if (onQueueNext != null || onToggleLikeClick != null) {
+        SwipeToActionRow(
+            onSwipeRight = { onQueueNext?.invoke(track) },
+            onSwipeLeft = { onToggleLikeClick?.invoke(track) },
+            rightIcon = Icons.AutoMirrored.Filled.QueueMusic,
+            leftIcon = if (effectiveLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+            content = { itemContent() }
+        )
+    } else {
+        itemContent()
     }
 }

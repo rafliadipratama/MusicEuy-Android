@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.rafliadipratama.musiceuy.data.model.Playlist
+import com.rafliadipratama.musiceuy.ui.components.ParallaxCoverHeader
 import com.rafliadipratama.musiceuy.ui.components.TrackItem
 import com.rafliadipratama.musiceuy.ui.theme.BrandGreen
 import com.rafliadipratama.musiceuy.ui.theme.ObsidianBackground
@@ -114,25 +116,19 @@ fun PlaylistDetailScreen(
             .fillMaxSize()
             .background(ObsidianBackground)
     ) {
+        val listState = rememberLazyListState()
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 200.dp)
         ) {
-            // Header with Gradient
+            // Header with Parallax + Gradient
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(290.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    BrandGreen.copy(alpha = 0.25f),
-                                    Color(0xFF161B22),
-                                    ObsidianBackground
-                                )
-                            )
-                        )
+                ParallaxCoverHeader(
+                    coverUrl = currentPlaylist.coverUrl,
+                    lazyListState = listState,
+                    headerHeight = 290.dp,
+                    overlayColor = ObsidianBackground
                 ) {
                     // Top Bar Actions
                     Row(
@@ -494,6 +490,9 @@ fun PlaylistDetailScreen(
                             },
                             onAddToPlaylistClick = {
                                 viewModel.showAddToPlaylist(track)
+                            },
+                            onQueueNext = {
+                                viewModel.queueNext(it)
                             }
                         )
                     }

@@ -36,6 +36,14 @@ import com.rafliadipratama.musiceuy.data.local.LocalMusicHistoryManager
 import com.rafliadipratama.musiceuy.data.model.Album
 import com.rafliadipratama.musiceuy.data.model.Artist
 import com.rafliadipratama.musiceuy.data.model.Playlist
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import com.rafliadipratama.musiceuy.ui.components.TopToaster
 
 enum class RepeatMode { OFF, ALL, ONE }
 
@@ -125,6 +133,7 @@ data class PlayerUiState(
     val updateInfo: com.rafliadipratama.musiceuy.data.network.AppUpdateInfo? = null,
     val isCheckingUpdate: Boolean = false,
     val isOnline: Boolean = true,
+    val audioFormatLabel: String = "",
     val error: String? = null
 )
 
@@ -876,6 +885,23 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
 
             android.util.Log.d("MusicEuy", "Setting MediaItem URI: $activeAudioUri")
 
+            val formatLabel = when {
+                activeAudioUri.endsWith(".flac", ignoreCase = true) -> "FLAC · LOSSLESS"
+                activeAudioUri.endsWith(".wav", ignoreCase = true) -> "WAV · LOSSLESS"
+                activeAudioUri.contains("opus", ignoreCase = true) || activeAudioUri.contains("webm", ignoreCase = true) -> "OPUS · 160 kbps"
+                activeAudioUri.contains("m4a", ignoreCase = true) || activeAudioUri.contains("mp4", ignoreCase = true) -> "AAC · 256 kbps"
+                activeAudioUri.endsWith(".mp3", ignoreCase = true) -> "MP3 · 320 kbps"
+                isLocalAudio -> "AUDIO · LOKAL"
+                else -> {
+                    val quality = com.rafliadipratama.musiceuy.audio.AudioEffectManager.getAudioQuality(getApplication())
+                    when (quality) {
+                        com.rafliadipratama.musiceuy.audio.AudioQuality.TINGGI -> "OPUS · 256 kbps"
+                        else -> "OPUS · 160 kbps"
+                    }
+                }
+            }
+            _uiState.update { it.copy(audioFormatLabel = formatLabel) }
+
             // Extract dynamic palette color from cover artwork
             extractPaletteColor(track.coverUrl)
 
@@ -1205,6 +1231,11 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 val item = list.removeAt(targetIndex)
                 val insertIndex = if (targetIndex < currentIndex) currentIndex else currentIndex + 1
                 list.add(insertIndex.coerceIn(0, list.size), item)
+                TopToaster.show(
+                    message = "'${item.title}' diputar berikutnya",
+                    icon = Icons.AutoMirrored.Filled.QueueMusic,
+                    iconTint = Color(0xFF34C759)
+                )
                 state.copy(
                     queue = list,
                     downloadNotificationMessage = "'${item.title}' diprioritaskan untuk diputar berikutnya."
@@ -1213,6 +1244,31 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 state
             }
         }
+    }
+
+    fun queueNext(track: Track) {
+        _uiState.update { state ->
+            val currentTrack = state.currentTrack
+            val list = state.queue.toMutableList()
+            val existingIndex = list.indexOfFirst { it.id == track.id }
+            if (existingIndex != -1) {
+                list.removeAt(existingIndex)
+            }
+            val insertIndex = if (currentTrack != null) {
+                val curIdx = list.indexOfFirst { it.id == currentTrack.id }
+                if (curIdx != -1) curIdx + 1 else 0
+            } else 0
+            list.add(insertIndex.coerceIn(0, list.size), track)
+            state.copy(
+                queue = list,
+                downloadNotificationMessage = "'${track.title}' diputar berikutnya."
+            )
+        }
+        TopToaster.show(
+            message = "'${track.title}' diputar berikutnya",
+            icon = Icons.AutoMirrored.Filled.QueueMusic,
+            iconTint = Color(0xFF34C759)
+        )
     }
 
     // ==================== Playlist & Artist Management ====================
@@ -1234,6 +1290,11 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
             }
             loadPlaylists()
             if (initialTrack != null) {
+                TopToaster.show(
+                    message = "Playlist '$name' dibuat",
+                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                    iconTint = Color(0xFF1DB954)
+                )
                 _uiState.update { it.copy(isAddToPlaylistSheetVisible = false, trackToAddToPlaylist = null) }
             }
         }
@@ -1245,6 +1306,11 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 historyManager.addTrackToPlaylist(playlistId, track)
             }
             loadPlaylists()
+            TopToaster.show(
+                message = "'${track.title}' ditambahkan ke playlist",
+                icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                iconTint = Color(0xFF1DB954)
+            )
             if (_uiState.value.selectedPlaylist?.id == playlistId) {
                 val updated = withContext(Dispatchers.IO) {
                     historyManager.getAllPlaylists().find { it.id == playlistId }
@@ -1261,6 +1327,11 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                 historyManager.removeTrackFromPlaylist(playlistId, trackId)
             }
             loadPlaylists()
+            TopToaster.show(
+                message = "Lagu dihapus dari playlist",
+                icon = Icons.Default.DeleteOutline,
+                iconTint = Color(0xFFAAAAAA)
+            )
             if (_uiState.value.selectedPlaylist?.id == playlistId) {
                 val updated = withContext(Dispatchers.IO) {
                     historyManager.getAllPlaylists().find { it.id == playlistId }
@@ -1334,6 +1405,19 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
                     RepeatMode.ONE -> Player.REPEAT_MODE_ONE
                 }
                 MusicService.instance?.updateCustomLayout(isNowLiked, repeatModeInt)
+            }
+            if (isNowLiked) {
+                TopToaster.show(
+                    message = "'${track.title}' disukai",
+                    icon = Icons.Default.Favorite,
+                    iconTint = Color(0xFFFF2D55)
+                )
+            } else {
+                TopToaster.show(
+                    message = "Dihapus dari Disukai",
+                    icon = Icons.Default.FavoriteBorder,
+                    iconTint = Color(0xFFAAAAAA)
+                )
             }
         }
     }

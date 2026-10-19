@@ -47,6 +47,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import com.rafliadipratama.musiceuy.ui.components.TrackListSkeleton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -303,21 +304,10 @@ fun SearchScreen(
                     .weight(1f),
                 contentPadding = PaddingValues(bottom = 110.dp, start = 18.dp, end = 18.dp)
             ) {
-                // Loading Indicator
+                // Loading Skeleton Indicator
                 if (uiState.isSearching) {
                     item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                color = BrandGreen,
-                                strokeWidth = 2.5.dp,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
+                        TrackListSkeleton(count = 6)
                     }
                 }
 
@@ -635,6 +625,9 @@ fun SearchScreen(
                                     },
                                     onToggleLikeClick = {
                                         viewModel.toggleLike(activeTrack)
+                                    },
+                                    onQueueNext = {
+                                        viewModel.queueNext(it)
                                     }
                                 )
                             }

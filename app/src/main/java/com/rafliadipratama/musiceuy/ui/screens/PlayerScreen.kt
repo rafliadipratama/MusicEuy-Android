@@ -54,9 +54,8 @@ import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import com.rafliadipratama.musiceuy.ui.components.SquigglySlider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -79,9 +78,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import com.rafliadipratama.musiceuy.ui.components.GlowLyricsLine
+import com.rafliadipratama.musiceuy.ui.components.AudioFormatBadge
 import com.rafliadipratama.musiceuy.ui.components.LikeBurst
 import com.rafliadipratama.musiceuy.ui.components.DoubleTapHeartOverlay
 import com.rafliadipratama.musiceuy.ui.components.SmoothCornerShape
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import com.rafliadipratama.musiceuy.ui.components.press3D
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -140,7 +143,10 @@ fun PlayerScreen(
             val activeIndex = uiState.lyrics.syncedLyrics.indexOfLast { it.timestampMs <= adjustedMs }
             if (activeIndex >= 0 && activeIndex != lastScrolledIndex) {
                 lastScrolledIndex = activeIndex
-                lyricsListState.animateScrollToItem((activeIndex - 1).coerceAtLeast(0))
+                lyricsListState.animateScrollToItem(
+                    index = (activeIndex - 2).coerceAtLeast(0),
+                    scrollOffset = 0
+                )
             }
         }
     }
@@ -389,6 +395,8 @@ private fun PortraitPlayerLayout(
             onToggle = onToggleVideoMode
         )
 
+        val dominantColor = uiState.dominantColor?.let { Color(it.toInt()) } ?: AccentEmerald
+
         // --- 2. Center Area: Large Artwork or Realtime Lyrics or Video Surface ---
         Box(
             modifier = Modifier
@@ -401,6 +409,7 @@ private fun PortraitPlayerLayout(
                     uiState = uiState,
                     currentMs = currentMs,
                     lyricsListState = lyricsListState,
+                    dominantColor = dominantColor,
                     onSeekToLine = onSeekToLine,
                     onAdjustOffset = onAdjustLyricsOffset,
                     onResetOffset = onResetLyricsOffset
@@ -488,6 +497,7 @@ private fun PortraitPlayerLayout(
                 durationMs = durationMs,
                 isUserSeeking = isUserSeeking,
                 seekProgress = seekProgress,
+                isPlaying = uiState.isPlaying,
                 onSeekChange = onSeekChange,
                 onSeekFinished = onSeekFinished
             )
@@ -717,6 +727,7 @@ private fun LandscapePlayerLayout(
 
             // Center: Lyrics (if active) or Spaced Controls
             if (uiState.isLyricsVisible) {
+                val dominantColor = uiState.dominantColor?.let { Color(it.toInt()) } ?: AccentEmerald
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -726,6 +737,7 @@ private fun LandscapePlayerLayout(
                         uiState = uiState,
                         currentMs = currentMs,
                         lyricsListState = lyricsListState,
+                        dominantColor = dominantColor,
                         onSeekToLine = onSeekToLine,
                         onAdjustOffset = onAdjustLyricsOffset,
                         onResetOffset = onResetLyricsOffset
@@ -742,6 +754,7 @@ private fun LandscapePlayerLayout(
                     durationMs = durationMs,
                     isUserSeeking = isUserSeeking,
                     seekProgress = seekProgress,
+                    isPlaying = uiState.isPlaying,
                     onSeekChange = onSeekChange,
                     onSeekFinished = onSeekFinished
                 )
@@ -834,6 +847,11 @@ private fun TrackInfoRow(
                     )
                 }
             }
+
+            if (uiState.audioFormatLabel.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                AudioFormatBadge(text = uiState.audioFormatLabel)
+            }
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -891,21 +909,20 @@ private fun PlaybackSeekbar(
     durationMs: Long,
     isUserSeeking: Boolean,
     seekProgress: Float,
+    isPlaying: Boolean = false,
     onSeekChange: (Float) -> Unit,
     onSeekFinished: () -> Unit
 ) {
     val sliderValue = if (durationMs > 0) (currentMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Slider(
+        SquigglySlider(
             value = if (isUserSeeking) seekProgress else sliderValue,
             onValueChange = onSeekChange,
             onValueChangeFinished = onSeekFinished,
-            colors = SliderDefaults.colors(
-                thumbColor = AccentEmerald,
-                activeTrackColor = AccentEmerald,
-                inactiveTrackColor = DarkSurface
-            ),
+            isPlaying = isPlaying,
+            activeColor = AccentEmerald,
+            inactiveColor = DarkSurface,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -1065,6 +1082,7 @@ private fun SyncedLyricsView(
     uiState: com.rafliadipratama.musiceuy.ui.viewmodel.PlayerUiState,
     currentMs: Long,
     lyricsListState: androidx.compose.foundation.lazy.LazyListState,
+    dominantColor: Color = AccentEmerald,
     onSeekToLine: (Long) -> Unit = {},
     onAdjustOffset: (Long) -> Unit = {},
     onResetOffset: () -> Unit = {}
@@ -1134,28 +1152,44 @@ private fun SyncedLyricsView(
                             }
                         }
 
-                        Text(
-                            text = annotatedString,
-                            textAlign = TextAlign.Center,
-                            lineHeight = 36.sp,
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { onSeekToLine(line.timestampMs) }
-                                .padding(horizontal = 16.dp, vertical = 6.dp)
-                        )
+                                .padding(horizontal = 20.dp, vertical = 4.dp)
+                                .drawBehind {
+                                    drawCircle(
+                                        brush = Brush.radialGradient(
+                                            colors = listOf(
+                                                dominantColor.copy(alpha = 0.35f),
+                                                dominantColor.copy(alpha = 0.12f),
+                                                Color.Transparent
+                                            ),
+                                            center = Offset(size.width / 2f, size.height / 2f),
+                                            radius = size.width * 0.6f
+                                        ),
+                                        radius = size.width * 0.6f,
+                                        center = Offset(size.width / 2f, size.height / 2f)
+                                    )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = annotatedString,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 36.sp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { onSeekToLine(line.timestampMs) }
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                            )
+                        }
                     } else {
-                        Text(
+                        GlowLyricsLine(
                             text = line.text,
-                            color = if (isActive) Color.White else TextMuted.copy(alpha = 0.35f),
-                            fontSize = if (isActive) 23.sp else 18.sp,
-                            fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { onSeekToLine(line.timestampMs) }
-                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                            isActive = isActive,
+                            glowColor = dominantColor,
+                            onTap = { onSeekToLine(line.timestampMs) }
                         )
                     }
                 }
