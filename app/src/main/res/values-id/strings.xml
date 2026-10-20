@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App & General -->
-    <string name="app_name">MusicEuy</string>
+    <string name="app_name">SoraFy</string>
     <string name="widget_description">Pemutar musik ringkas di Layar Utama</string>
     <string name="cancel">Batal</string>
     <string name="ok">OK</string>
@@ -165,7 +165,7 @@
 
     <!-- Notification & Media3 Playback -->
     <string name="music_player">Pemutar Musik</string>
-    <string name="music_player_notification_desc">Notifikasi pemutaran audio latar belakang MusicEuy</string>
+    <string name="music_player_notification_desc">Notifikasi pemutaran audio latar belakang SoraFy</string>
     <string name="playing_status">Sedang Memutar</string>
     <string name="paused_status">Dijeda</string>
 </resources>

@@ -1,12 +1,12 @@
-# MusicEuy Mobile (Android Native)
+# SoraFy Mobile (Android Native)
 
 <div align="center">
 
-![MusicEuy Logo](app/src/main/res/mipmap-xxxhdpi/ic_launcher.png)
+![SoraFy Logo](app/src/main/res/drawable/ic_sorafy_logo.png)
 
-### **Aplikasi Streaming Musik Native Cepat, Ringan, dan Bebas Biaya Langganan untuk Android**
+### **Aplikasi Streaming Musik Native Cepat, Elegan, dan Bebas Biaya Langganan untuk Android**
 
-[![Release](https://img.shields.io/github/v/release/rafliadipratama/MusicEuy-Android?color=00e676&style=flat-square)](https://github.com/rafliadipratama/MusicEuy-Android/releases)
+[![Release](https://img.shields.io/github/v/release/rafliadipratama/sorafy?color=00e599&style=flat-square)](https://github.com/rafliadipratama/sorafy/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
 [![Android](https://img.shields.io/badge/Platform-Android_7.0%2B-brightgreen?style=flat-square&logo=android)](https://www.android.com/)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF?style=flat-square&logo=kotlin)](https://kotlinlang.org/)
@@ -16,9 +16,20 @@
 
 ---
 
-## 🎧 Tentang MusicEuy
+## 🎧 Tentang SoraFy
 
-**MusicEuy** adalah pemutar dan pengalir musik modern untuk perangkat Android yang dibangun menggunakan **Kotlin** dan **Jetpack Compose**. Dirancang untuk menghadirkan pengalaman mendengarkan musik sekelas aplikasi premium: **tanpa iklan, tanpa batasan langganan, dan dengan performa pemutaran instan**.
+**SoraFy** adalah pemutar dan pengalir musik modern untuk perangkat Android yang dibangun menggunakan **Kotlin** dan **Jetpack Compose**. Dirancang dengan filosofi desain modern, gelap elegan (*Obsidian Void*), beraksen *Priangan Emerald* & *Electric Lime*, menghadirkan pengalaman mendengarkan musik sekelas aplikasi premium: **tanpa iklan, tanpa batasan langganan, dan dengan performa pemutaran instan**.
+
+---
+
+## 🎨 Sistem Desain & Palet Warna Resmi
+
+| Token Warna | Hex Code | Peran di Aplikasi |
+| :--- | :--- | :--- |
+| **Obsidian Void** | `#0B0D10` | Latar belakang utama (background) yang dalam, elegan, dan ramah layar OLED/AMOLED |
+| **Slate Surface** | `#181C22` | Warna dasar kartu (*card*), wadah baris lagu (*track row*), *bottom sheet*, navigasi bar, dan *mini-player* |
+| **Priangan Emerald** | `#00E599` | Warna aksen utama (*primary brand*): tombol putar (*play*), *wavy seekbar*, indikator aktif, dan logo |
+| **Electric Lime** | `#C8FF29` | Aksen sekunder bernuansa *neon energetic*: *badge* kualitas audio, *highlight*, tag lirik, dan tombol aksi cepat |
 
 ---
 
@@ -36,22 +47,24 @@
 ### 📈 3. Top 50 Hits Indonesia & Global Resmi
 - Jelajahi tangga lagu terpopuler harian dan mingguan langsung dari data resmi YouTube Music Charts dengan sampul album beresolusi tinggi.
 
-### 🎤 4. Lirik Real-Time Tersinkronisasi
-- Lirik lagu bergulir otomatis (*synchronized lyrics*) mengikuti ketukan dan detik lagu secara *real-time* via integrasi LRCLIB.
+### 🎤 4. Apple Music-Style Glow Karaoke Lyrics
+- Tampilan lirik tersinkronisasi (*synchronized lyrics*) di mana baris aktif menyala terang dengan pendaran cahaya (*ambient radial aura glow*), sementara baris sekitarnya meredup lembut.
 
-### 📱 5. Pemutaran Latar Belakang (*Background Playback*) & Kontrol Lockscreen
+### 🌊 5. Bouncy Squiggly / Wavy Seekbar
+- Bilah progres lagu bergelombang dinamis seperti ombak audio hidup saat musik berputar, dan merata (*flatten*) elastis saat disentuh atau di-pause.
+
+### 🏷️ 6. Badge Format & Kualitas Audio
+- Indikator kualitas audio teknis (*OPUS 160/256 kbps, AAC, FLAC/WAV Lossless*) langsung di bawah judul lagu.
+
+### 📱 7. Pemutaran Latar Belakang (*Background Playback*) & Kontrol Lockscreen
 - Didukung penuh oleh **AndroidX Media3 (ExoPlayer)** dan `MediaSessionService`.
 - Kendalikan lagu langsung dari panel notifikasi Android, jam tangan pintar (smartwatch), maupun layar kunci (*lockscreen*).
 
-### 💾 6. Mode Offline & Penyimpanan Lokal
+### 💾 8. Mode Offline & Penyimpanan Lokal
 - Simpan lagu favorit ke perangkat untuk didengarkan saat bepergian tanpa kuota data internet.
 
-### 🎛️ 7. Equalizer & Efek Suara
-- Kustomisasi kualitas suara sesuai selera dengan Bass Boost, Virtualizer, Reverb, dan pemilihan bitrate audio (Normal 160kbps / High 256kbps).
-
-### 🎨 8. Tampilan Modern Material 3
-- Mengadopsi desain gelap elegan beraksen Emerald & Purple khas MusicEuy.
-- Dilengkapi animasi fluid waveform visualizer, *floating mini player*, dan antarmuka pemutar layar penuh (*full player*).
+### 🎛️ 9. Equalizer & Efek Suara
+- Kustomisasi kualitas suara sesuai selera dengan Bass Boost, Virtualizer, Reverb, dan pemilihan bitrate audio.
 
 ---
 
@@ -72,10 +85,10 @@
 
 ## 📥 Unduh & Instalasi
 
-Kamu dapat mengunduh berkas APK siap pakai langsung dari halaman [**GitHub Releases**](https://github.com/rafliadipratama/MusicEuy-Android/releases).
+Kamu dapat mengunduh berkas APK siap pakai langsung dari halaman [**GitHub Releases**](https://github.com/rafliadipratama/sorafy/releases).
 
 1. Buka rilis terbaru di tab **Releases**.
-2. Unduh berkas `MusicEuy-v1.6.0.apk`.
+2. Unduh berkas APK terbaru.
 3. Pasang APK pada perangkat Android kamu (pastikan izin instalasi dari sumber tidak dikenal telah diaktifkan).
 4. Nikmati musik sepuasnya!
 
@@ -91,8 +104,8 @@ Kamu dapat mengunduh berkas APK siap pakai langsung dari halaman [**GitHub Relea
 ### Langkah-langkah
 ```bash
 # 1. Kloning repositori
-git clone https://github.com/rafliadipratama/MusicEuy-Android.git
-cd MusicEuy-Android
+git clone https://github.com/rafliadipratama/sorafy.git
+cd sorafy
 
 # 2. Build APK Release
 ./gradlew assembleRelease

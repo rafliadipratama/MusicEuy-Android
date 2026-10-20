@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MusicEuy-Android"
+rootProject.name = "sorafy"
 include(":app")

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App & General -->
-    <string name="app_name">MusicEuy</string>
+    <string name="app_name">SoraFy</string>
     <string name="widget_description">Compact music player for Home Screen</string>
     <string name="cancel">Cancel</string>
     <string name="ok">OK</string>
@@ -165,7 +165,7 @@
 
     <!-- Notification & Media3 Playback -->
     <string name="music_player">Music Player</string>
-    <string name="music_player_notification_desc">MusicEuy background playback notification</string>
+    <string name="music_player_notification_desc">SoraFy background playback notification</string>
     <string name="playing_status">Playing</string>
     <string name="paused_status">Paused</string>
     <string name="action_like">Like</string>

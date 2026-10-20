@@ -5,8 +5,8 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
 private val DarkColorScheme = darkColorScheme(
-    primary = AccentPurple,
-    secondary = AccentEmerald,
+    primary = AccentEmerald,
+    secondary = AccentPurple,
     background = DarkBackground,
     surface = DarkSurface,
     surfaceVariant = DarkSurfaceVariant,
@@ -16,10 +16,13 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun MusicEuyTheme(content: @Composable () -> Unit) {
+fun SoraFyTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = DarkColorScheme,
         typography = MusicEuyTypography,
         content = content
     )
 }
+
+@Composable
+fun MusicEuyTheme(content: @Composable () -> Unit) = SoraFyTheme(content = content)

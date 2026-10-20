@@ -52,7 +52,7 @@ class MusicWidgetProvider : AppWidgetProvider() {
 
             val views = RemoteViews(context.packageName, R.layout.widget_music_player)
 
-            views.setTextViewText(R.id.widget_track_title, track?.title ?: "MusicEuy")
+            views.setTextViewText(R.id.widget_track_title, track?.title ?: "SoraFy")
             views.setTextViewText(R.id.widget_artist_name, track?.artist?.name ?: "Sentuh untuk memutar musik")
             views.setImageViewResource(
                 R.id.widget_btn_play_pause,

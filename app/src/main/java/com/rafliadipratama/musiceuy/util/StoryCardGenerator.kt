@@ -84,7 +84,7 @@ object StoryCardGenerator {
                 textAlign = Paint.Align.CENTER
                 isAntiAlias = true
             }
-            canvas.drawText("MusicEuy • Sedang Memutar", width / 2f, 226f, brandTextPaint)
+            canvas.drawText("SoraFy • Sedang Memutar", width / 2f, 226f, brandTextPaint)
 
             // 3. Draw Album Cover with Rounded Corners & Subtle Shadow
             val coverSize = 740f
@@ -164,7 +164,7 @@ object StoryCardGenerator {
                 textAlign = Paint.Align.CENTER
                 isAntiAlias = true
             }
-            canvas.drawText("Dengarkan di MusicEuy App", width / 2f, height - 120f, footerPaint)
+            canvas.drawText("Dengarkan di SoraFy App", width / 2f, height - 120f, footerPaint)
 
             // Save to cache directory
             val cardsDir = File(context.cacheDir, "story_cards")
@@ -185,7 +185,7 @@ object StoryCardGenerator {
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "image/png"
                 putExtra(Intent.EXTRA_STREAM, contentUri)
-                putExtra(Intent.EXTRA_TEXT, "Sedang mendengarkan \"${track.title}\" oleh ${track.artist.name} di MusicEuy 🎵")
+                putExtra(Intent.EXTRA_TEXT, "Sedang mendengarkan \"${track.title}\" oleh ${track.artist.name} di SoraFy 🎵")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }

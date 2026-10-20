@@ -204,16 +204,16 @@ fun HomeScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_musiceuy_logo),
-                        contentDescription = "MusicEuy Logo",
+                        painter = painterResource(id = R.drawable.ic_sorafy_logo),
+                        contentDescription = "SoraFy Logo",
                         tint = Color.Unspecified,
                         modifier = Modifier.size(34.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "MusicEuy",
+                        text = "sorafy",
                         color = TextPrimary,
-                        fontSize = 22.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = (-0.5).sp
                     )
