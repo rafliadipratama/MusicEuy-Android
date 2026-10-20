@@ -1,0 +1,28 @@
+[package]
+name = "sorafy-desktop"
+version = "1.0.0"
+description = "SoraFy Desktop - High-fidelity cross-platform music streaming (Linux & Windows)"
+edition = "2021"
+authors = ["Rafli Adi Pratama"]
+
+[lib]
+name = "sorafy_lib"
+path = "src/lib.rs"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "sorafy-desktop"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+async-trait = "0.1"
+thiserror = "2.0"
+regex = "1.10"
+dirs = "6.0"
+
+[features]
+default = []

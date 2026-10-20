@@ -1,16 +1,18 @@
-# SoraFy Mobile (Android Native)
+# SoraFy (Multiplatform Monorepo)
 
 <div align="center">
 
-![SoraFy Logo](app/src/main/res/drawable/ic_sorafy_logo.png)
+<img src="shared/assets/logo_monogram.png" alt="SoraFy Logo" width="128" />
 
-### **Aplikasi Streaming Musik Native Cepat, Elegan, dan Bebas Biaya Langganan untuk Android**
+### **Aplikasi Streaming Musik Cepat, Elegan, dan Bebas Biaya Langganan untuk Android, Linux, dan Windows**
 
 [![Release](https://img.shields.io/github/v/release/rafliadipratama/sorafy?color=00e599&style=flat-square)](https://github.com/rafliadipratama/sorafy/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](LICENSE)
 [![Android](https://img.shields.io/badge/Platform-Android_7.0%2B-brightgreen?style=flat-square&logo=android)](https://www.android.com/)
+[![Linux](https://img.shields.io/badge/Platform-Linux_(AppImage%20%7C%20deb)-FCC624?style=flat-square&logo=linux&logoColor=black)](https://kernel.org/)
+[![Windows](https://img.shields.io/badge/Platform-Windows_10%2F11-0078D6?style=flat-square&logo=windows)](https://www.microsoft.com/)
+[![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF?style=flat-square&logo=kotlin)](https://kotlinlang.org/)
-[![Jetpack Compose](https://img.shields.io/badge/Jetpack_Compose-Material_3-4285F4?style=flat-square&logo=jetpackcompose)](https://developer.android.com/jetpack/compose)
 
 </div>
 
@@ -18,106 +20,121 @@
 
 ## 🎧 Tentang SoraFy
 
-**SoraFy** adalah pemutar dan pengalir musik modern untuk perangkat Android yang dibangun menggunakan **Kotlin** dan **Jetpack Compose**. Dirancang dengan filosofi desain modern, gelap elegan (*Obsidian Void*), beraksen *Priangan Emerald* & *Electric Lime*, menghadirkan pengalaman mendengarkan musik sekelas aplikasi premium: **tanpa iklan, tanpa batasan langganan, dan dengan performa pemutaran instan**.
+**SoraFy** adalah aplikasi pemutar dan pengalir musik lintas platform (*cross-platform*) modern yang dibangun dengan arsitektur **Monorepo** dan mengusung filosofi **Domain-Driven Design (DDD)**. 
+
+Tersedia untuk:
+- 📱 **Android**: Native Kotlin + Jetpack Compose (Material 3) + AndroidX Media3
+- 🐧 **Linux**: Native Desktop App (Rust + Tauri v2)
+- 🪟 **Windows**: Native Desktop App (Rust + Tauri v2)
+
+Dirancang dengan nuansa visual gelap premium: kanvas *Obsidian Void*, kartu *Slate Surface*, serta aksen kembar *Priangan Emerald* & *Electric Lime*.
 
 ---
 
 ## 🎨 Sistem Desain & Palet Warna Resmi
 
-| Token Warna | Hex Code | Peran di Aplikasi |
+| Token Desain | Kode Hex | Peran Antarmuka |
 | :--- | :--- | :--- |
-| **Obsidian Void** | `#0B0D10` | Latar belakang utama (background) yang dalam, elegan, dan ramah layar OLED/AMOLED |
-| **Slate Surface** | `#181C22` | Warna dasar kartu (*card*), wadah baris lagu (*track row*), *bottom sheet*, navigasi bar, dan *mini-player* |
-| **Priangan Emerald** | `#00E599` | Warna aksen utama (*primary brand*): tombol putar (*play*), *wavy seekbar*, indikator aktif, dan logo |
-| **Electric Lime** | `#C8FF29` | Aksen sekunder bernuansa *neon energetic*: *badge* kualitas audio, *highlight*, tag lirik, dan tombol aksi cepat |
+| **Obsidian Void** | `#0B0D10` | Latar belakang kanvas utama (*canvas background*), ramah layar OLED/AMOLED |
+| **Slate Surface** | `#181C22` | Warna dasar kartu (*cards*), wadah baris lagu (*track rows*), *mini-player*, dan laci samping |
+| **Priangan Emerald** | `#00E599` | Warna aksen utama (*primary brand*): tombol putar (*play*), *wavy seekbar*, logo, dan indikator aktif |
+| **Electric Lime** | `#C8FF29` | Aksen sekunder *neon energetic*: *glow active lyrics*, *badge* kualitas audio, dan highlight status |
+
+---
+
+## 🏛️ Arsitektur Monorepo & Domain-Driven Design (DDD)
+
+Repository ini disusun dalam struktur **Monorepo** yang memisahkan tanggung jawab domain bisnis dari implementasi infrastruktur dan presentasi:
+
+```text
+sorafy/
+├── android/                   # Aplikasi Mobile Android (Kotlin + Jetpack Compose)
+│   ├── app/                   # Sumber kode Android native (Media3, UI, Fingerprinting)
+│   ├── build.gradle.kts       # Konfigurasi Gradle root Android
+│   └── settings.gradle.kts
+│
+├── desktop/                   # Aplikasi Desktop Windows & Linux (Rust + Tauri v2)
+│   ├── src-tauri/             # Backend Rust berarsitektur Hexagonal / DDD
+│   │   ├── src/
+│   │   │   ├── domain/        # Lapisan Domain Inti (Bebas framework)
+│   │   │   │   ├── model.rs   # Entity & Value Object: Track, Artist, Album, Lyrics, PlaybackState
+│   │   │   │   ├── ports.rs   # Trait / Port: AudioPlayerPort, CatalogRepositoryPort, LyricsRepositoryPort
+│   │   │   │   └── error.rs   # Domain Error types
+│   │   │   ├── application/   # Lapisan Aplikasi & Use Cases
+│   │   │   │   ├── player_service.rs   # Orchestration antrean & pemutaran
+│   │   │   │   ├── catalog_service.rs  # Pencarian & katalog musik
+│   │   │   │   ├── lyrics_service.rs   # Sinkronisasi lirik LRCLIB
+│   │   │   │   └── commands.rs         # Tauri IPC Command Handlers
+│   │   │   └── infrastructure/         # Lapisan Adapter & Infrastruktur
+│   │   │       ├── audio_engine.rs     # Implementasi AudioPlayerPort
+│   │   │       ├── innertube_client.rs # Implementasi CatalogRepositoryPort (Streaming Resolver)
+│   │   │       ├── lrclib_client.rs    # Implementasi LyricsRepositoryPort (LrcLib Parser)
+│   │   │       └── local_storage.rs    # Implementasi StoragePort (Riwayat & Favorit)
+│   │   └── tauri.conf.json    # Konfigurasi jendela & bundle Tauri v2
+│   └── src/                   # Antarmuka Desktop Modern (SoraFy UI + Canvas Squiggly Wave)
+│
+├── shared/                    # Aset Bersama & Token Desain Lintas Platform
+│   ├── design/
+│   │   ├── tokens.json        # Nilai token resmi (warna, tipografi, radius, shadow)
+│   │   └── colors.css         # Variabel CSS siap pakai
+│   └── assets/                # Logo monogram, ikon origami, dan aset visual
+│
+└── .github/workflows/
+    └── release.yml            # CI/CD otomatis untuk rilis APK, AppImage, Deb, dan Windows EXE
+```
 
 ---
 
 ## ✨ Fitur Unggulan
 
-### 🔍 1. Pengenal Musik Shazam Nyata (*Acoustic Fingerprinting*)
-- Deteksi lagu yang sedang diputar di sekitar kamu hanya dengan mendekatkan smartphone ke sumber audio.
-- Menggunakan algoritma sidik jari akustik murni (*Fast Fourier Transform / Cooley-Tukey DIT & Hanning windowing*) yang di-porting langsung ke Kotlin tanpa dependensi library eksternal yang berat.
-- Lagu yang terdeteksi otomatis disinkronkan ke katalog YouTube Music sehingga **bisa langsung diputar dan distreaming saat itu juga**.
-
-### ⚡ 2. Streaming Unthrottled & Preload Antrean
-- **Bypass Throttling YouTube**: Streaming audio dimulai dalam hitungan milidetik tanpa *buffering* berlebih berkat *Unthrottled Stream Resolver*.
-- **Smart TTL Caching & Preloading**: Lagu berikutnya dalam antrean otomatis disiapkan di memori latar belakang agar transisi antarlagu terasa mulus tanpa jeda.
-
-### 📈 3. Top 50 Hits Indonesia & Global Resmi
-- Jelajahi tangga lagu terpopuler harian dan mingguan langsung dari data resmi YouTube Music Charts dengan sampul album beresolusi tinggi.
-
-### 🎤 4. Apple Music-Style Glow Karaoke Lyrics
-- Tampilan lirik tersinkronisasi (*synchronized lyrics*) di mana baris aktif menyala terang dengan pendaran cahaya (*ambient radial aura glow*), sementara baris sekitarnya meredup lembut.
-
-### 🌊 5. Bouncy Squiggly / Wavy Seekbar
-- Bilah progres lagu bergelombang dinamis seperti ombak audio hidup saat musik berputar, dan merata (*flatten*) elastis saat disentuh atau di-pause.
-
-### 🏷️ 6. Badge Format & Kualitas Audio
-- Indikator kualitas audio teknis (*OPUS 160/256 kbps, AAC, FLAC/WAV Lossless*) langsung di bawah judul lagu.
-
-### 📱 7. Pemutaran Latar Belakang (*Background Playback*) & Kontrol Lockscreen
-- Didukung penuh oleh **AndroidX Media3 (ExoPlayer)** dan `MediaSessionService`.
-- Kendalikan lagu langsung dari panel notifikasi Android, jam tangan pintar (smartwatch), maupun layar kunci (*lockscreen*).
-
-### 💾 8. Mode Offline & Penyimpanan Lokal
-- Simpan lagu favorit ke perangkat untuk didengarkan saat bepergian tanpa kuota data internet.
-
-### 🎛️ 9. Equalizer & Efek Suara
-- Kustomisasi kualitas suara sesuai selera dengan Bass Boost, Virtualizer, Reverb, dan pemilihan bitrate audio.
+1. **Squiggly Waveform Seekbar (Android & Desktop)**: Bilah progres lagu bergelombang dinamis sinusoidal yang hidup saat lagu berputar dan merata elastis saat dihentikan.
+2. **Apple Music-Style Glowing Karaoke Lyrics**: Lirik tersinkronisasi (*timestamped*) dengan pendaran cahaya (*ambient neon glow*) pada baris aktif yang bergerak otomatis (*auto-scroll*).
+3. **High-Fidelity Audio Badge**: Indikator langsung kualitas berkas (*FLAC Lossless, Opus Hi-Res 320kbps, AAC High*).
+4. **Pendeteksi Musik Shazam Nyata (Android)**: Identifikasi lagu sekitar secara instan menggunakan sidik jari akustik *Fast Fourier Transform* (FFT).
+5. **Streaming Unthrottled**: Bebas buffering tanpa throttling dengan *smart preloading*.
+6. **Top Toast Notifications**: Notifikasi melayang elegan dari atas layar saat lagu ditambahkan ke antrean atau disukai.
+7. **Satu Tautan Distribusi Rilis**: Pengguna cukup membuka satu tautan GitHub Release untuk mengunduh versi Android, Linux, maupun Windows.
 
 ---
 
-## 🛠️ Arsitektur & Teknologi
+## 🚀 Panduan Membangun (*Build Instructions*)
 
-| Komponen | Teknologi |
-| :--- | :--- |
-| **Bahasa Utama** | Kotlin 2.1 |
-| **Framework UI** | Jetpack Compose + Material 3 (Declarative UI) |
-| **Audio Engine** | AndroidX Media3 ExoPlayer (`1.5.0`) & MediaSessionService |
-| **Pendeteksi Musik** | Pure Kotlin FFT Acoustic Landmark + Shazam Discovery API |
-| **Katalog & Ekstraktor** | NewPipe Extractor & Innertube Protocol |
-| **HTTP Client** | OkHttp 4.12 |
-| **Pemuat Gambar** | Coil Compose 2.7 |
-| **Pola Arsitektur** | Clean MVVM (Model-View-ViewModel) + Coroutines & StateFlow |
+### 1. Membangun Android (APK)
 
----
-
-## 📥 Unduh & Instalasi
-
-Kamu dapat mengunduh berkas APK siap pakai langsung dari halaman [**GitHub Releases**](https://github.com/rafliadipratama/sorafy/releases).
-
-1. Buka rilis terbaru di tab **Releases**.
-2. Unduh berkas APK terbaru.
-3. Pasang APK pada perangkat Android kamu (pastikan izin instalasi dari sumber tidak dikenal telah diaktifkan).
-4. Nikmati musik sepuasnya!
-
----
-
-## 💻 Cara Membangun dari Sumber (*Build from Source*)
-
-### Prasyarat
-- **JDK**: Java Development Kit 21 atau lebih baru
-- **Android SDK**: Target API 35 (Android 15)
-- **Gradle**: Menggunakan Gradle Wrapper bawaan proyek
-
-### Langkah-langkah
 ```bash
-# 1. Kloning repositori
-git clone https://github.com/rafliadipratama/sorafy.git
-cd sorafy
-
-# 2. Build APK Release
+cd android
+./gradlew assembleDebug
+# atau untuk release APK siap pasang:
 ./gradlew assembleRelease
+```
+*Hasil APK berada di `android/app/build/outputs/apk/`.*
 
-# 3. APK hasil build akan tersedia di:
-# app/build/outputs/apk/release/app-release.apk
+### 2. Menjalankan & Membangun Desktop (Linux & Windows)
+
+**Menjalankan Core Engine Rust DDD:**
+```bash
+cd desktop/src-tauri
+cargo run
 ```
 
+**Membangun Aplikasi Desktop (Tauri v2):**
+```bash
+cd desktop
+npm install
+npx tauri build
+```
+*Hasil binary installer Linux (`.AppImage`, `.deb`) atau Windows (`.exe`, `.msi`) akan otomatis tersedia di `desktop/src-tauri/target/release/bundle/`.*
+
 ---
 
-## 📜 Lisensi
+## 📥 Unduh Rilis Resmi
 
-Proyek ini dilisensikan di bawah ketentuan [**GNU General Public License v3.0 (GPL-3.0)**](LICENSE).
+Seluruh versi rilis untuk semua platform (Android APK, Linux AppImage/deb, Windows exe) dipublikasikan secara terpadu di:
+👉 **[Unduh SoraFy di GitHub Releases](https://github.com/rafliadipratama/sorafy/releases/latest)**
 
-Dibuat dan dikembangkan oleh **[Rafli Adi Pratama](https://github.com/rafliadipratama)**.
+---
+
+## 📄 Lisensi
+
+Proyek ini dilisensikan di bawah [GNU General Public License v3.0 (GPLv3)](LICENSE).
+Dibuat dengan dedikasi oleh [Rafli Adi Pratama](https://github.com/rafliadipratama).

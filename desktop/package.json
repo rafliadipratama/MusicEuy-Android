@@ -1,0 +1,18 @@
+{
+  "name": "sorafy-desktop",
+  "version": "1.0.0",
+  "description": "SoraFy Desktop Music Player for Linux & Windows",
+  "main": "src/index.html",
+  "scripts": {
+    "start": "npx serve src -p 3000",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "keywords": ["sorafy", "music", "desktop", "tauri", "rust"],
+  "author": "Rafli Adi Pratama",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

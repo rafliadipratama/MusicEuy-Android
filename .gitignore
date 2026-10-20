@@ -12,3 +12,11 @@ captures/
 *.apk
 !packages/*.apk
 output.json
+
+# Rust build artifacts
+target/
+**/target/
+
+# Node dependencies
+node_modules/
+**/node_modules/
