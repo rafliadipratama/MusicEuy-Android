@@ -1,18 +1,26 @@
 {
-  "name": "sorafy-desktop",
+  "name": "sorafy",
   "version": "1.0.0",
-  "description": "SoraFy Desktop Music Player for Linux & Windows",
-  "main": "src/index.html",
+  "description": "SoraFy - High-fidelity cross-platform music streaming (Linux & Windows)",
+  "main": "electron-main.js",
   "scripts": {
-    "start": "npx serve src -p 3000",
+    "start": "electron .",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },
-  "keywords": ["sorafy", "music", "desktop", "tauri", "rust"],
+  "keywords": [
+    "sorafy",
+    "music",
+    "desktop",
+    "tauri",
+    "rust",
+    "electron"
+  ],
   "author": "Rafli Adi Pratama",
   "license": "GPL-3.0",
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0"
+    "@tauri-apps/cli": "^2.0.0",
+    "electron": "^44.9.2"
   }
 }
