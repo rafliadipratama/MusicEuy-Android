@@ -11,6 +11,7 @@ captures/
 .cxx/
 *.apk
 !packages/*.apk
+!**/packages/*.apk
 output.json
 
 # Rust build artifacts
