@@ -299,7 +299,7 @@ class MainActivity : ComponentActivity() {
 
                     // Queue Bottom Sheet with Scrim
                     AnimatedVisibility(
-                        visible = uiState.isQueueVisible,
+                        visible = uiState.isQueueVisible && !uiState.isPlayerExpanded,
                         enter = fadeIn(),
                         exit = fadeOut()
                     ) {

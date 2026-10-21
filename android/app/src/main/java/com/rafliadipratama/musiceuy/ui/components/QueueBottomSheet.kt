@@ -72,101 +72,117 @@ fun QueueBottomSheet(
     onReorderUpcoming: (fromIndex: Int, toIndex: Int) -> Unit = { _, _ -> },
     onMoveTrackToNext: (trackId: String) -> Unit = {},
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    embedded: Boolean = false
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.75f)
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .background(ObsidianBackground)
+            .then(if (embedded) Modifier.fillMaxHeight() else Modifier
+                .fillMaxHeight(0.75f)
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                .background(ObsidianBackground))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp)
         ) {
-            // Drag handle
-            Box(
-                modifier = Modifier
-                    .size(width = 40.dp, height = 4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.2f))
-                    .align(Alignment.CenterHorizontally)
-            )
+            if (!embedded) {
+                // Drag handle
+                Box(
+                    modifier = Modifier
+                        .size(width = 40.dp, height = 4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color.White.copy(alpha = 0.2f))
+                        .align(Alignment.CenterHorizontally)
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // Header Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                        contentDescription = null,
-                        tint = BrandGreen,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Antrean Musik",
-                        color = TextPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(BrandGreen.copy(alpha = 0.15f))
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "${queue.size} Lagu",
-                            color = BrandGreen,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold
+                // Header Bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                            contentDescription = null,
+                            tint = BrandGreen,
+                            modifier = Modifier.size(24.dp)
                         )
-                    }
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (queue.size > 1) {
-                        IconButton(onClick = onClearQueue) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteSweep,
-                                contentDescription = "Bersihkan Antrean",
-                                tint = TextMuted,
-                                modifier = Modifier.size(22.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Antrean Musik",
+                            color = TextPrimary,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(BrandGreen.copy(alpha = 0.15f))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "${queue.size} Lagu",
+                                color = BrandGreen,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
 
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Tutup",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(24.dp)
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (queue.size > 1) {
+                            IconButton(onClick = onClearQueue) {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteSweep,
+                                    contentDescription = "Bersihkan Antrean",
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
+
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Tutup",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Berikutnya", color = TextPrimary, fontSize = 21.sp,
+                        fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    if (queue.size > 1) IconButton(onClick = onClearQueue) {
+                        Icon(Icons.Default.DeleteSweep, "Bersihkan antrean", tint = TextSecondary)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = if (embedded) 0.dp else 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Section: Sedang Diputar
-                if (currentTrack != null) {
+                if (currentTrack != null && !embedded) {
                     item {
                         Text(
                             text = "SEDANG DIPUTAR",
@@ -283,7 +299,7 @@ fun QueueBottomSheet(
                         val rowBg = if (isDraggingThis) {
                             BrandGreen.copy(alpha = 0.22f)
                         } else {
-                            SurfaceContainer.copy(alpha = 0.6f)
+                            if (embedded) Color.Transparent else SurfaceContainer.copy(alpha = 0.6f)
                         }
 
                         Row(

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
@@ -53,8 +54,10 @@ fun PlayerOptionsBottomSheet(
     track: Track,
     isSleepTimerActive: Boolean,
     sleepTimerRemainingSeconds: Long?,
+    currentLyricsOffsetMs: Long = 0L,
     onDismiss: () -> Unit,
     onStartRadioClick: () -> Unit = {},
+    onLyricsOffsetClick: () -> Unit = {},
     onSleepTimerClick: () -> Unit,
     onShareStoryClick: () -> Unit,
     onAddToPlaylistClick: () -> Unit,
@@ -158,6 +161,23 @@ fun PlayerOptionsBottomSheet(
                 onClick = {
                     onDismiss()
                     onEqualizerClick()
+                }
+            )
+
+            val offsetLabel = if (currentLyricsOffsetMs != 0L) {
+                "Tersinkronisasi • Offset ${if (currentLyricsOffsetMs > 0) "+" else ""}${currentLyricsOffsetMs}ms"
+            } else {
+                "Atur penundaan waktu lirik agar tepat dengan vokal"
+            }
+
+            OptionItem(
+                icon = Icons.Default.FastForward,
+                title = "Sinkronisasi Lirik (Offset)",
+                subtitle = offsetLabel,
+                isHighlight = currentLyricsOffsetMs != 0L,
+                onClick = {
+                    onDismiss()
+                    onLyricsOffsetClick()
                 }
             )
 

@@ -22,6 +22,8 @@ class LrcLibClient(
 ) {
     private val timestampPattern = Pattern.compile("\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})\\](.*)")
     private val enhancedWordPattern = Pattern.compile("<(\\d{2}):(\\d{2})\\.(\\d{2,3})>([^<]*)")
+    private val agentPattern = Pattern.compile("\\{agent:([^}]+)\\}")
+    private val bgPattern = Pattern.compile("^\\{bg\\}")
 
     private fun getCacheFile(artist: String, track: String): java.io.File? {
         val dir = cacheDir ?: return null
@@ -61,7 +63,19 @@ class LrcLibClient(
                             )
                         }
                     }
-                    syncedList.add(LyricLine(timestampMs = ts, text = text, words = wordsList))
+                    val agent = item.optString("agent", "").ifBlank { null }
+                    val isBg = item.optBoolean("isBackground", false)
+                    val translation = item.optString("translation", "").ifBlank { null }
+                    syncedList.add(
+                        LyricLine(
+                            timestampMs = ts,
+                            text = text,
+                            words = wordsList,
+                            agent = agent,
+                            isBackground = isBg,
+                            translation = translation
+                        )
+                    )
                 }
             }
             // Ensure every line has synthesized words if words were empty
@@ -83,6 +97,9 @@ class LrcLibClient(
                     arr.put(JSONObject().apply {
                         put("timestampMs", line.timestampMs)
                         put("text", line.text)
+                        line.agent?.let { put("agent", it) }
+                        if (line.isBackground) put("isBackground", true)
+                        line.translation?.let { put("translation", it) }
                         val wordsArr = JSONArray()
                         line.words.forEach { w ->
                             wordsArr.put(JSONObject().apply {
@@ -247,14 +264,34 @@ class LrcLibClient(
                 val rawText = matcher.group(4)?.trim() ?: ""
 
                 if (rawText.isNotBlank()) {
-                    val (cleanText, extractedWords) = parseEnhancedWords(rawText, totalMs)
-                    parsedRawLines.add(
-                        LyricLine(
-                            timestampMs = totalMs,
-                            text = cleanText,
-                            words = extractedWords
+                    var lineBody = rawText
+                    var agentTag: String? = null
+                    var isBg = false
+
+                    val agentMatcher = agentPattern.matcher(lineBody)
+                    if (agentMatcher.find()) {
+                        agentTag = agentMatcher.group(1)
+                        lineBody = agentMatcher.replaceAll("").trim()
+                    }
+
+                    val bgMatcher = bgPattern.matcher(lineBody)
+                    if (bgMatcher.find()) {
+                        isBg = true
+                        lineBody = bgMatcher.replaceFirst("").trim()
+                    }
+
+                    val (cleanText, extractedWords) = parseEnhancedWords(lineBody, totalMs)
+                    if (cleanText.isNotBlank()) {
+                        parsedRawLines.add(
+                            LyricLine(
+                                timestampMs = totalMs,
+                                text = cleanText,
+                                words = extractedWords,
+                                agent = agentTag,
+                                isBackground = isBg
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
@@ -304,7 +341,7 @@ class LrcLibClient(
                 line
             } else {
                 val nextTimestamp = if (i < lines.size - 1) lines[i + 1].timestampMs else (line.timestampMs + 3800L)
-                val lineDuration = (nextTimestamp - line.timestampMs).coerceIn(1200L, 6000L)
+                val lineDuration = (nextTimestamp - line.timestampMs).coerceAtLeast(1L)
                 val words = synthesizeWords(line.text, line.timestampMs, lineDuration)
                 line.copy(words = words)
             }
@@ -316,15 +353,14 @@ class LrcLibClient(
         if (wordTokens.isEmpty()) return emptyList()
 
         val totalWeight = wordTokens.sumOf { (it.length.coerceAtLeast(1) + 1) }
-        var currentOffset = lineStartMs
+        var consumedWeight = 0L
         val result = mutableListOf<SyllableWord>()
 
         for (token in wordTokens) {
-            val weight = token.length.coerceAtLeast(1) + 1
-            val wordDur = ((lineDurationMs * weight) / totalWeight).coerceAtLeast(120L)
-            val end = currentOffset + wordDur
-            result.add(SyllableWord(word = token, startMs = currentOffset, endMs = end))
-            currentOffset = end
+            val start = lineStartMs + lineDurationMs * consumedWeight / totalWeight
+            consumedWeight += token.length.coerceAtLeast(1) + 1
+            val end = lineStartMs + lineDurationMs * consumedWeight / totalWeight
+            result.add(SyllableWord(word = token, startMs = start, endMs = end))
         }
         return result
     }

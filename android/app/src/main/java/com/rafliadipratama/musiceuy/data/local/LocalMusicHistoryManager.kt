@@ -49,6 +49,7 @@ class LocalMusicHistoryManager(context: Context) {
         private const val KEY_LAST_PLAYED_POS = "last_played_position_ms"
         private const val KEY_LAST_PLAYED_QUEUE = "last_played_queue_json"
         private const val KEY_SKIPS = "listening_skips_json"
+        private const val KEY_LYRICS_OFFSETS = "lyrics_offsets_json"
         private const val MAX_SKIPS = 200
     }
 
@@ -187,6 +188,33 @@ class LocalMusicHistoryManager(context: Context) {
         val trackDisliked = getNotInterestedTrackIds().contains(trackId)
         val artistDisliked = getNotInterestedArtists().contains(artistName.trim().lowercase())
         return trackDisliked || artistDisliked
+    }
+
+    // ==================== Per-Track Lyrics Offset (z.reference/db SongEntity.lyricsOffset) ====================
+
+    fun getLyricsOffset(trackId: String): Long {
+        if (trackId.isBlank()) return 0L
+        return try {
+            val json = prefs.getString(KEY_LYRICS_OFFSETS, "{}") ?: "{}"
+            val obj = JSONObject(json)
+            obj.optLong(trackId, 0L)
+        } catch (_: Exception) {
+            0L
+        }
+    }
+
+    fun saveLyricsOffset(trackId: String, offsetMs: Long) {
+        if (trackId.isBlank()) return
+        try {
+            val json = prefs.getString(KEY_LYRICS_OFFSETS, "{}") ?: "{}"
+            val obj = JSONObject(json)
+            if (offsetMs == 0L) {
+                obj.remove(trackId)
+            } else {
+                obj.put(trackId, offsetMs)
+            }
+            prefs.edit().putString(KEY_LYRICS_OFFSETS, obj.toString()).apply()
+        } catch (_: Exception) {}
     }
 
     fun isOnboardingCompleted(): Boolean {

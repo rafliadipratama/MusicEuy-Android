@@ -130,6 +130,7 @@ data class PlayerUiState(
     val currentVideoStreamUrl: String? = null,
     val isLoadingVideo: Boolean = false,
     val lyricsOffsetMs: Long = 0L,
+    val isLyricsOffsetSheetVisible: Boolean = false,
     val updateInfo: com.rafliadipratama.musiceuy.data.network.AppUpdateInfo? = null,
     val isCheckingUpdate: Boolean = false,
     val isOnline: Boolean = true,
@@ -341,28 +342,32 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         progressJob = viewModelScope.launch {
             var counter = 0
             while (isActive) {
-                val pos = mediaController?.currentPosition ?: 0L
-                val dur = mediaController?.duration ?: 0L
-                _uiState.update {
-                    it.copy(
-                        currentPositionMs = pos,
-                        durationMs = if (dur > 0) dur else it.durationMs
-                    )
-                }
-                if (_uiState.value.isSleepTimerEndOfTrack && dur > 15000L) {
-                    val remainingMs = dur - pos
-                    if (remainingMs in 1..15000L) {
-                        val vol = (remainingMs / 15000f).coerceIn(0f, 1f)
-                        mediaController?.volume = vol
+                val currentTrackId = _uiState.value.currentTrack?.id
+                val controllerMediaId = mediaController?.currentMediaItem?.mediaId
+                if (currentTrackId != null && controllerMediaId == currentTrackId) {
+                    val pos = mediaController?.currentPosition ?: 0L
+                    val dur = mediaController?.duration ?: 0L
+                    _uiState.update {
+                        it.copy(
+                            currentPositionMs = pos,
+                            durationMs = if (dur > 0) dur else it.durationMs
+                        )
+                    }
+                    if (_uiState.value.isSleepTimerEndOfTrack && dur > 15000L) {
+                        val remainingMs = dur - pos
+                        if (remainingMs in 1..15000L) {
+                            val vol = (remainingMs / 15000f).coerceIn(0f, 1f)
+                            mediaController?.volume = vol
+                        }
+                    }
+                    counter++
+                    if (counter % 50 == 0) { // every ~4-5 seconds
+                        _uiState.value.currentTrack?.let { cur ->
+                            historyManager.saveLastPlaybackState(cur, pos, _uiState.value.queue)
+                        }
                     }
                 }
-                counter++
-                if (counter % 50 == 0) { // every ~4-5 seconds
-                    _uiState.value.currentTrack?.let { cur ->
-                        historyManager.saveLastPlaybackState(cur, pos, _uiState.value.queue)
-                    }
-                }
-                val delayMs = if (_uiState.value.isPlaying) 80L else 300L
+                val delayMs = if (_uiState.value.isPlaying) 60L else 300L
                 delay(delayMs)
             }
         }
@@ -724,6 +729,10 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     fun playTrack(track: Track, newQueue: List<Track>? = null) {
         val controller = mediaController ?: return
 
+        // Immediately pause controller so previous audio stops and position doesn't leak into new track's lyrics
+        controller.pause()
+        progressJob?.cancel()
+
         // Musicfy negative signal: Track skipped after < 30 seconds of listening
         val prevTrack = _uiState.value.currentTrack
         val prevPosMs = _uiState.value.currentPositionMs
@@ -740,12 +749,15 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         val isLiked = _uiState.value.likedTrackIds.contains(track.id)
         val activeTrack = track.copy(isLiked = isLiked)
 
+        val savedLyricsOffset = historyManager.getLyricsOffset(activeTrack.id)
         _uiState.update {
             it.copy(
                 currentTrack = activeTrack,
                 queue = currentQueue,
                 currentPositionMs = 0L,
+                isPlaying = false,
                 lyrics = Lyrics(),
+                lyricsOffsetMs = savedLyricsOffset,
                 isLoadingLyrics = true,
                 currentVideoStreamUrl = null,
                 error = null
@@ -1148,15 +1160,15 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun collapsePlayer() {
-        _uiState.update { it.copy(isPlayerExpanded = false) }
+        _uiState.update { it.copy(isPlayerExpanded = false, isQueueVisible = false) }
     }
 
     fun toggleLyrics() {
-        _uiState.update { it.copy(isLyricsVisible = !it.isLyricsVisible) }
+        _uiState.update { it.copy(isLyricsVisible = !it.isLyricsVisible, isQueueVisible = false) }
     }
 
     fun toggleQueue() {
-        _uiState.update { it.copy(isQueueVisible = !it.isQueueVisible) }
+        _uiState.update { it.copy(isQueueVisible = !it.isQueueVisible, isLyricsVisible = false) }
     }
 
     fun dismissQueue() {
@@ -1895,12 +1907,30 @@ class MusicPlayerViewModel(application: Application) : AndroidViewModel(applicat
         return success
     }
 
+    fun setLyricsOffset(offsetMs: Long) {
+        val clamped = offsetMs.coerceIn(-3000L, 3000L)
+        _uiState.update { it.copy(lyricsOffsetMs = clamped) }
+        val currentTrackId = _uiState.value.currentTrack?.id
+        if (!currentTrackId.isNullOrBlank()) {
+            historyManager.saveLyricsOffset(currentTrackId, clamped)
+        }
+    }
+
     fun adjustLyricsOffset(deltaMs: Long) {
-        _uiState.update { it.copy(lyricsOffsetMs = (it.lyricsOffsetMs + deltaMs).coerceIn(-10000L, 10000L)) }
+        val newOffset = (_uiState.value.lyricsOffsetMs + deltaMs).coerceIn(-3000L, 3000L)
+        setLyricsOffset(newOffset)
     }
 
     fun resetLyricsOffset() {
-        _uiState.update { it.copy(lyricsOffsetMs = 0L) }
+        setLyricsOffset(0L)
+    }
+
+    fun showLyricsOffsetDialog() {
+        _uiState.update { it.copy(isLyricsOffsetSheetVisible = true) }
+    }
+
+    fun dismissLyricsOffsetDialog() {
+        _uiState.update { it.copy(isLyricsOffsetSheetVisible = false) }
     }
 
     fun startSongRadio(track: Track) {

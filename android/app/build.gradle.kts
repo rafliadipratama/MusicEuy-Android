@@ -92,4 +92,6 @@ dependencies {
 
     // AndroidX WebKit for safe OAuth login and token interception
     implementation("androidx.webkit:webkit:1.12.1")
+
+    testImplementation("junit:junit:4.13.2")
 }

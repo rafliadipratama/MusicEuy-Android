@@ -9,7 +9,10 @@ data class SyllableWord(
 data class LyricLine(
     val timestampMs: Long,
     val text: String,
-    val words: List<SyllableWord> = emptyList()
+    val words: List<SyllableWord> = emptyList(),
+    val agent: String? = null,
+    val isBackground: Boolean = false,
+    val translation: String? = null
 )
 
 data class Lyrics(
