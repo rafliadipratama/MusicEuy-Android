@@ -432,9 +432,8 @@
           </div>
         </div>
 
-        <!-- Screen Player Main Body Grid -->
+        <!-- Screen Player Main Body (Focused Cover & Controls, Musicfy Style) -->
         <div class="screen-player-body">
-          <!-- Left Column: Artwork or Video -->
           <div class="screen-player-visual-col">
             <!-- 1. Audio Artwork Mode -->
             <div id="screenPlayerAudioView" class="screen-player-art-box">
@@ -490,28 +489,6 @@
                 <button class="control-btn" id="screenPlayerRepeatBtn" title="Ulangi">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
                 </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Right Column: Interactive Synced Karaoke Lyrics & Queue Drawer -->
-          <div class="screen-player-side-col">
-            <div class="screen-player-tabs-header">
-              <button class="screen-side-tab active" id="screenTabLyricsBtn">Lirik Tersinkronisasi</button>
-              <button class="screen-side-tab" id="screenTabQueueBtn">Antrean Selanjutnya</button>
-            </div>
-
-            <div class="screen-player-side-content">
-              <!-- Synced Lyrics -->
-              <div id="screenPlayerLyricsBox" class="screen-lyrics-container">
-                <div class="screen-lyrics-placeholder">Lirik akan muncul di sini...</div>
-              </div>
-
-              <!-- Upcoming Queue List -->
-              <div id="screenPlayerQueueBox" class="screen-queue-container" style="display: none;">
-                <div id="screenPlayerQueueList" class="queue-list">
-                  <!-- Populated dynamically -->
-                </div>
               </div>
             </div>
           </div>
@@ -602,13 +579,13 @@
         </button>
       </div>
 
-      <!-- Squiggly Wave Seekbar Canvas -->
+      <!-- Linear Seekbar Progress Container (Clean Musicfy Style) -->
       <div class="progress-container">
         <span class="time-label" id="currentTimeLabel">0:00</span>
-        <div class="wave-canvas-wrapper" id="waveContainer">
-          <canvas id="waveCanvas"></canvas>
+        <div class="player-slider-wrap" id="playerSliderWrap">
+          <input type="range" class="player-slider" id="playerSeekbar" min="0" max="100" value="0" step="0.1">
         </div>
-        <span class="time-label" id="durationLabel">3:34</span>
+        <span class="time-label" id="durationLabel">0:00</span>
       </div>
     </div>
 

@@ -297,11 +297,10 @@ class SoraFyDesktopApp {
     // Search Debounce Timer
     this.searchDebounceTimer = null;
 
-    // Wave Canvas state
-    this.waveCanvas = document.getElementById("waveCanvas");
-    this.ctx = this.waveCanvas.getContext("2d");
-    this.wavePhase = 0;
-    this.animationFrame = null;
+    // Seekbar dragging states
+    this.playerSeekbar = null;
+    this.isSeekingBottom = false;
+    this.isSeekingScreen = false;
 
     // Side panel tab & volume states
     this.activeSideTab = "lyrics";
@@ -314,8 +313,6 @@ class SoraFyDesktopApp {
     this.initUserPlaylists();
     this.loadCuratedPlaylists();
     this.loadInitialCatalog();
-    this.setupWaveCanvas();
-    this.startWaveAnimation();
 
     // Initialize persisted volume
     const savedVol = localStorage.getItem("sorafy_volume");
@@ -386,7 +383,8 @@ class SoraFyDesktopApp {
     this.sidebarCreatePlaylistBtn = document.getElementById("sidebarCreatePlaylistBtn");
     this.userPlaylistsNav = document.getElementById("userPlaylistsNav");
 
-    // View Containers
+    // View Containers & Header
+    this.contentHeader = document.querySelector(".content-header");
     this.homeViewContainer = document.getElementById("homeViewContainer");
     this.pluginsViewContainer = document.getElementById("pluginsViewContainer");
     this.equalizerViewContainer = document.getElementById("equalizerViewContainer");
@@ -505,17 +503,12 @@ class SoraFyDesktopApp {
     this.screenPlayerPlayPauseIcon = document.getElementById("screenPlayerPlayPauseIcon");
     this.screenPlayerNextBtn = document.getElementById("screenPlayerNextBtn");
     this.screenPlayerRepeatBtn = document.getElementById("screenPlayerRepeatBtn");
-    this.screenTabLyricsBtn = document.getElementById("screenTabLyricsBtn");
-    this.screenTabQueueBtn = document.getElementById("screenTabQueueBtn");
-    this.screenPlayerLyricsBox = document.getElementById("screenPlayerLyricsBox");
-    this.screenPlayerQueueBox = document.getElementById("screenPlayerQueueBox");
-    this.screenPlayerQueueList = document.getElementById("screenPlayerQueueList");
 
+    this.playerSeekbar = document.getElementById("playerSeekbar");
     this.bottomPlayerTrackInfo = document.getElementById("bottomPlayerTrackInfo");
     this.expandPlayerBtn = document.getElementById("expandPlayerBtn");
 
     this.currentScreenMode = "audio"; // "audio" or "video"
-    this.activeScreenSideTab = "lyrics"; // "lyrics" or "queue"
     this.previousView = "home";
   }
 
@@ -688,23 +681,28 @@ class SoraFyDesktopApp {
     }
     if (this.screenPlayerSeekbar) {
       this.screenPlayerSeekbar.addEventListener("input", (e) => {
+        this.isSeekingScreen = true;
+        const val = parseFloat(e.target.value);
+        if (this.audio.duration && !isNaN(this.audio.duration)) {
+          const seekTime = (val / 100) * this.audio.duration;
+          if (this.screenPlayerCurrentTime) this.screenPlayerCurrentTime.textContent = this.formatTime(seekTime);
+          this.screenPlayerSeekbar.style.background = `linear-gradient(to right, #00E599 0%, #00E599 ${val}%, rgba(255, 255, 255, 0.16) ${val}%, rgba(255, 255, 255, 0.16) 100%)`;
+        }
+      });
+      this.screenPlayerSeekbar.addEventListener("change", (e) => {
         const val = parseFloat(e.target.value);
         if (this.audio.duration && !isNaN(this.audio.duration)) {
           this.audio.currentTime = (val / 100) * this.audio.duration;
         }
+        this.isSeekingScreen = false;
       });
     }
-    if (this.screenTabLyricsBtn) {
-      this.screenTabLyricsBtn.addEventListener("click", () => this.switchScreenSideTab("lyrics"));
-    }
-    if (this.screenTabQueueBtn) {
-      this.screenTabQueueBtn.addEventListener("click", () => this.switchScreenSideTab("queue"));
-    }
+
     if (this.screenPlayerToggleLyricsBtn) {
-      this.screenPlayerToggleLyricsBtn.addEventListener("click", () => this.switchScreenSideTab("lyrics"));
+      this.screenPlayerToggleLyricsBtn.addEventListener("click", () => this.toggleLyricsTab());
     }
     if (this.screenPlayerToggleQueueBtn) {
-      this.screenPlayerToggleQueueBtn.addEventListener("click", () => this.switchScreenSideTab("queue"));
+      this.screenPlayerToggleQueueBtn.addEventListener("click", () => this.toggleQueueTab());
     }
 
     // Artist Detail screen actions
@@ -939,15 +937,25 @@ class SoraFyDesktopApp {
     });
     this.audio.addEventListener("ended", () => this.onTrackEnded());
 
-    // Wave canvas click to seek
-    this.waveCanvas.addEventListener("click", (e) => {
-      const rect = this.waveCanvas.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const ratio = Math.max(0, Math.min(1, clickX / rect.width));
-      if (this.audio.duration) {
-        this.audio.currentTime = ratio * this.audio.duration;
-      }
-    });
+    // Bottom player linear seekbar
+    if (this.playerSeekbar) {
+      this.playerSeekbar.addEventListener("input", (e) => {
+        this.isSeekingBottom = true;
+        const val = parseFloat(e.target.value);
+        if (this.audio.duration && !isNaN(this.audio.duration)) {
+          const seekTime = (val / 100) * this.audio.duration;
+          this.currentTimeLabel.textContent = this.formatTime(seekTime);
+          this.playerSeekbar.style.background = `linear-gradient(to right, #00E599 0%, #00E599 ${val}%, rgba(255, 255, 255, 0.16) ${val}%, rgba(255, 255, 255, 0.16) 100%)`;
+        }
+      });
+      this.playerSeekbar.addEventListener("change", (e) => {
+        const val = parseFloat(e.target.value);
+        if (this.audio.duration && !isNaN(this.audio.duration)) {
+          this.audio.currentTime = (val / 100) * this.audio.duration;
+        }
+        this.isSeekingBottom = false;
+      });
+    }
 
     // Real Online Search Input with Debounce (Just like mobile!)
     this.searchInput.addEventListener("input", (e) => {
@@ -1074,7 +1082,6 @@ class SoraFyDesktopApp {
       }
     });
 
-    window.addEventListener("resize", () => this.setupWaveCanvas());
 
     // Track Context Menu (Klik Kanan) Events
     document.addEventListener("click", (e) => {
@@ -2981,17 +2988,22 @@ class SoraFyDesktopApp {
   onTimeUpdate() {
     const current = this.audio.currentTime || 0;
     const total = this.audio.duration || this.tracks[this.currentTrackIndex]?.duration_secs || 1;
+    const pct = total > 0 ? (current / total) * 100 : 0;
 
     this.currentTimeLabel.textContent = this.formatTime(current);
     this.durationLabel.textContent = this.formatTime(total);
 
+    if (this.playerSeekbar && !this.isSeekingBottom) {
+      this.playerSeekbar.value = pct;
+      this.playerSeekbar.style.background = `linear-gradient(to right, #00E599 0%, #00E599 ${pct}%, rgba(255, 255, 255, 0.16) ${pct}%, rgba(255, 255, 255, 0.16) 100%)`;
+    }
+
     if (this.screenPlayerCurrentTime) this.screenPlayerCurrentTime.textContent = this.formatTime(current);
     if (this.screenPlayerDuration) this.screenPlayerDuration.textContent = this.formatTime(total);
 
-    if (this.screenPlayerSeekbar && total > 0) {
-      const pct = (current / total) * 100;
+    if (this.screenPlayerSeekbar && !this.isSeekingScreen) {
       this.screenPlayerSeekbar.value = pct;
-      this.screenPlayerSeekbar.style.background = `linear-gradient(to right, var(--color-brand-primary) 0%, var(--color-brand-primary) ${pct}%, rgba(255, 255, 255, 0.12) ${pct}%, rgba(255, 255, 255, 0.12) 100%)`;
+      this.screenPlayerSeekbar.style.background = `linear-gradient(to right, #00E599 0%, #00E599 ${pct}%, rgba(255, 255, 255, 0.16) ${pct}%, rgba(255, 255, 255, 0.16) 100%)`;
     }
 
     this.syncLyrics(current * 1000);
@@ -3007,18 +3019,13 @@ class SoraFyDesktopApp {
   loadLyrics(lyrics) {
     this.currentLyrics = lyrics;
     this.lyricsContainer.innerHTML = "";
-    if (this.screenPlayerLyricsBox) this.screenPlayerLyricsBox.innerHTML = "";
 
     if (!lyrics || lyrics.length === 0) {
       this.lyricsContainer.innerHTML = `<div style="color: var(--color-text-tertiary); text-align: center; margin-top: 40px;">Tidak ada lirik tersinkronisasi untuk lagu ini.</div>`;
-      if (this.screenPlayerLyricsBox) {
-        this.screenPlayerLyricsBox.innerHTML = `<div class="screen-lyrics-placeholder">Tidak ada lirik tersinkronisasi untuk lagu ini.</div>`;
-      }
       return;
     }
 
     lyrics.forEach((line) => {
-      // Bottom drawer lyrics
       const p = document.createElement("p");
       p.className = "lyric-line";
       p.textContent = line.text;
@@ -3027,18 +3034,6 @@ class SoraFyDesktopApp {
         this.audio.currentTime = line.timestamp_ms / 1000;
       });
       this.lyricsContainer.appendChild(p);
-
-      // Dedicated Screen player lyrics
-      if (this.screenPlayerLyricsBox) {
-        const sp = document.createElement("p");
-        sp.className = "screen-lyric-line";
-        sp.textContent = line.text;
-        sp.dataset.time = line.timestamp_ms;
-        sp.addEventListener("click", () => {
-          this.audio.currentTime = line.timestamp_ms / 1000;
-        });
-        this.screenPlayerLyricsBox.appendChild(sp);
-      }
     });
   }
 
@@ -3065,85 +3060,7 @@ class SoraFyDesktopApp {
           l.classList.remove("active");
         }
       });
-
-      if (this.screenPlayerLyricsBox) {
-        const screenLines = this.screenPlayerLyricsBox.querySelectorAll(".screen-lyric-line");
-        screenLines.forEach((l, idx) => {
-          if (idx === activeIdx) {
-            l.classList.add("active");
-            l.scrollIntoView({ behavior: "smooth", block: "center" });
-          } else {
-            l.classList.remove("active");
-          }
-        });
-      }
     }
-  }
-
-  // Squiggly Wave Canvas Seekbar
-  setupWaveCanvas() {
-    const rect = this.waveCanvas.parentElement.getBoundingClientRect();
-    this.waveCanvas.width = rect.width * window.devicePixelRatio;
-    this.waveCanvas.height = rect.height * window.devicePixelRatio;
-    this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-  }
-
-  startWaveAnimation() {
-    const draw = () => {
-      const w = this.waveCanvas.width / window.devicePixelRatio;
-      const h = this.waveCanvas.height / window.devicePixelRatio;
-      const midY = h / 2;
-
-      this.ctx.clearRect(0, 0, w, h);
-
-      const current = this.audio.currentTime || 0;
-      const total = this.audio.duration || this.tracks[this.currentTrackIndex]?.duration_secs || 1;
-      const progress = Math.min(1, current / total);
-      const playedWidth = w * progress;
-
-      if (this.isPlaying) {
-        this.wavePhase += 0.08;
-      }
-
-      // Unplayed background track
-      this.ctx.beginPath();
-      this.ctx.moveTo(playedWidth, midY);
-      this.ctx.lineTo(w, midY);
-      this.ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-      this.ctx.lineWidth = 4;
-      this.ctx.lineCap = "round";
-      this.ctx.stroke();
-
-      // Played portion as Sine Wave
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, midY);
-
-      const amplitude = this.isPlaying ? 4 : 1.5;
-      const frequency = 0.055;
-
-      for (let x = 0; x <= playedWidth; x += 2) {
-        const y = midY + Math.sin(x * frequency - this.wavePhase) * amplitude;
-        this.ctx.lineTo(x, y);
-      }
-
-      this.ctx.strokeStyle = "#00E599";
-      this.ctx.lineWidth = 2.5;
-      this.ctx.lineCap = "round";
-      this.ctx.stroke();
-
-      // Wave Head Thumb (Flat clean, no neon blur)
-      if (playedWidth > 0) {
-        const thumbY = midY + Math.sin(playedWidth * frequency - this.wavePhase) * amplitude;
-        this.ctx.beginPath();
-        this.ctx.arc(playedWidth, thumbY, 4, 0, Math.PI * 2);
-        this.ctx.fillStyle = "#FFFFFF";
-        this.ctx.fill();
-      }
-
-      this.animationFrame = requestAnimationFrame(draw);
-    };
-
-    draw();
   }
 
   // Render Track List (Streamlined Minimalist Spotify/Apple Music Style)
@@ -3174,6 +3091,10 @@ class SoraFyDesktopApp {
     this.navItems.forEach(item => {
       item.classList.toggle("active", item.dataset.view === viewName);
     });
+
+    if (this.contentHeader) {
+      this.contentHeader.style.display = (viewName === "player") ? "none" : "flex";
+    }
 
     if (this.homeViewContainer) {
       this.homeViewContainer.style.display = (viewName === "home" || viewName === "explore") ? "block" : "none";
@@ -3513,8 +3434,6 @@ class SoraFyDesktopApp {
 
       this.queueList.appendChild(item);
     }
-
-    this.renderScreenPlayerQueue();
   }
 
   clearUpcomingQueue() {
@@ -3619,86 +3538,6 @@ class SoraFyDesktopApp {
       this.setScreenPlayerMode("video");
     } else {
       this.setScreenPlayerMode("audio");
-    }
-
-    this.renderScreenPlayerQueue();
-  }
-
-  switchScreenSideTab(tab) {
-    this.activeScreenSideTab = tab;
-    if (this.screenTabLyricsBtn) this.screenTabLyricsBtn.classList.toggle("active", tab === "lyrics");
-    if (this.screenTabQueueBtn) this.screenTabQueueBtn.classList.toggle("active", tab === "queue");
-    if (this.screenPlayerToggleLyricsBtn) this.screenPlayerToggleLyricsBtn.classList.toggle("active", tab === "lyrics");
-    if (this.screenPlayerToggleQueueBtn) this.screenPlayerToggleQueueBtn.classList.toggle("active", tab === "queue");
-
-    if (this.screenPlayerLyricsBox) this.screenPlayerLyricsBox.style.display = (tab === "lyrics") ? "block" : "none";
-    if (this.screenPlayerQueueBox) this.screenPlayerQueueBox.style.display = (tab === "queue") ? "block" : "none";
-    if (tab === "queue") {
-      this.renderScreenPlayerQueue();
-    }
-  }
-
-  renderScreenPlayerQueue() {
-    if (!this.screenPlayerQueueList) return;
-    this.screenPlayerQueueList.innerHTML = "";
-
-    const upcomingCount = Math.max(0, this.tracks.length - 1 - this.currentTrackIndex);
-    if (upcomingCount === 0) {
-      this.screenPlayerQueueList.innerHTML = `
-        <div style="text-align: center; padding: 32px 16px; color: var(--color-text-tertiary); font-size: 13px;">
-          <div style="font-size: 24px; margin-bottom: 8px;">🎵</div>
-          Tidak ada antrean berikutnya.<br>Pilih lagu untuk menambah antrean.
-        </div>
-      `;
-      return;
-    }
-
-    for (let i = this.currentTrackIndex + 1; i < this.tracks.length; i++) {
-      const track = this.tracks[i];
-      const queueIdx = i;
-
-      const item = document.createElement("div");
-      item.className = "queue-item";
-      item.dataset.index = queueIdx;
-
-      item.innerHTML = `
-        <img src="${track.artwork_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80'}" class="queue-item-art" alt="${this.escapeHtml(track.title)}">
-        <div class="queue-item-info">
-          <span class="queue-item-title">${this.escapeHtml(track.title)}</span>
-          <span class="queue-item-artist">${this.escapeHtml(track.artist)}</span>
-        </div>
-        <span class="queue-item-duration">${this.formatTime(track.duration_secs || 0)}</span>
-        <button class="queue-item-remove" title="Hapus dari antrean" data-action="remove">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      `;
-
-      item.addEventListener("click", (e) => {
-        if (e.target.closest('[data-action="remove"]')) return;
-        this.loadTrack(queueIdx, true);
-      });
-
-      item.addEventListener("contextmenu", (e) => {
-        e.preventDefault();
-        this.showContextMenu(e, track);
-      });
-
-      const removeBtn = item.querySelector('[data-action="remove"]');
-      if (removeBtn) {
-        removeBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const removed = this.tracks.splice(queueIdx, 1);
-          this.renderQueue();
-          if (removed && removed[0]) {
-            this.showToast(`Dihapus dari antrean: ${removed[0].title}`);
-          }
-        });
-      }
-
-      this.screenPlayerQueueList.appendChild(item);
     }
   }
 
