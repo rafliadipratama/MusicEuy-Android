@@ -1422,18 +1422,25 @@ class SoraFyDesktopApp {
     const shelves = [];
 
     const queryInnerTube = async (q) => {
-      if (window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function') {
-        try {
-          const res = await window.electronAPI.searchYouTubeMusic(q);
-          if (res && res.length) {
-            return res.map(t => ({
-              ...t,
-              is_liked: this.likedTrackIds.has(t.id)
-            }));
-          }
-        } catch (_) {}
-      }
-      return await this.fetchExternalMusic(q);
+      const fetchPromise = (async () => {
+        if (window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function') {
+          try {
+            const res = await window.electronAPI.searchYouTubeMusic(q);
+            if (res && res.length) {
+              return res.map(t => ({
+                ...t,
+                is_liked: this.likedTrackIds.has(t.id)
+              }));
+            }
+          } catch (_) {}
+        }
+        return await this.fetchExternalMusic(q);
+      })();
+
+      return Promise.race([
+        fetchPromise,
+        new Promise(resolve => setTimeout(() => resolve([]), 5000))
+      ]);
     };
 
     try {

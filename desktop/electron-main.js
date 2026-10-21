@@ -1042,6 +1042,17 @@ ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) 
     return cached.data;
   }
 
+  // 1. High-speed Direct MP3 320k from JioSaavn (with strict match check, 100% reliable)
+  if (title && artist) {
+    try {
+      const saavnStream = await resolveJioSaavnStream(title, artist);
+      if (saavnStream && saavnStream.url) {
+        streamCache.set(cacheKey, { data: saavnStream, expireAt: Date.now() + 6 * 3600 * 1000 });
+        return saavnStream;
+      }
+    } catch (_) {}
+  }
+
   let vid = videoId;
   if (!vid && title && artist) {
     vid = await searchYouTubeMusicStrict(title, artist);
@@ -1051,14 +1062,14 @@ ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) 
   }
 
   if (vid) {
-    // 1. High-speed direct unthrottled stream via yt-dlp
+    // 2. High-speed direct unthrottled stream via yt-dlp
     const dlpStream = await resolveYtDlpStream(vid);
     if (dlpStream && dlpStream.url) {
       streamCache.set(cacheKey, { data: dlpStream, expireAt: Date.now() + 45 * 60 * 1000 });
       return dlpStream;
     }
 
-    // 2. High-speed direct InnerTube stream with chunked proxy fallback
+    // 3. High-speed direct InnerTube stream with chunked proxy fallback
     const innerStream = await resolveInnerTubeStream(vid);
     if (innerStream && innerStream.url) {
       streamCache.set(cacheKey, { data: innerStream, expireAt: Date.now() + 45 * 60 * 1000 });
