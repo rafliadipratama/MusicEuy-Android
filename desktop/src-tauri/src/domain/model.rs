@@ -38,6 +38,7 @@ pub struct Track {
     pub artwork_url: Option<String>,
     pub audio_format: AudioFormat,
     pub is_liked: bool,
+    pub source_label: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -105,4 +106,31 @@ impl Default for PlaybackState {
             is_shuffled: false,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PluginMeta {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub version: String,
+    pub author: String,
+    pub category: String, // "Audio Stream", "Lirik", "Integrasi & Sosial", "DSP / Audio", "Alat & Impor"
+    pub github_url: String,
+    pub is_builtin: bool,
+    pub is_enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EqualizerBand {
+    pub frequency_hz: u32,
+    pub gain_db: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EqualizerPreset {
+    pub name: String,
+    pub bass_boost: f32,
+    pub virtualizer: f32,
+    pub bands: Vec<EqualizerBand>,
 }

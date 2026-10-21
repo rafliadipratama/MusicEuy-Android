@@ -6,7 +6,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use application::{
-    AppState, CatalogService, LibraryService, LyricsService, PlayerService,
+    AppState, CatalogService, LibraryService, LyricsService, PlayerService, PluginService,
 };
 use infrastructure::{
     InnertubeCatalogClient, LocalStorageAdapter, LrcLibClient, MockAudioEngine,
@@ -22,11 +22,13 @@ pub fn build_app_state() -> AppState {
     let catalog_service = Arc::new(CatalogService::new(catalog_repo));
     let lyrics_service = Arc::new(LyricsService::new(lyrics_repo));
     let library_service = Arc::new(LibraryService::new(storage_repo));
+    let plugin_service = Arc::new(PluginService::new());
 
     AppState {
         player: player_service,
         catalog: catalog_service,
         lyrics: lyrics_service,
         library: library_service,
+        plugins: plugin_service,
     }
 }

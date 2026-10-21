@@ -1,0 +1,19 @@
+pub mod apple_canvas;
+pub mod bandcamp_jamendo;
+pub mod deezer;
+pub mod discord_rpc;
+pub mod equalizer_dsp;
+pub mod jiosaavn;
+pub mod lastfm;
+pub mod monochrome_lossless;
+pub mod spotify_importer;
+
+pub use apple_canvas::AppleCanvasPlugin;
+pub use bandcamp_jamendo::BandcampJamendoPlugin;
+pub use deezer::DeezerPlugin;
+pub use discord_rpc::DiscordRpcPlugin;
+pub use equalizer_dsp::EqualizerDspPlugin;
+pub use jiosaavn::JioSaavnPlugin;
+pub use lastfm::LastFmPlugin;
+pub use monochrome_lossless::MonochromeLosslessPlugin;
+pub use spotify_importer::SpotifyImporterPlugin;

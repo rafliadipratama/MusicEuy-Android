@@ -76,6 +76,7 @@ impl InnertubeCatalogClient {
                     is_lossless: true,
                 },
                 is_liked: true,
+                source_label: Some("SoraFy Master".to_string()),
             },
             Track {
                 id: "sora_002".to_string(),
@@ -93,6 +94,7 @@ impl InnertubeCatalogClient {
                     is_lossless: false,
                 },
                 is_liked: false,
+                source_label: Some("SoraFy Cyber".to_string()),
             },
             Track {
                 id: "sora_003".to_string(),
@@ -110,6 +112,7 @@ impl InnertubeCatalogClient {
                     is_lossless: false,
                 },
                 is_liked: true,
+                source_label: Some("SoraFy Ambient".to_string()),
             },
         ]
     }
@@ -150,6 +153,7 @@ impl CatalogRepositoryPort for InnertubeCatalogClient {
                                         is_lossless: false,
                                     },
                                     is_liked: false,
+                                    source_label: Some("YouTube Music".to_string()),
                                 })
                             })
                             .collect();
@@ -203,6 +207,7 @@ impl CatalogRepositoryPort for InnertubeCatalogClient {
                                     artwork_url: item.thumbnail,
                                     audio_format: AudioFormat::default(),
                                     is_liked: false,
+                                    source_label: Some("YouTube Music".to_string()),
                                 })
                             })
                             .collect();

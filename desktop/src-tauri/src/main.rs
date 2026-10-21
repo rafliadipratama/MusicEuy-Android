@@ -11,7 +11,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let state = build_app_state();
 
-    println!("\n[1/3] Initializing Catalog Repository Adapter...");
+    println!("\n[1/4] Initializing Catalog Repository Adapter...");
     let trending = state.catalog.get_trending().await?;
     println!("-> Retrieved {} tracks from catalog port.", trending.len());
     for (idx, track) in trending.iter().enumerate().take(3) {
@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    println!("\n[2/3] Initializing LRCLIB Lyrics Sync Adapter...");
+    println!("\n[2/4] Initializing LRCLIB Lyrics Sync Adapter...");
     if let Some(first) = trending.first() {
         println!("-> Probing synchronized lyrics for \"{}\"...", first.title);
         match state
@@ -44,10 +44,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    println!("\n[3/3] Initializing Storage Adapter...");
+    println!("\n[3/4] Initializing Storage Adapter...");
     let history = state.library.get_history().await?;
     println!("-> Loaded {} history items from local cache.", history.len());
 
-    println!("\n✓ SoraFy Desktop Core Engine is operational and ready for UI binding.\n");
+    println!("\n[4/4] Initializing Modular Plugins (Mobile to Desktop Port)...");
+    let plugins = state.plugins.get_all_plugins().await;
+    println!("-> Loaded {} active plugins:", plugins.len());
+    for p in &plugins {
+        let status = if p.is_enabled { "✓ AKTIF" } else { "○ NONAKTIF" };
+        println!("   [{}] {} v{} ({}) - {}", status, p.name, p.version, p.category, p.description);
+    }
+
+    println!("\n✓ SoraFy Desktop Core Engine & Plugins operational.\n");
     Ok(())
 }
