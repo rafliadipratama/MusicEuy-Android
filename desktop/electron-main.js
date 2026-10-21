@@ -67,6 +67,64 @@ localAudioProxy.listen(0, '127.0.0.1', () => {
 // In-memory stream cache for instant 0ms playback on repeated tracks
 const streamCache = new Map();
 
+// Strict filters & matching algorithms (ported directly from Android MusicStreamSource.kt)
+const BANNED_LANGUAGES = new Set([
+  'hindi', 'punjabi', 'bhojpuri', 'tamil', 'telugu', 'marathi',
+  'bengali', 'kannada', 'gujarati', 'malayalam', 'urdu', 'haryanvi',
+  'rajasthani', 'odia', 'assamese', 'sanskrit'
+]);
+
+const BANNED_KEYWORDS = [
+  't-series', 'zee music', 'bhangra', 'dholak', 'qawwali', 'naat',
+  'sonu nigam', 'arijit', 'badshah', 'sidhu', 'shreya ghoshal', 'kumar sanu',
+  'lata mangeshkar', 'dj remix', 'viral rimek', 'pashmina', 'punjabi', 'bhojpuri',
+  'hawa hawa', 'dilbar', 'diljit', 'neha kakkar', 'yo yo honey', 'tribute', 'cover by'
+];
+
+function isIndianOrCoverContent(title, artist, language) {
+  if (language && BANNED_LANGUAGES.has(language.toLowerCase())) {
+    return true;
+  }
+  const lowerT = (title || '').toLowerCase();
+  const lowerA = (artist || '').toLowerCase();
+  return BANNED_KEYWORDS.some(k => lowerT.includes(k) || lowerA.includes(k));
+}
+
+function normalize(s) {
+  return (s || '').toLowerCase()
+    .replace(/\(.*\)|\[.*\]/g, '')
+    .replace(/[^a-z0-9]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isStrictMatch(expectedTitle, expectedArtist, candTitle, candArtist) {
+  const normExpT = normalize(expectedTitle);
+  const normCandT = normalize(candTitle);
+  const normExpA = normalize(expectedArtist);
+  const normCandA = normalize(candArtist);
+
+  if (!normExpT || !normCandT) return false;
+
+  const titleMatch = normExpT === normCandT ||
+    normExpT.includes(normCandT) || normCandT.includes(normExpT) ||
+    (() => {
+      const expWords = normExpT.split(' ').filter(w => w.length > 2);
+      const candWords = normCandT.split(' ').filter(w => w.length > 2);
+      return (expWords.length > 0 && expWords.every(w => candWords.includes(w))) ||
+             (candWords.length > 0 && candWords.every(w => expWords.includes(w)));
+    })();
+
+  if (!titleMatch) return false;
+
+  const artistMatch = !normExpA || !normCandA ||
+    normExpA === normCandA ||
+    normExpA.includes(normCandA) || normCandA.includes(normExpA) ||
+    normExpA.split(' ').filter(w => w.length > 2).some(w => normCandA.includes(w));
+
+  return artistMatch;
+}
+
 // JioSaavn DES 320kbps Stream Decryptor (Key: 38346591, matches Android MusicStreamSource.kt)
 function decryptSaavnMediaUrl(encryptedUrl) {
   try {
@@ -104,6 +162,16 @@ function resolveJioSaavnStream(title, artist) {
 
           for (const item of results) {
             if (!item.encrypted_media_url) continue;
+            const candTitle = item.title || item.song || '';
+            const candArtist = item.more_info?.primary_artists || item.singers || '';
+            const candLang = item.language;
+
+            // Reject Indian regional & banned keywords
+            if (isIndianOrCoverContent(candTitle, candArtist, candLang)) continue;
+
+            // Reject if title and artist don't strictly match the requested song
+            if (!isStrictMatch(title, artist, candTitle, candArtist)) continue;
+
             const fullUrl = decryptSaavnMediaUrl(item.encrypted_media_url);
             if (fullUrl && fullUrl.startsWith('https://')) {
               return resolve({
@@ -222,6 +290,72 @@ function searchYouTubeMusicInnerTube(query) {
       });
     });
     req.on('error', () => resolve([]));
+    req.write(payload);
+    req.end();
+  });
+}
+
+function searchYouTubeMusicStrict(title, artist) {
+  return new Promise((resolve) => {
+    const payload = JSON.stringify({
+      query: `${artist} ${title}`.trim(),
+      params: 'EgWKAQIIAWoKEAkQBRAKEAMQBw%3D%3D', // Filter Songs only
+      context: {
+        client: {
+          clientName: 'WEB_REMIX',
+          clientVersion: '1.20240318.01.00',
+          hl: 'id',
+          gl: 'ID'
+        }
+      }
+    });
+
+    const req = https.request({
+      hostname: 'music.youtube.com',
+      path: '/youtubei/v1/search',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    }, res => {
+      let body = '';
+      res.on('data', c => body += c);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(body);
+          const contents = json.contents?.tabbedSearchResultsRenderer?.tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents;
+          const shelf = contents?.[0]?.musicShelfRenderer?.contents || [];
+
+          // 1. First pass: strict match title and artist (guarantees authentic artist recording)
+          for (const item of shelf) {
+            const r = item.musicResponsiveListItemRenderer;
+            const cTitle = r?.flexColumns[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text;
+            const cArtist = r?.flexColumns[1]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text;
+            const overlay = r?.overlay?.musicItemThumbnailOverlayRenderer;
+            const videoId = overlay?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId
+              || r?.playlistItemData?.videoId;
+            if (videoId && isStrictMatch(title, artist, cTitle, cArtist)) {
+              return resolve(videoId);
+            }
+          }
+
+          // 2. Second pass: fallback to first playable videoId from song results
+          for (const item of shelf) {
+            const r = item.musicResponsiveListItemRenderer;
+            const overlay = r?.overlay?.musicItemThumbnailOverlayRenderer;
+            const videoId = overlay?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId
+              || r?.playlistItemData?.videoId;
+            if (videoId) return resolve(videoId);
+          }
+          resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    });
+    req.on('error', () => resolve(null));
     req.write(payload);
     req.end();
   });
@@ -369,26 +503,35 @@ ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) 
     return cached.data;
   }
 
-  // 1. Try JioSaavn 320k direct stream first (100% playable, 320kbps, zero 403)
-  if (title && artist) {
-    const saavnStream = await resolveJioSaavnStream(title, artist);
-    if (saavnStream && saavnStream.url) {
-      streamCache.set(cacheKey, { data: saavnStream, expireAt: Date.now() + 45 * 60 * 1000 });
-      return saavnStream;
-    }
-  }
-
-  // 2. If JioSaavn not found, fallback to direct InnerTube stream
+  // 1. If videoId is provided directly (e.g. from YouTube Music search item),
+  // ALWAYS resolve InnerTube stream directly! This guarantees 100% authentic recording by the original artist.
   let vid = videoId;
-  if (!vid && title && artist) {
-    vid = await searchYouTubeId(`${artist} ${title}`);
-  }
-
   if (vid) {
     const stream = await resolveInnerTubeStream(vid);
     if (stream && stream.url) {
       streamCache.set(cacheKey, { data: stream, expireAt: Date.now() + 45 * 60 * 1000 });
       return stream;
+    }
+  }
+
+  // 2. If no videoId provided, search YouTube Music strictly for original recording by artist
+  if (title && artist) {
+    const matchedVid = await searchYouTubeMusicStrict(title, artist);
+    if (matchedVid) {
+      const stream = await resolveInnerTubeStream(matchedVid);
+      if (stream && stream.url) {
+        streamCache.set(cacheKey, { data: stream, expireAt: Date.now() + 45 * 60 * 1000 });
+        return stream;
+      }
+    }
+  }
+
+  // 3. Fallback to JioSaavn ONLY IF strictly matched and NOT Indian/cover content
+  if (title && artist) {
+    const saavnStream = await resolveJioSaavnStream(title, artist);
+    if (saavnStream && saavnStream.url) {
+      streamCache.set(cacheKey, { data: saavnStream, expireAt: Date.now() + 45 * 60 * 1000 });
+      return saavnStream;
     }
   }
 

@@ -188,6 +188,46 @@ const DEFAULT_PLUGINS = [
     is_enabled: true
   },
   {
+    id: "lrclib",
+    name: "LRCLIB Synced Karaoke",
+    version: "1.0.0",
+    author: "LRCLIB Community",
+    description: "Lirik tersinkronisasi presisi kata-per-kata otomatis dengan efek karaoke glow.",
+    category: "Visual & Lyrics",
+    icon: "🎤",
+    is_enabled: true
+  },
+  {
+    id: "soundcloud",
+    name: "SoundCloud Audio Stream",
+    version: "1.0.0",
+    author: "Team NewPipe",
+    description: "Stream lagu indie, mixtape, EDM, remix, dan DJ sets langsung dari SoundCloud.",
+    category: "Audio Streaming",
+    icon: "☁️",
+    is_enabled: true
+  },
+  {
+    id: "ytdlp_engine",
+    name: "yt-dlp Native Engine",
+    version: "2024.08.06",
+    author: "yt-dlp Core",
+    description: "Mesin ekstraksi native berkecepatan tinggi untuk stream audio bitrate maksimal.",
+    category: "Audio Streaming",
+    icon: "🚀",
+    is_enabled: true
+  },
+  {
+    id: "spotube_bridge",
+    name: "Spotube Bridge Resolver",
+    version: "1.0.1",
+    author: "Spotube Open Spec",
+    description: "Protokol resolver kompatibel format .smplug untuk sinkronisasi audio eksternal.",
+    category: "Tools & Utilities",
+    icon: "🔌",
+    is_enabled: true
+  },
+  {
     id: "lastfm",
     name: "Last.fm Scrobbler",
     version: "1.0.0",
