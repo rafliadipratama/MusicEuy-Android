@@ -1,6 +1,9 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
+// Disable incompatible Vulkan on Linux Wayland to guarantee silky smooth rendering
+app.commandLine.appendSwitch('disable-features', 'Vulkan');
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
