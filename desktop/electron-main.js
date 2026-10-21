@@ -7,6 +7,7 @@ const des = require('des.js');
 // Disable incompatible Vulkan on Linux Wayland to guarantee silky smooth rendering
 app.commandLine.appendSwitch('disable-features', 'Vulkan');
 app.commandLine.appendSwitch('disable-dev-shm-usage');
+app.commandLine.appendSwitch('log-level', '3'); // Suppress harmless Chromium Ozone/Vulkan warnings
 
 // Apple / Safari User-Agent (exact match with Android MusicStreamSource.kt & MusicCacheManager.kt)
 const APPLE_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
