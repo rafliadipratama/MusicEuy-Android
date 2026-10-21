@@ -118,10 +118,6 @@
             <button class="chip" data-category="fokus">Fokus & Belajar</button>
             <button class="chip" data-category="workout">Workout</button>
           </div>
-          <button class="header-spotify-btn" id="openSpotifyImportBtn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle><path d="M8 11.5c3-1 6-1 8 0M7 14.5c3.5-1 7-1 10 0M9 9c2.5-.8 5-.8 7 0" stroke="#0B0D10" stroke-width="2" fill="none"></path></svg>
-            Impor Spotify
-          </button>
         </div>
       </header>
 
@@ -226,7 +222,7 @@
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="#00E599"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path></svg>
                 </span>
               </div>
-              <span class="artist-role-badge">Artis Terverifikasi</span>
+              <span class="artist-role-badge" id="artistRoleBadge">Artis Terverifikasi</span>
               <p class="artist-bio-text" id="artistBioText"></p>
               
               <div class="artist-action-row">
@@ -576,6 +572,35 @@
         <button class="hero-secondary-btn" id="modalCreateNewPlaylistBtn">+ Buat Playlist Baru</button>
         <button class="hero-outline-btn" id="cancelAddToPlaylistBtn">Selesai</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Custom Track Context Menu (Klik Kanan) -->
+  <div id="trackContextMenu" class="context-menu" style="display: none;">
+    <div class="context-menu-item" data-action="play-next">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+      <span>Putar Setelah Ini</span>
+    </div>
+    <div class="context-menu-item" data-action="add-queue">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      <span>Tambahkan ke Antrean</span>
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" data-action="play-now">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      <span>Putar Sekarang</span>
+    </div>
+    <div class="context-menu-item" data-action="artist-profile">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      <span>Buka Profil Artis</span>
+    </div>
+    <div class="context-menu-item" data-action="add-playlist">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <span>Tambah ke Playlist</span>
+    </div>
+    <div class="context-menu-item" data-action="toggle-like">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+      <span id="contextMenuLikeText">Sukai Lagu</span>
     </div>
   </div>
 

@@ -1818,69 +1818,244 @@ body {
 /* =========================================================
    Artist Result Cards (Multi-Search & Recommendation)
    ========================================================= */
-.search-top-artist-hero {
+.search-hero-container {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 1024px) {
+  .search-hero-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.search-hero-artist-card {
+  background: #13171D;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 22px;
   display: flex;
   align-items: center;
-  gap: 22px;
-  background: var(--color-surface-container);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-lg);
-  padding: 18px 24px;
-  margin-bottom: 24px;
+  gap: 20px;
+  position: relative;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.search-top-artist-hero:hover {
-  background: var(--color-surface-elevated);
-  border-color: rgba(255, 255, 255, 0.16);
+.search-hero-artist-card:hover {
+  background: #171C24;
+  border-color: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
 }
 
-.search-top-artist-avatar {
-  width: 90px;
-  height: 90px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  flex-shrink: 0;
-  background: #181C22;
+.search-hero-artist-card:hover .search-hero-chevron {
+  color: #FFFFFF;
+  transform: translateX(3px);
 }
 
-.search-top-artist-info {
+.search-hero-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  background: #1A1F27;
+}
+
+.search-hero-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
   flex: 1;
   min-width: 0;
 }
 
-.search-top-artist-badge {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--color-brand-primary);
-}
-
-.search-top-artist-name {
-  font-size: 22px;
+.search-hero-name {
+  font-size: 24px;
   font-weight: 800;
   color: #FFFFFF;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.3px;
 }
 
-.search-top-artist-sub {
+.search-hero-sub {
+  font-size: 13.5px;
+  color: #94A3B8;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.btn-hero-shuffle {
+  background: #FFFFFF;
+  color: #000000;
+  border-radius: 20px;
+  padding: 7px 18px;
   font-size: 13px;
-  color: var(--color-text-secondary);
-  margin: 0;
+  font-weight: 700;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
 }
 
-.search-top-artist-action {
+.btn-hero-shuffle:hover {
+  background: #F1F5F9;
+  transform: scale(1.03);
+}
+
+.btn-hero-mix {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+  border-radius: 20px;
+  padding: 7px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-hero-mix:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.03);
+}
+
+.search-hero-chevron {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: #64748B;
+  transition: all 0.2s ease;
+}
+
+/* Right Side: Top 3 Tracks Card */
+.search-hero-tracks-card {
+  background: #13171D;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.search-hero-track-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.search-hero-track-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.search-hero-track-art {
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  object-fit: cover;
   flex-shrink: 0;
+  background: #1A1F27;
+}
+
+.search-hero-track-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-hero-track-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-hero-track-sub {
+  font-size: 12px;
+  color: #94A3B8;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =========================================================
+   Context Menu (Klik Kanan Musik)
+   ========================================================= */
+.context-menu {
+  position: fixed;
+  z-index: 10000;
+  background: #111419;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  min-width: 210px;
+  padding: 6px;
+  backdrop-filter: blur(24px);
+  user-select: none;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #E2E8F0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #FFFFFF;
+}
+
+.context-menu-item svg {
+  color: #94A3B8;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.context-menu-item:hover svg {
+  color: #00E599;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 5px 6px;
 }
 
 .artist-results-grid {

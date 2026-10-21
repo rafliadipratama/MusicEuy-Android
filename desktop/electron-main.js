@@ -234,13 +234,12 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
   return new Promise((resolve) => {
     let params = 'EgWKAQIIAWoKEAkQBRAKEAMQBw%3D%3D'; // Songs
     if (filterType === 'video') params = 'EgWKAQIQAWoKEAkQBRAKEAMQBw%3D%3D'; // Videos
-    if (filterType === 'artist') params = 'EgWKAQIgAWoSEAUQAxAEEAoQDhAJEBAQFRAR'; // Artists
+    if (filterType === 'artist') params = ''; // Unfiltered: yields musicCardShelfRenderer with top 3 songs & real monthly listeners
     if (filterType === 'playlist') params = 'EgWKAQI4AWoKEAkQBRAKEAMQBw%3D%3D'; // Playlists
     if (filterType === 'album') params = 'EgWKAQIYAWoSEAUQAxAEEAoQDhAJEBAQFRAR'; // Albums
 
-    const payload = JSON.stringify({
+    const payloadObj = {
       query: query.trim(),
-      params: params,
       context: {
         client: {
           clientName: 'WEB_REMIX',
@@ -249,7 +248,11 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
           gl: 'ID'
         }
       }
-    });
+    };
+    if (params) {
+      payloadObj.params = params;
+    }
+    const payload = JSON.stringify(payloadObj);
 
     const req = https.request({
       hostname: 'music.youtube.com',
@@ -290,6 +293,45 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
                 const isArtistCard = pageType === 'MUSIC_PAGE_TYPE_ARTIST' || sub.toLowerCase().includes('artis') || (browseId && browseId.startsWith('UC'));
                 const isPlaylistCard = pageType === 'MUSIC_PAGE_TYPE_PLAYLIST' || (browseId && (browseId.startsWith('VL') || browseId.startsWith('PL')));
 
+                // Extract 3 top tracks from the artist card shelf (exact matches to YouTube Music)
+                const cardSongs = [];
+                for (const item of (card.contents || [])) {
+                  const r = item.musicResponsiveListItemRenderer;
+                  if (!r) continue;
+                  const t = r.flexColumns?.[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text || '';
+                  const sRuns = r.flexColumns?.[1]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs || [];
+                  const subText = sRuns.map(x => x.text).join('');
+                  const durStr = sRuns.length > 0 ? sRuns[sRuns.length - 1]?.text : '3:30';
+                  let dSec = 210;
+                  if (durStr && durStr.includes(':')) {
+                    const parts = durStr.split(':').map(p => parseInt(p, 10));
+                    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                      dSec = parts[0] * 60 + parts[1];
+                    }
+                  }
+                  const sThumbs = r.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails
+                    || r.thumbnail?.croppedSquareThumbnailRenderer?.thumbnail?.thumbnails || [];
+                  let sArt = sThumbs.length ? sThumbs[sThumbs.length - 1].url : '';
+                  if (sArt) sArt = sArt.replace(/=(?:w\d+-h\d+|s\d+).*$/, '=w544-h544-l90-rj');
+                  const sVid = r.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId
+                    || r.playlistItemData?.videoId || '';
+
+                  if (t && sVid) {
+                    cardSongs.push({
+                      id: 'yt_' + sVid,
+                      video_id: sVid,
+                      title: t,
+                      artist: title,
+                      subtitle: subText,
+                      duration_secs: dSec,
+                      artwork_url: sArt || `https://i.ytimg.com/vi/${sVid}/hqdefault.jpg`,
+                      stream_url: '',
+                      source_label: 'SoraFy Stream',
+                      audio_format: { codec: 'Opus HD', bitrate_kbps: 160, is_lossless: false }
+                    });
+                  }
+                }
+
                 if (isArtistCard && (filterType === 'artist' || filterType === 'all')) {
                   if (title) {
                     itemsList.unshift({
@@ -300,7 +342,8 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
                       artwork_url: artwork || '',
                       browse_id: browseId,
                       sub_label: sub || 'Artis Terverifikasi',
-                      is_top_hero: true
+                      is_top_hero: true,
+                      top_songs: cardSongs
                     });
                   }
                 } else if (isPlaylistCard && filterType === 'playlist') {
@@ -480,6 +523,10 @@ function browseYouTubeInnerTube(browseId) {
           const header = json.header?.musicImmersiveHeaderRenderer || json.header?.musicVisualHeaderRenderer || json.header?.musicDetailHeaderRenderer;
           const name = header?.title?.runs?.[0]?.text || '';
           const desc = header?.description?.runs?.[0]?.text || '';
+          const subText = header?.subscriptionButton?.subscribeButtonRenderer?.subscriberCountText?.runs?.[0]?.text
+            || header?.straplineTextOne?.runs?.map(x => x.text).join('')
+            || header?.subtitle?.runs?.map(x => x.text).join('')
+            || '';
           const thumbs = header?.thumbnails
             || header?.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails
             || header?.thumbnail?.croppedSquareThumbnailRenderer?.thumbnail?.thumbnails
@@ -596,6 +643,7 @@ function browseYouTubeInnerTube(browseId) {
             name,
             description: desc,
             avatar_url: avatarUrl,
+            sub_label: subText,
             tracks: parsedTracks,
             albums: parsedAlbums,
             videos: parsedVideos,
@@ -830,8 +878,9 @@ async function resolveArtistProfile(name) {
       avatar_url: artAvatar,
       artwork_url: artAvatar,
       banner_url: artAvatar,
+      sub_label: match.sub_label || (bio?.sub_label || ''),
       description: bio?.description || '',
-      tracks: bio?.tracks || [],
+      tracks: (match.top_songs && match.top_songs.length) ? match.top_songs : (bio?.tracks || []),
       albums: bio?.albums || [],
       videos: bio?.videos || [],
       peers: bio?.peers || []
