@@ -1105,35 +1105,65 @@ class SoraFyDesktopApp {
     draw();
   }
 
-  // Render Track Grid
+  // Render Track List (Streamlined Minimalist Spotify/Apple Music Style)
   renderTrackGrid(tracks) {
     this.trackGrid.innerHTML = "";
-    tracks.forEach((track) => {
-      const card = document.createElement("div");
-      card.className = "track-card";
-      card.innerHTML = `
-        <div class="track-art-wrapper">
-          <img src="${track.artwork_url}" class="track-art" alt="${track.title}" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80'">
-          <div class="card-play-overlay">
-            <div class="play-circle">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="#0B0D10"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-            </div>
+    tracks.forEach((track, idx) => {
+      const isActive = this.tracks[this.currentTrackIndex]?.id === track.id;
+      const isLiked = this.likedTrackIds.has(track.id);
+      const row = document.createElement("div");
+      row.className = `track-row ${isActive ? 'active' : ''}`;
+      row.id = `track_row_${track.id}`;
+
+      row.innerHTML = `
+        <div class="track-row-num">
+          <span class="num-text">${idx + 1}</span>
+          <span class="play-icon">▶</span>
+          ${isActive && this.isPlaying ? '<div class="playing-bars"><span></span><span></span><span></span></div>' : ''}
+        </div>
+        <img src="${track.artwork_url}" class="track-row-art" alt="${track.title}" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80'">
+        <div class="track-row-info">
+          <div class="track-row-title">${track.title}</div>
+          <div class="track-row-sub">
+            <span>${track.artist}</span>
+            ${track.album ? `<span class="bullet">•</span><span>${track.album}</span>` : ''}
           </div>
         </div>
-        <div class="track-name" title="${track.title}">${track.title}</div>
-        <div class="track-meta">
-          <span class="track-artist">${track.artist}</span>
+        <div class="track-row-badge">
           <span class="audio-tag">${track.source_label || track.audio_format.codec}</span>
         </div>
+        <button class="track-row-heart ${isLiked ? 'liked' : ''}" title="Suka" id="row_like_${track.id}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="${isLiked ? '#00E599' : 'none'}" stroke="${isLiked ? '#00E599' : 'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+        </button>
+        <div class="track-row-duration">${this.formatTime(track.duration_secs || 180)}</div>
       `;
 
-      card.addEventListener("click", () => {
+      row.addEventListener("click", (e) => {
+        if (e.target.closest('.track-row-heart')) return;
         const originalIndex = this.tracks.findIndex(t => t.id === track.id);
         this.loadTrack(originalIndex !== -1 ? originalIndex : 0, true);
         this.showToast(`Memutar ${track.title}`);
+        this.renderTrackGrid(this.tracks);
       });
 
-      this.trackGrid.appendChild(card);
+      const heartBtn = row.querySelector(`#row_like_${track.id}`);
+      if (heartBtn) {
+        heartBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (this.likedTrackIds.has(track.id)) {
+            this.likedTrackIds.delete(track.id);
+            this.showToast("Dihapus dari Lagu Favorit");
+          } else {
+            this.likedTrackIds.add(track.id);
+            this.showToast("Disimpan ke Lagu Favorit ❤️");
+          }
+          localStorage.setItem("sorafy_liked_ids", JSON.stringify([...this.likedTrackIds]));
+          this.renderTrackGrid(this.tracks);
+          this.updateLikeButton();
+        });
+      }
+
+      this.trackGrid.appendChild(row);
     });
   }
 
@@ -1322,21 +1352,23 @@ class SoraFyDesktopApp {
           <div class="plugin-info">
             <div class="plugin-icon-box">${plugin.icon || '🧩'}</div>
             <div class="plugin-meta-col">
-              <span class="plugin-title">${plugin.name}</span>
-              <span class="plugin-author-version">v${plugin.version} • oleh ${plugin.author}</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="plugin-title">${plugin.name}</span>
+                <span class="plugin-category-badge">${plugin.category}</span>
+                <span class="plugin-author-version">v${plugin.version}</span>
+              </div>
+              <p class="plugin-desc">${plugin.description}</p>
             </div>
           </div>
+        </div>
+        <div class="plugin-footer">
+          <span style="font-size: 11px; color: ${plugin.is_enabled ? 'var(--color-brand-primary)' : 'var(--color-text-tertiary)'}; font-weight: 600;" id="status_${plugin.id}">
+            ${plugin.is_enabled ? '● Aktif' : '○ Nonaktif'}
+          </span>
           <label class="switch">
             <input type="checkbox" ${plugin.is_enabled ? 'checked' : ''} id="toggle_${plugin.id}">
             <span class="slider"></span>
           </label>
-        </div>
-        <p class="plugin-desc">${plugin.description}</p>
-        <div class="plugin-footer">
-          <span class="plugin-category-badge">${plugin.category}</span>
-          <span style="font-size: 11px; color: ${plugin.is_enabled ? 'var(--color-brand-primary)' : 'var(--color-text-tertiary)'}; font-weight: 600;" id="status_${plugin.id}">
-            ${plugin.is_enabled ? '● Aktif' : '○ Dinonaktifkan'}
-          </span>
         </div>
       `;
 
