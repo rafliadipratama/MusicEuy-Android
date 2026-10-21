@@ -3543,7 +3543,15 @@ class SoraFyDesktopApp {
         }
         const currentSrc = this.screenPlayerVideoFrame.src || "";
         if (!currentSrc.includes(vid)) {
-          this.screenPlayerVideoFrame.src = `https://www.youtube-nocookie.com/embed/${vid}?autoplay=1&start=${curSec}&enablejsapi=1&controls=1&modestbranding=1&rel=0`;
+          if (window.electronAPI && typeof window.electronAPI.getVideoEmbedUrl === 'function') {
+            window.electronAPI.getVideoEmbedUrl({ videoId: vid, start: curSec }).then(url => {
+              this.screenPlayerVideoFrame.src = url;
+            }).catch(() => {
+              this.screenPlayerVideoFrame.src = `https://www.youtube.com/embed/${vid}?autoplay=1&start=${curSec}&enablejsapi=1&controls=1&modestbranding=1&rel=0&origin=https://www.youtube.com`;
+            });
+          } else {
+            this.screenPlayerVideoFrame.src = `https://www.youtube.com/embed/${vid}?autoplay=1&start=${curSec}&enablejsapi=1&controls=1&modestbranding=1&rel=0&origin=https://www.youtube.com`;
+          }
         }
       }
     } else {

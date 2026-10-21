@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>SoraFy - High-Fidelity Music Streaming</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -442,7 +443,7 @@
 
             <!-- 2. Video Player Mode (jika muter video tampilin videonya) -->
             <div id="screenPlayerVideoView" class="screen-player-video-box" style="display: none;">
-              <iframe id="screenPlayerVideoFrame" class="screen-player-video-frame" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+              <iframe id="screenPlayerVideoFrame" class="screen-player-video-frame" src="" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe>
             </div>
 
             <!-- Track Metadata & Action Row -->

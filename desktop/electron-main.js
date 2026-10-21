@@ -2,6 +2,8 @@ const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
 const http = require('http');
 const https = require('https');
+const { execFile } = require('child_process');
+const fs = require('fs');
 const des = require('des.js');
 
 // Disable incompatible Vulkan on Linux Wayland to guarantee silky smooth rendering
@@ -12,6 +14,42 @@ app.commandLine.appendSwitch('log-level', '3'); // Suppress harmless Chromium Oz
 // Apple / Safari User-Agent (exact match with Android MusicStreamSource.kt & MusicCacheManager.kt)
 const APPLE_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
 const IOS_UA = 'com.google.ios.youtube/21.03.3 (iPad7,6; U; CPU iPadOS 17_7_10 like Mac OS X; en-US)';
+
+// Locate yt-dlp binary for 100% reliable, unthrottled direct audio stream extraction
+const YT_DLP_BIN = fs.existsSync('/home/rafliadipratama/.local/bin/yt-dlp')
+  ? '/home/rafliadipratama/.local/bin/yt-dlp'
+  : 'yt-dlp';
+
+function resolveYtDlpStream(videoId) {
+  return new Promise((resolve) => {
+    if (!videoId) return resolve(null);
+    execFile(
+      YT_DLP_BIN,
+      ['-g', '-f', 'ba/b', `https://www.youtube.com/watch?v=${videoId}`],
+      { timeout: 9000 },
+      (error, stdout) => {
+        if (error || !stdout) {
+          return resolve(null);
+        }
+        const lines = stdout.trim().split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length > 0 && lines[0].startsWith('http')) {
+          resolve({
+            url: lines[0],
+            rawUrl: lines[0],
+            videoId: videoId,
+            bitrate: 160000,
+            mimeType: 'audio/webm',
+            provider: 'YouTube Direct (yt-dlp)',
+            duration: 0,
+            isFull: true
+          });
+        } else {
+          resolve(null);
+        }
+      }
+    );
+  });
+}
 
 let cachedVisitorData = null;
 function getVisitorData() {
@@ -45,10 +83,44 @@ function getVisitorData() {
   });
 }
 
-// Lightweight local audio proxy for YouTube InnerTube streams (handles Range & iOS headers)
+// Lightweight local proxy server for:
+// 1. YouTube Video Embed relay (/embed) - completely eliminates Error 153 by providing a verified HTTP origin
+// 2. Chunked audio stream relay (/stream) - safely bypasses chunk throttling on iOS streams
 let localProxyPort = 0;
 const localAudioProxy = http.createServer((req, res) => {
   const reqUrl = new URL(req.url, `http://127.0.0.1:${localProxyPort}`);
+
+  // 1. YouTube Video Embed Relay
+  if (reqUrl.pathname === '/embed') {
+    const vid = reqUrl.searchParams.get('v') || '';
+    const start = parseInt(reqUrl.searchParams.get('start') || '0', 10);
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <style>
+    * { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #07080A; }
+    iframe { border: none; width: 100%; height: 100%; display: block; }
+  </style>
+</head>
+<body>
+  <iframe 
+    src="https://www.youtube.com/embed/${encodeURIComponent(vid)}?autoplay=1&start=${start}&enablejsapi=1&controls=1&modestbranding=1&rel=0&origin=https://www.youtube.com" 
+    referrerpolicy="strict-origin-when-cross-origin" 
+    allow="autoplay; encrypted-media; picture-in-picture; web-share" 
+    allowfullscreen>
+  </iframe>
+</body>
+</html>`;
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Access-Control-Allow-Origin': '*'
+    });
+    return res.end(html);
+  }
+
+  // 2. Chunked Audio Stream Relay
   const target = reqUrl.searchParams.get('url');
   if (!target) {
     res.writeHead(400);
@@ -57,40 +129,92 @@ const localAudioProxy = http.createServer((req, res) => {
 
   try {
     const u = new URL(target);
-    const headers = {
-      'User-Agent': IOS_UA
-    };
-    if (req.headers.range) {
-      headers['Range'] = req.headers.range;
+    const clenParam = u.searchParams.get('clen');
+    const totalLength = clenParam ? parseInt(clenParam, 10) : 0;
+
+    let rangeStart = 0;
+    let rangeEnd = totalLength ? totalLength - 1 : 0;
+
+    const rangeHeader = req.headers.range;
+    if (rangeHeader) {
+      const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+      if (match) {
+        rangeStart = parseInt(match[1], 10);
+        if (match[2]) {
+          rangeEnd = parseInt(match[2], 10);
+        } else if (totalLength) {
+          rangeEnd = totalLength - 1;
+        }
+      }
     }
 
-    const upstream = https.request({
-      hostname: u.hostname,
-      path: u.pathname + u.search,
-      headers: headers
-    }, (upRes) => {
-      const respHeaders = {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': upRes.headers['content-type'] || 'audio/mp4'
-      };
-      if (upRes.headers['content-length']) respHeaders['Content-Length'] = upRes.headers['content-length'];
-      if (upRes.headers['content-range']) respHeaders['Content-Range'] = upRes.headers['content-range'];
-      if (upRes.headers['accept-ranges']) respHeaders['Accept-Ranges'] = upRes.headers['accept-ranges'];
+    const CHUNK_SIZE = 256 * 1024; // 256KB safe chunk size
+    const contentLength = (rangeEnd && rangeEnd >= rangeStart) ? (rangeEnd - rangeStart + 1) : '';
 
-      res.writeHead(upRes.statusCode, respHeaders);
-      upRes.pipe(res);
-    });
+    const respHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Content-Type': 'audio/mp4',
+      'Accept-Ranges': 'bytes'
+    };
 
-    upstream.on('error', (err) => {
-      if (!res.headersSent) res.writeHead(502);
-      res.end();
-    });
+    if (totalLength && rangeHeader) {
+      respHeaders['Content-Range'] = `bytes ${rangeStart}-${rangeEnd}/${totalLength}`;
+      if (contentLength) respHeaders['Content-Length'] = contentLength;
+      res.writeHead(206, respHeaders);
+    } else {
+      if (contentLength) respHeaders['Content-Length'] = contentLength;
+      res.writeHead(200, respHeaders);
+    }
+
+    let cur = rangeStart;
+    let isDestroyed = false;
 
     req.on('close', () => {
-      upstream.destroy();
+      isDestroyed = true;
     });
 
-    upstream.end();
+    function fetchNextChunk() {
+      if (isDestroyed || (rangeEnd && cur > rangeEnd)) {
+        res.end();
+        return;
+      }
+
+      const nextEnd = rangeEnd ? Math.min(cur + CHUNK_SIZE - 1, rangeEnd) : (cur + CHUNK_SIZE - 1);
+      const chunkHeaders = {
+        'User-Agent': IOS_UA,
+        'Range': `bytes=${cur}-${nextEnd}`
+      };
+
+      const upReq = https.request({
+        hostname: u.hostname,
+        path: u.pathname + u.search,
+        headers: chunkHeaders
+      }, (upRes) => {
+        if (upRes.statusCode !== 200 && upRes.statusCode !== 206) {
+          res.end();
+          return;
+        }
+
+        upRes.on('data', chunk => {
+          if (!isDestroyed) {
+            res.write(chunk);
+          }
+        });
+
+        upRes.on('end', () => {
+          cur = nextEnd + 1;
+          fetchNextChunk();
+        });
+      });
+
+      upReq.on('error', () => {
+        res.end();
+      });
+
+      upReq.end();
+    }
+
+    fetchNextChunk();
   } catch (err) {
     if (!res.headersSent) res.writeHead(500);
     res.end();
@@ -807,8 +931,8 @@ async function resolveInnerTubeStream(videoId) {
           const json = JSON.parse(body);
           const formats = json.streamingData?.adaptiveFormats?.filter(f => f.mimeType?.includes("audio"));
           if (formats && formats.length > 0) {
-            formats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-            const rawUrl = formats[0].url;
+            const chosen = formats.find(f => f.itag === 140) || formats.find(f => f.mimeType?.includes("mp4")) || formats[0];
+            const rawUrl = chosen.url;
             const streamUrl = (localProxyPort > 0 && rawUrl)
               ? `http://127.0.0.1:${localProxyPort}/stream?url=${encodeURIComponent(rawUrl)}`
               : rawUrl;
@@ -816,8 +940,8 @@ async function resolveInnerTubeStream(videoId) {
               url: streamUrl,
               rawUrl: rawUrl,
               videoId: videoId,
-              bitrate: formats[0].bitrate || 160000,
-              mimeType: formats[0].mimeType || 'audio/mp4',
+              bitrate: chosen.bitrate || 160000,
+              mimeType: chosen.mimeType || 'audio/mp4',
               provider: 'YouTube Music InnerTube',
               duration: parseInt(json.videoDetails?.lengthSeconds, 10) || 0,
               isFull: true
@@ -907,6 +1031,10 @@ ipcMain.handle('resolve-artist-profile', async (event, name) => {
   return await resolveArtistProfile(name);
 });
 
+ipcMain.handle('get-video-embed-url', async (event, { videoId, start = 0 }) => {
+  return `http://127.0.0.1:${localProxyPort}/embed?v=${encodeURIComponent(videoId)}&start=${start}`;
+});
+
 ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) => {
   const cacheKey = videoId || `${artist} - ${title}`.toLowerCase().trim();
   const cached = streamCache.get(cacheKey);
@@ -914,38 +1042,27 @@ ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) 
     return cached.data;
   }
 
-  // 1. If videoId is provided directly (e.g. from YouTube Music search item),
-  // ALWAYS resolve InnerTube stream directly! This guarantees 100% authentic recording by the original artist.
   let vid = videoId;
+  if (!vid && title && artist) {
+    vid = await searchYouTubeMusicStrict(title, artist);
+    if (!vid) {
+      vid = await searchYouTubeId(`${artist} ${title}`);
+    }
+  }
+
   if (vid) {
-    const stream = await resolveInnerTubeStream(vid);
-    if (stream && stream.url) {
-      streamCache.set(cacheKey, { data: stream, expireAt: Date.now() + 45 * 60 * 1000 });
-      return stream;
+    // 1. High-speed direct unthrottled stream via yt-dlp
+    const dlpStream = await resolveYtDlpStream(vid);
+    if (dlpStream && dlpStream.url) {
+      streamCache.set(cacheKey, { data: dlpStream, expireAt: Date.now() + 45 * 60 * 1000 });
+      return dlpStream;
     }
-  }
 
-  // 2. If no videoId provided, search YouTube Music strictly for original recording by artist
-  if (title && artist) {
-    const matchedVid = await searchYouTubeMusicStrict(title, artist);
-    if (matchedVid) {
-      const stream = await resolveInnerTubeStream(matchedVid);
-      if (stream && stream.url) {
-        streamCache.set(cacheKey, { data: stream, expireAt: Date.now() + 45 * 60 * 1000 });
-        return stream;
-      }
-    }
-  }
-
-  // 3. Fallback search on YouTube
-  if (title && artist) {
-    const fallbackVid = await searchYouTubeId(`${artist} ${title}`);
-    if (fallbackVid) {
-      const stream = await resolveInnerTubeStream(fallbackVid);
-      if (stream && stream.url) {
-        streamCache.set(cacheKey, { data: stream, expireAt: Date.now() + 45 * 60 * 1000 });
-        return stream;
-      }
+    // 2. High-speed direct InnerTube stream with chunked proxy fallback
+    const innerStream = await resolveInnerTubeStream(vid);
+    if (innerStream && innerStream.url) {
+      streamCache.set(cacheKey, { data: innerStream, expireAt: Date.now() + 45 * 60 * 1000 });
+      return innerStream;
     }
   }
 
@@ -953,17 +1070,33 @@ ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) 
 });
 
 app.whenReady().then(() => {
-  // Set Safari/Apple User-Agent on googlevideo requests to prevent 403 Forbidden
   if (session && session.defaultSession) {
     session.defaultSession.webRequest.onBeforeSendHeaders(
-      { urls: ['*://*.googlevideo.com/*', '*://*.youtube.com/*'] },
+      { urls: ['*://*.googlevideo.com/*', '*://*.youtube.com/*', '*://*.youtube-nocookie.com/*'] },
       (details, callback) => {
-        delete details.requestHeaders['Origin'];
-        delete details.requestHeaders['sec-ch-ua'];
-        delete details.requestHeaders['sec-ch-ua-mobile'];
-        delete details.requestHeaders['sec-ch-ua-platform'];
-        details.requestHeaders['User-Agent'] = APPLE_UA;
+        const u = details.url;
+        if (u.includes('youtube.com') || u.includes('youtube-nocookie.com')) {
+          details.requestHeaders['Referer'] = 'https://www.youtube.com/';
+          details.requestHeaders['Origin'] = 'https://www.youtube.com';
+        }
+        if (u.includes('googlevideo.com')) {
+          delete details.requestHeaders['Origin'];
+          delete details.requestHeaders['sec-ch-ua'];
+          delete details.requestHeaders['sec-ch-ua-mobile'];
+          delete details.requestHeaders['sec-ch-ua-platform'];
+          details.requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+        }
         callback({ cancel: false, requestHeaders: details.requestHeaders });
+      }
+    );
+
+    session.defaultSession.webRequest.onHeadersReceived(
+      { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*'] },
+      (details, callback) => {
+        const responseHeaders = { ...details.responseHeaders };
+        delete responseHeaders['x-frame-options'];
+        delete responseHeaders['X-Frame-Options'];
+        callback({ cancel: false, responseHeaders });
       }
     );
   }
