@@ -230,11 +230,17 @@ function resolveJioSaavnStream(title, artist) {
   });
 }
 
-function searchYouTubeMusicInnerTube(query) {
+function searchYouTubeMusicInnerTube(query, filterType = 'song') {
   return new Promise((resolve) => {
+    let params = 'EgWKAQIIAWoKEAkQBRAKEAMQBw%3D%3D'; // Songs
+    if (filterType === 'video') params = 'EgWKAQIQAWoKEAkQBRAKEAMQBw%3D%3D'; // Videos
+    if (filterType === 'artist') params = 'EgWKAQIgAWoSEAUQAxAEEAoQDhAJEBAQFRAR'; // Artists
+    if (filterType === 'playlist') params = 'EgWKAQI4AWoKEAkQBRAKEAMQBw%3D%3D'; // Playlists
+    if (filterType === 'album') params = 'EgWKAQIYAWoSEAUQAxAEEAoQDhAJEBAQFRAR'; // Albums
+
     const payload = JSON.stringify({
       query: query.trim(),
-      params: 'EgWKAQIIAWoKEAkQBRAKEAMQBw%3D%3D', // Filter Songs only
+      params: params,
       context: {
         client: {
           clientName: 'WEB_REMIX',
@@ -261,7 +267,7 @@ function searchYouTubeMusicInnerTube(query) {
         try {
           const json = JSON.parse(body);
           const contents = json.contents?.tabbedSearchResultsRenderer?.tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents;
-          const tracks = [];
+          const itemsList = [];
 
           if (contents) {
             for (const sec of contents) {
@@ -290,10 +296,13 @@ function searchYouTubeMusicInnerTube(query) {
                   }
                 }
 
-                // Video ID
+                // Video ID & Browse ID
                 const overlay = renderer.overlay?.musicItemThumbnailOverlayRenderer;
                 const videoId = overlay?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId
                   || renderer.playlistItemData?.videoId || '';
+                const navEndpoint = item.navigationEndpoint || renderer.navigationEndpoint;
+                const browseId = navEndpoint?.browseEndpoint?.browseId
+                  || renderer.flexColumns[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseId || '';
 
                 // Thumbnail (upgrade resolution)
                 const thumbs = renderer.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails || [];
@@ -302,30 +311,172 @@ function searchYouTubeMusicInnerTube(query) {
                   artwork = artwork.replace(/=w\d+-h\d+/, '=w544-h544');
                 }
 
-                if (videoId) {
-                  tracks.push({
-                    id: 'yt_' + videoId,
-                    video_id: videoId,
-                    title: title,
-                    artist: artist,
-                    album: album || title,
-                    duration_secs: durationSec,
-                    artwork_url: artwork,
-                    stream_url: '',
-                    source_label: 'YouTube Music (InnerTube)',
-                    audio_format: { codec: 'Opus HD', bitrate_kbps: 160, is_lossless: false }
+                if (filterType === 'artist') {
+                  itemsList.push({
+                    id: browseId || ('art_' + title.toLowerCase().replace(/[^a-z0-9]/g, '_')),
+                    name: title,
+                    avatar_url: artwork || '',
+                    browse_id: browseId,
+                    sub_label: 'Artis'
                   });
+                } else if (filterType === 'playlist') {
+                  let authorClean = artist;
+                  if (!authorClean || authorClean.toLowerCase().includes('youtube') || authorClean === 'Artist') {
+                    authorClean = 'SoraFy Koleksi';
+                  }
+                  itemsList.push({
+                    id: browseId || ('pl_' + title.toLowerCase().replace(/[^a-z0-9]/g, '_')),
+                    title: title,
+                    author: authorClean,
+                    artwork_url: artwork,
+                    browse_id: browseId,
+                    track_count: album || 'Daftar Putar',
+                    source_label: 'Koleksi Spesial'
+                  });
+                } else if (filterType === 'video') {
+                  const isOfficial = /\b(official\s*(?:music\s*)?video|video\s*musik|music\s*video|mv|m\/v)\b/i.test(title);
+                  const isLiveOrCover = /\b(live|acoustic|akustik|cover|session|remix|konser|karaoke)\b/i.test(title);
+                  const videoBadge = isOfficial ? 'Official' : (isLiveOrCover ? 'Live / Session' : 'Video');
+
+                  if (videoId) {
+                    itemsList.push({
+                      id: 'yt_' + videoId,
+                      video_id: videoId,
+                      title: title,
+                      artist: artist,
+                      album: album || title,
+                      duration_secs: durationSec,
+                      artwork_url: artwork || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+                      stream_url: '',
+                      is_video: true,
+                      video_badge: videoBadge,
+                      source_label: 'Video Musik',
+                      audio_format: { codec: 'Opus HD', bitrate_kbps: 160, is_lossless: false }
+                    });
+                  }
+                } else {
+                  // Standard Song format
+                  if (videoId) {
+                    const isOfficial = /\b(official\s*(?:music\s*)?video|official\s*audio|video\s*musik)\b/i.test(title);
+                    itemsList.push({
+                      id: 'yt_' + videoId,
+                      video_id: videoId,
+                      title: title,
+                      artist: artist,
+                      album: album || title,
+                      duration_secs: durationSec,
+                      artwork_url: artwork,
+                      stream_url: '',
+                      is_video: false,
+                      is_official: isOfficial,
+                      source_label: 'SoraFy Stream',
+                      audio_format: { codec: 'Opus HD', bitrate_kbps: 160, is_lossless: false }
+                    });
+                  }
                 }
               }
             }
           }
-          resolve(tracks);
+          resolve(itemsList);
         } catch (e) {
           resolve([]);
         }
       });
     });
     req.on('error', () => resolve([]));
+    req.write(payload);
+    req.end();
+  });
+}
+
+function browseYouTubeInnerTube(browseId) {
+  if (!browseId) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const payload = JSON.stringify({
+      browseId,
+      context: {
+        client: {
+          clientName: 'WEB_REMIX',
+          clientVersion: '1.20240318.01.00',
+          hl: 'id',
+          gl: 'ID'
+        }
+      }
+    });
+
+    const req = https.request({
+      hostname: 'music.youtube.com',
+      path: '/youtubei/v1/browse',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    }, res => {
+      let body = '';
+      res.on('data', c => body += c);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(body);
+          const header = json.header?.musicImmersiveHeaderRenderer || json.header?.musicVisualHeaderRenderer || json.header?.musicDetailHeaderRenderer;
+          const name = header?.title?.runs?.[0]?.text || '';
+          const desc = header?.description?.runs?.[0]?.text || '';
+          const thumbs = header?.thumbnails || header?.thumbnail?.croppedSquareThumbnailRenderer?.thumbnail?.thumbnails || [];
+          let avatarUrl = thumbs.length ? thumbs[thumbs.length - 1].url : '';
+          if (avatarUrl) avatarUrl = avatarUrl.replace(/=w\d+-h\d+/, '=w544-h544');
+
+          // Extract tracks if it's a playlist or artist
+          const parsedTracks = [];
+          const contents = json.contents?.singleColumnBrowseResultsRenderer?.tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents
+            || json.contents?.twoColumnBrowseResultsRenderer?.secondaryContents?.sectionListRenderer?.contents || [];
+
+          for (const sec of contents) {
+            const shelf = sec.musicShelfRenderer || sec.musicPlaylistShelfRenderer;
+            if (shelf && shelf.contents) {
+              for (const item of shelf.contents) {
+                const r = item.musicResponsiveListItemRenderer;
+                if (!r || !r.flexColumns) continue;
+                const tTitle = r.flexColumns[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text || '';
+                const subRuns = r.flexColumns[1]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs || [];
+                const tArtist = subRuns[0]?.text || name || 'Artist';
+                const tAlbum = subRuns.length > 2 ? subRuns[2]?.text : '';
+                const overlay = r.overlay?.musicItemThumbnailOverlayRenderer;
+                const videoId = overlay?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId
+                  || r.playlistItemData?.videoId || '';
+                const tThumbs = r.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails || [];
+                const artwork = tThumbs.length ? tThumbs[tThumbs.length - 1].url : '';
+
+                if (tTitle && videoId) {
+                  parsedTracks.push({
+                    id: 'yt_' + videoId,
+                    video_id: videoId,
+                    title: tTitle,
+                    artist: tArtist,
+                    album: tAlbum || tTitle,
+                    duration_secs: 210,
+                    artwork_url: artwork || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+                    stream_url: '',
+                    source_label: 'SoraFy Stream',
+                    audio_format: { codec: 'Opus HD', bitrate_kbps: 160, is_lossless: false }
+                  });
+                }
+              }
+            }
+          }
+
+          resolve({
+            name,
+            description: desc,
+            avatar_url: avatarUrl,
+            tracks: parsedTracks
+          });
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    });
+    req.on('error', () => resolve(null));
     req.write(payload);
     req.end();
   });
@@ -530,9 +681,14 @@ function createWindow() {
 }
 
 // IPC Handlers for YouTube Music InnerTube Search & Audio Streaming
-ipcMain.handle('search-yt-music', async (event, query) => {
+ipcMain.handle('search-yt-music', async (event, query, filterType = 'song') => {
   if (!query || !query.trim()) return [];
-  return await searchYouTubeMusicInnerTube(query);
+  return await searchYouTubeMusicInnerTube(query, filterType);
+});
+
+ipcMain.handle('browse-yt', async (event, browseId) => {
+  if (!browseId) return null;
+  return await browseYouTubeInnerTube(browseId);
 });
 
 ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) => {

@@ -45,7 +45,19 @@
       </nav>
 
       <div class="sidebar-divider"></div>
-      <div class="sidebar-section-title">Playlists & Curations</div>
+      <div class="sidebar-section-header-row">
+        <div class="sidebar-section-title">Playlist Saya</div>
+        <button class="sidebar-add-playlist-btn" id="sidebarCreatePlaylistBtn" title="Buat Playlist Baru">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+      </div>
+
+      <nav class="nav-menu" id="userPlaylistsNav">
+        <!-- User custom playlists list populated dynamically -->
+      </nav>
+
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section-title">Koleksi & Kurasi</div>
 
       <nav class="nav-menu">
         <div class="nav-item" data-filter="favorites" id="navLiked">
@@ -66,9 +78,34 @@
     <!-- Center Main Content -->
     <main class="main-content" id="mainContent">
       <header class="content-header">
-        <div class="search-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" id="searchInput" placeholder="Cari lagu atau artis...">
+        <div class="search-container-col">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="searchInput" placeholder="Cari lagu, artis, video musik, atau playlist...">
+            <button id="searchClearBtn" class="search-clear-btn" style="display: none;">✕</button>
+          </div>
+
+          <!-- Suggestion Pick Chips -->
+          <div class="suggestion-picks" id="searchSuggestions">
+            <span class="suggestion-label">Saran:</span>
+            <button class="suggestion-chip" data-query="Bernadya - Satu Bulan">Bernadya - Satu Bulan</button>
+            <button class="suggestion-chip" data-query="Tulus - Monokrom">Tulus - Monokrom</button>
+            <button class="suggestion-chip" data-query="Sal Priadi - Gala Bunga Matahari">Sal Priadi</button>
+            <button class="suggestion-chip" data-query="Hindia - Evaluasi">Hindia</button>
+            <button class="suggestion-chip" data-query="Billie Eilish Live">Billie Eilish Live</button>
+            <button class="suggestion-chip" data-query="Official Music Video">Official MV</button>
+            <button class="suggestion-chip" data-query="Acoustic Session">Acoustic Session</button>
+            <button class="suggestion-chip" data-query="Lofi Chill Beats">Lofi Chill</button>
+          </div>
+
+          <!-- Search Filter Tabs (Semua, Lagu, Artis, Video, Playlist) -->
+          <div class="search-filter-tabs" id="searchFilterTabs">
+            <button class="filter-tab-btn active" data-search-filter="all">Semua</button>
+            <button class="filter-tab-btn" data-search-filter="song">Lagu</button>
+            <button class="filter-tab-btn" data-search-filter="artist">Artis</button>
+            <button class="filter-tab-btn" data-search-filter="video">Video</button>
+            <button class="filter-tab-btn" data-search-filter="playlist">Playlist</button>
+          </div>
         </div>
 
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;">
@@ -89,8 +126,19 @@
 
       <!-- Home View Container -->
       <div id="homeViewContainer">
+        <!-- Curated Playlists Recommendations (Strictly no YT Music branding) -->
+        <section class="curated-playlists-section" id="curatedPlaylistsSection">
+          <div class="section-title">
+            <span>Daftar Putar Pilihan Untukmu</span>
+            <span style="font-size: 13px; color: var(--color-brand-primary); cursor: pointer;" id="refreshPlaylistsBtn">Segarkan</span>
+          </div>
+          <div class="curated-playlists-row" id="curatedPlaylistsRow">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </section>
+
         <!-- Recommended Track List (Clean Minimalist Streamlined) -->
-        <section>
+        <section style="margin-top: 24px;">
           <div class="section-title">
             <span id="sectionTitleLabel">Trending & Rekomendasi</span>
             <span style="font-size: 13px; color: var(--color-brand-primary); cursor: pointer;" id="viewAllBtn">Muat Ulang</span>
@@ -101,6 +149,188 @@
             <span style="width: 70px; text-align: right;">Durasi</span>
           </div>
           <div class="track-list" id="trackGrid">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </section>
+      </div>
+
+      <!-- Multi-Type Search Results View Container -->
+      <div id="searchResultsContainer" style="display: none;">
+        <div class="search-results-header">
+          <h2 id="searchResultsTitle" style="font-size: 20px; font-weight: 800;">Hasil Pencarian</h2>
+          <span id="searchResultsCount" style="font-size: 13px; color: var(--color-text-secondary);"></span>
+        </div>
+
+        <!-- Artists Grid Results (When searching artists or 'all') -->
+        <div id="searchArtistsSection" style="display: none; margin-bottom: 28px;">
+          <div class="section-title">
+            <span>Artis Terkait</span>
+          </div>
+          <div class="artist-results-grid" id="searchArtistsGrid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Videos Grid Results (When searching videos or 'all') -->
+        <div id="searchVideosSection" style="display: none; margin-bottom: 28px;">
+          <div class="section-title">
+            <span>Video Musik & Sesi Live</span>
+          </div>
+          <div class="video-grid" id="searchVideosGrid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Playlists Grid Results (When searching playlists or 'all') -->
+        <div id="searchPlaylistsSection" style="display: none; margin-bottom: 28px;">
+          <div class="section-title">
+            <span>Daftar Putar & Koleksi</span>
+          </div>
+          <div class="curated-playlists-row" id="searchPlaylistsGrid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Songs List Results -->
+        <div id="searchSongsSection">
+          <div class="section-title">
+            <span>Lagu</span>
+          </div>
+          <div class="track-list" id="searchSongsList">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Artist Detail Screen Container (Ported from Android ArtistDetailScreen.kt) -->
+      <div id="artistViewContainer" style="display: none;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <button class="back-nav-btn" id="artistBackBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            Kembali
+          </button>
+        </div>
+
+        <!-- Hero Parallax Header -->
+        <div class="artist-hero-card">
+          <div class="artist-hero-banner" id="artistHeroBanner"></div>
+          <div class="artist-hero-content">
+            <div class="artist-avatar-wrapper">
+              <img src="" alt="Artist Avatar" id="artistAvatarImg" class="artist-avatar-img">
+            </div>
+            <div class="artist-hero-meta">
+              <div class="artist-title-row">
+                <h1 class="artist-name" id="artistNameHeading">Nama Artis</h1>
+                <span class="verified-badge-icon" id="artistVerifiedBadge" title="Artis Terverifikasi">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="#00E599"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path></svg>
+                </span>
+              </div>
+              <span class="artist-role-badge">Artis Terverifikasi</span>
+              <p class="artist-bio-text" id="artistBioText"></p>
+              
+              <div class="artist-action-row">
+                <button class="hero-play-btn" id="artistPlayAllBtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  Putar Semua
+                </button>
+                <button class="hero-secondary-btn" id="artistShuffleBtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+                  Acak
+                </button>
+                <button class="hero-outline-btn" id="artistFollowBtn">
+                  + Ikuti
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. Lagu Populer -->
+        <section class="artist-section" style="margin-top: 24px;">
+          <div class="section-title">
+            <span>Lagu Populer</span>
+            <span class="section-sub-action" id="artistPopularCount">5 Lagu Teratas</span>
+          </div>
+          <div class="track-list" id="artistTopTracksList">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </section>
+
+        <!-- 2. Video Musik Resmi & Sesi Live (16:9 Widescreen) -->
+        <section class="artist-section" id="artistVideosSection" style="margin-top: 28px;">
+          <div class="section-title">
+            <span>Video Musik Resmi & Sesi Live</span>
+            <span class="section-sub-action" id="artistVideoCountLabel">0 Video</span>
+          </div>
+          <div class="video-grid" id="artistVideosGrid">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </section>
+
+        <!-- 3. Album & Diskografi -->
+        <section class="artist-section" id="artistAlbumsSection" style="margin-top: 28px;">
+          <div class="section-title">
+            <span>Album & Diskografi</span>
+            <span class="section-sub-action" id="artistAlbumCountLabel">0 Album</span>
+          </div>
+          <div class="album-grid" id="artistAlbumsRow">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </section>
+
+        <!-- 4. Artis Serupa / Rekomendasi Terkait -->
+        <section class="artist-section" id="artistPeersSection" style="margin-top: 28px;">
+          <div class="section-title">
+            <span>Mungkin Kamu Suka</span>
+          </div>
+          <div class="artist-peers-row" id="artistPeerRow">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </section>
+      </div>
+
+      <!-- Playlist Detail Screen Container -->
+      <div id="playlistViewContainer" style="display: none;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <button class="back-nav-btn" id="playlistBackBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            Kembali
+          </button>
+        </div>
+
+        <div class="playlist-hero-card">
+          <div class="playlist-cover-wrapper">
+            <img src="" alt="Playlist Cover" id="playlistCoverImg" class="playlist-cover-img">
+          </div>
+          <div class="playlist-hero-meta">
+            <span class="playlist-type-badge" id="playlistTypeBadge">Daftar Putar</span>
+            <h1 class="playlist-title" id="playlistTitleHeading">Judul Playlist</h1>
+            <p class="playlist-desc" id="playlistDescText"></p>
+            <div class="playlist-stats" id="playlistStatsText">0 Lagu</div>
+
+            <div class="artist-action-row" style="margin-top: 16px;">
+              <button class="hero-play-btn" id="playlistPlayAllBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Putar
+              </button>
+              <button class="hero-secondary-btn" id="playlistShuffleBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+                Acak
+              </button>
+              <button class="hero-outline-btn delete-btn" id="playlistDeleteBtn" style="display: none;">
+                Hapus Playlist
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <section class="artist-section" style="margin-top: 24px;">
+          <div class="track-list-header">
+            <span style="width: 28px; text-align: center;">#</span>
+            <span style="flex: 1; padding-left: 56px;">Judul & Artis</span>
+            <span style="width: 70px; text-align: right;">Durasi</span>
+          </div>
+          <div class="track-list" id="playlistTrackList">
             <!-- Populated dynamically via JS -->
           </div>
         </section>
@@ -305,6 +535,45 @@
       <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
         <button class="hero-secondary-btn" id="cancelSpotifyBtn">Batal</button>
         <button class="hero-play-btn" id="submitSpotifyBtn">Mulai Impor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog Create Custom Playlist -->
+  <div id="createPlaylistModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 18px; font-weight: 700;">+ Buat Playlist Baru</h3>
+        <button class="control-btn" id="closeCreatePlaylistModalBtn">✕</button>
+      </div>
+      <p style="font-size: 13px; color: var(--color-text-secondary); margin-top: 8px;">
+        Beri nama playlist kamu untuk mengelompokkan lagu favorit, sesi santai, atau koleksi kerja.
+      </p>
+      <input type="text" id="playlistNameInput" class="modal-input" placeholder="Nama Playlist (contoh: Santai Sore, Fokus Kerja)">
+      <textarea id="playlistDescInput" class="modal-input" style="height: 70px; resize: none; margin-top: 10px;" placeholder="Deskripsi opsional..."></textarea>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+        <button class="hero-secondary-btn" id="cancelCreatePlaylistBtn">Batal</button>
+        <button class="hero-play-btn" id="submitCreatePlaylistBtn">Buat Playlist</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog Add Track to Playlist -->
+  <div id="addToPlaylistModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 18px; font-weight: 700;">Tambahkan ke Playlist</h3>
+        <button class="control-btn" id="closeAddToPlaylistModalBtn">✕</button>
+      </div>
+      <p style="font-size: 13px; color: var(--color-text-secondary); margin-top: 8px;" id="addToPlaylistTrackTitle">
+        Pilih playlist tujuan untuk lagu ini:
+      </p>
+      <div class="modal-playlist-list" id="modalUserPlaylistsList" style="margin-top: 14px; max-height: 240px; overflow-y: auto;">
+        <!-- Populated dynamically via JS -->
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+        <button class="hero-secondary-btn" id="modalCreateNewPlaylistBtn">+ Buat Playlist Baru</button>
+        <button class="hero-outline-btn" id="cancelAddToPlaylistBtn">Selesai</button>
       </div>
     </div>
   </div>
