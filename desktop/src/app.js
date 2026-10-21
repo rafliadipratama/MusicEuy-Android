@@ -98,6 +98,16 @@ const SAMPLE_MASTER_TRACKS = [
 
 const DEFAULT_PLUGINS = [
   {
+    id: "ytmusic",
+    name: "YouTube Music InnerTube",
+    version: "1.2.0",
+    author: "Team NewPipe & MusicEuy",
+    description: "Ekstraksi stream audio resmi YouTube Music (Opus HD 160-320kbps) via InnerTube RPC.",
+    category: "Audio Streaming",
+    icon: "📺",
+    is_enabled: true
+  },
+  {
     id: "monochrome_lossless",
     name: "Monochrome Lossless",
     version: "2.0.0",
@@ -666,7 +676,22 @@ class SoraFyDesktopApp {
     try {
       let results = [];
 
-      // Query Deezer
+      // 1. Query YouTube Music InnerTube (Official Mobile Plugin)
+      if (this.isPluginEnabled("ytmusic") && window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function') {
+        try {
+          const ytTracks = await window.electronAPI.searchYouTubeMusic(query);
+          if (ytTracks && Array.isArray(ytTracks) && ytTracks.length > 0) {
+            results.push(...ytTracks.map(item => ({
+              ...item,
+              is_liked: this.likedTrackIds.has(item.id)
+            })));
+          }
+        } catch (err) {
+          console.warn("YouTube Music InnerTube search notice:", err);
+        }
+      }
+
+      // 2. Query Deezer
       try {
         let dzRes = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=25`);
         if (dzRes.ok) {
@@ -1358,10 +1383,25 @@ class SoraFyDesktopApp {
     this.showToast(`Preset Equalizer: ${presetName}`);
   }
 
+  isPluginEnabled(id) {
+    const p = this.plugins.find(x => x.id === id);
+    return p ? p.is_enabled !== false : true;
+  }
+
   // =========================================================
   // Modular Plugins Manager
   // =========================================================
   async initPlugins() {
+    const saved = localStorage.getItem("sorafy_plugins_state");
+    if (saved) {
+      try {
+        const stateMap = JSON.parse(saved);
+        this.plugins.forEach(p => {
+          if (stateMap[p.id] !== undefined) p.is_enabled = stateMap[p.id];
+        });
+      } catch (e) {}
+    }
+
     const nativePlugins = await invokeTauri("get_plugins");
     if (nativePlugins && Array.isArray(nativePlugins) && nativePlugins.length > 0) {
       this.plugins = nativePlugins;
@@ -1416,6 +1456,11 @@ class SoraFyDesktopApp {
     if (plugin) {
       plugin.is_enabled = isEnabled;
     }
+
+    try {
+      const stateMap = Object.fromEntries(this.plugins.map(p => [p.id, p.is_enabled]));
+      localStorage.setItem("sorafy_plugins_state", JSON.stringify(stateMap));
+    } catch (e) {}
 
     const card = document.getElementById(`plugin_card_${id}`);
     const status = document.getElementById(`status_${id}`);
