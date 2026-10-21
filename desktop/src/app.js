@@ -1,100 +1,7 @@
 // SoraFy Desktop Core Frontend Controller
 // Domain-Driven Design (DDD) Client with Real Multi-Provider Search, 
 // Live Streaming Playback, LRCLIB Synced Lyrics & Studio Equalizer DSP
-
-const SAMPLE_MASTER_TRACKS = [
-  {
-    id: "sora_001",
-    title: "Blinding Lights",
-    artist: "The Weeknd",
-    album: "After Hours",
-    duration_secs: 200,
-    stream_url: "https://aac.saavncdn.com/265/49d2e76e53abba8b08c951447abacbb0_320.mp4",
-    artwork_url: "https://c.saavncdn.com/265/After-Hours-English-2020-20200320023605-500x500.jpg",
-    audio_format: { codec: "AAC 320k", bitrate_kbps: 320, is_lossless: false },
-    source_label: "SoraFy 320k",
-    is_liked: true,
-    is_full_stream: true,
-    lyrics: [
-      { timestamp_ms: 0, text: "(Synth Intro)" },
-      { timestamp_ms: 27000, text: "I've been tryna call" },
-      { timestamp_ms: 31000, text: "I've been on my own for long enough" },
-      { timestamp_ms: 36000, text: "Maybe you can show me how to love, maybe" },
-      { timestamp_ms: 45000, text: "I'm going through withdrawals" },
-      { timestamp_ms: 49000, text: "You don't even have to do too much" },
-      { timestamp_ms: 54000, text: "You can turn me on with just a touch, baby" },
-      { timestamp_ms: 63000, text: "I look around and Sin City's cold and empty" },
-      { timestamp_ms: 72000, text: "No one's around to judge me" },
-      { timestamp_ms: 77000, text: "I can't see clearly when you're gone" },
-      { timestamp_ms: 81000, text: "I said, ooh, I'm blinded by the lights" },
-      { timestamp_ms: 91000, text: "No, I can't sleep until I feel your touch" },
-      { timestamp_ms: 100000, text: "I said, ooh, I'm drowning in the night" },
-      { timestamp_ms: 109000, text: "Oh, when I'm like this, you're the one I trust" }
-    ]
-  },
-  {
-    id: "sora_002",
-    title: "Starboy",
-    artist: "The Weeknd ft. Daft Punk",
-    album: "Starboy",
-    duration_secs: 225,
-    stream_url: "https://aac.saavncdn.com/216/8b8a4f2344d7703773d2aa956ecbe51b_320.mp4",
-    artwork_url: "https://c.saavncdn.com/216/ZZang-KARAOKE-2024-The-Weeknd-Vol-2-Instrumental-2024-20260620203409-500x500.webp",
-    audio_format: { codec: "AAC 320k", bitrate_kbps: 320, is_lossless: false },
-    source_label: "SoraFy 320k",
-    is_liked: false,
-    is_full_stream: true,
-    lyrics: [
-      { timestamp_ms: 0, text: "(Piano & Drum intro)" },
-      { timestamp_ms: 13000, text: "I'm tryna put you in the worst mood, ah" },
-      { timestamp_ms: 16000, text: "P1 cleaner than your church shoes, ah" },
-      { timestamp_ms: 20000, text: "Milli point two just to hurt you, ah" },
-      { timestamp_ms: 23000, text: "All red Lamb' just to tease you, ah" },
-      { timestamp_ms: 38000, text: "Look what you've done" },
-      { timestamp_ms: 41000, text: "I'm a motherfuckin' starboy" }
-    ]
-  },
-  {
-    id: "sora_003",
-    title: "Yellow",
-    artist: "Coldplay",
-    album: "Parachutes",
-    duration_secs: 271,
-    stream_url: "https://aac.saavncdn.com/263/2083848071f4ca4b33f8866c02a16ee3_320.mp4",
-    artwork_url: "https://c.saavncdn.com/263/ZZang-KARAOKE-2024-POP-Vol-60-Instrumental-2024-20260511142050-500x500.webp",
-    audio_format: { codec: "AAC 320k", bitrate_kbps: 320, is_lossless: false },
-    source_label: "SoraFy Acoustic",
-    is_liked: true,
-    is_full_stream: true,
-    lyrics: [
-      { timestamp_ms: 0, text: "(Acoustic guitar intro)" },
-      { timestamp_ms: 16000, text: "Look at the stars" },
-      { timestamp_ms: 20000, text: "Look how they shine for you" },
-      { timestamp_ms: 24000, text: "And everything you do" },
-      { timestamp_ms: 32000, text: "Yeah they were all yellow" }
-    ]
-  },
-  {
-    id: "sora_004",
-    title: "Shape of You",
-    artist: "Ed Sheeran",
-    album: "÷ (Divide)",
-    duration_secs: 140,
-    stream_url: "https://aac.saavncdn.com/444/c72a75582084c9e31a0e8f60339da41e_320.mp4",
-    artwork_url: "https://c.saavncdn.com/444/Shape-of-You-Instrumental-2021-20211029105017-500x500.webp",
-    audio_format: { codec: "AAC 320k", bitrate_kbps: 320, is_lossless: false },
-    source_label: "SoraFy Pop",
-    is_liked: false,
-    is_full_stream: true,
-    lyrics: [
-      { timestamp_ms: 0, text: "(Marimba rhythm)" },
-      { timestamp_ms: 10000, text: "The club isn't the best place to find a lover" },
-      { timestamp_ms: 13000, text: "So the bar is where I go" },
-      { timestamp_ms: 17000, text: "Me and my friends at the table doing shots" },
-      { timestamp_ms: 20000, text: "Drinking fast and then we talk slow" }
-    ]
-  }
-];
+// Musicfy Recommendation & Discovery Algorithm Engine
 
 const DEFAULT_PLUGINS = [
   {
@@ -310,7 +217,8 @@ function parseLrc(lrcText) {
 class SoraFyDesktopApp {
   constructor() {
     this.audio = document.getElementById("audioSource");
-    this.tracks = [...SAMPLE_MASTER_TRACKS];
+    this.tracks = [];
+    this.currentShelves = [];
     this.plugins = [...DEFAULT_PLUGINS];
     this.currentTrackIndex = 0;
     this.isPlaying = false;
@@ -458,18 +366,7 @@ class SoraFyDesktopApp {
     this.likeBtn.addEventListener("click", () => {
       const current = this.tracks[this.currentTrackIndex];
       if (!current) return;
-      const isLiked = this.likedTrackIds.has(current.id);
-      if (isLiked) {
-        this.likedTrackIds.delete(current.id);
-        current.is_liked = false;
-        this.showToast("Dihapus dari Lagu Favorit");
-      } else {
-        this.likedTrackIds.add(current.id);
-        current.is_liked = true;
-        this.showToast("Disimpan ke Lagu Favorit ❤️");
-      }
-      localStorage.setItem("sorafy_liked_ids", JSON.stringify([...this.likedTrackIds]));
-      this.updateLikeButton();
+      this.toggleLikeTrack(current);
     });
 
     if (this.volumeSlider) {
@@ -528,8 +425,8 @@ class SoraFyDesktopApp {
 
     if (this.viewAllBtn) {
       this.viewAllBtn.addEventListener("click", () => {
-        this.showToast("Memuat ulang trending chart global...");
-        this.fetchTrendingChart();
+        this.showToast("Menyinkronkan rekomendasi Musicfy...");
+        this.fetchMusicfyRecommendations();
       });
     }
 
@@ -572,8 +469,7 @@ class SoraFyDesktopApp {
       clearTimeout(this.searchDebounceTimer);
 
       if (!query) {
-        this.sectionTitleLabel.textContent = "Trending & Rekomendasi (Multi-Provider)";
-        this.fetchTrendingChart();
+        this.fetchMusicfyRecommendations();
         return;
       }
 
@@ -692,133 +588,346 @@ class SoraFyDesktopApp {
   }
 
   // =========================================================
-  // Live Online Music Catalog & Multi-Provider Search
+  // Musicfy Recommendation Algorithm & Multi-Provider Search
+  // (Ported from Android MusicStreamSource.kt with Zero Static Data)
   // =========================================================
   async loadInitialCatalog() {
-    this.renderTrackGrid(this.tracks);
-    this.loadTrack(0, false);
-    // Fetch live trending global chart in background
-    await this.fetchTrendingChart();
+    this.renderLoadingPlaceholder("Memuat rekomendasi cerdas Musicfy...");
+    await this.fetchMusicfyRecommendations();
   }
 
-  async fetchTrendingChart() {
-    try {
-      let chartItems = [];
+  renderLoadingPlaceholder(text = "Memuat...") {
+    if (!this.trackGrid) return;
+    this.trackGrid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 48px 0; color: var(--color-text-secondary);">
+        <div style="font-size: 22px; margin-bottom: 12px; opacity: 0.7;">✦</div>
+        <div style="font-size: 13px; font-weight: 600;">${this.escapeHtml(text)}</div>
+      </div>
+    `;
+  }
 
-      // 1. Try Deezer Chart
-      try {
-        let res = await fetch("https://api.deezer.com/chart/0/tracks?limit=20");
-        if (res.ok) {
-          const json = await res.json();
-          if (json && json.data) chartItems = json.data;
-        }
-      } catch (err) {
-        // Try JSONP fallback if direct fetch fails (e.g. browser CORS)
-        const jsonpData = await fetchDeezerJsonp("https://api.deezer.com/chart/0/tracks?limit=20").catch(() => null);
-        if (jsonpData && jsonpData.data) chartItems = jsonpData.data;
+  /**
+   * Musicfy track picking algorithm:
+   * - Filters out avoided songs and avoided artists.
+   * - Partitions into heard vs unheard tracks:
+   *   Keeps a balanced familiar ratio (familiar = Math.max(1, Math.floor(limit / 4))),
+   *   filling the remaining with unheard discoveries.
+   * - Enforces perArtist limit to spread diverse artists across the shelf.
+   */
+  pickDiverseTracks(songs, heardIds = new Set(), avoidSongs = new Set(), avoidArtists = new Set(), limit = 8, perArtist = 2) {
+    if (!songs || !Array.isArray(songs)) return [];
+
+    const usable = [];
+    const seen = new Set();
+    for (const track of songs) {
+      if (!track || !track.id) continue;
+      const artistName = (track.artist || "").trim().toLowerCase();
+      if (avoidSongs.has(track.id) || avoidArtists.has(artistName)) continue;
+      if (!seen.has(track.id)) {
+        seen.add(track.id);
+        usable.push(track);
       }
+    }
 
-      // 2. If Deezer fails, fallback to Apple Music / iTunes Top Songs
-      if (!chartItems || chartItems.length === 0) {
-        const res = await fetch("https://itunes.apple.com/search?term=pop&media=music&entity=song&limit=20");
-        if (res.ok) {
-          const itunesJson = await res.json();
-          if (itunesJson && itunesJson.results) {
-            chartItems = itunesJson.results.map(r => ({
-              id: r.trackId,
-              title: r.trackName,
-              artist: { name: r.artistName },
-              album: { title: r.collectionName, cover_xl: r.artworkUrl100.replace('100x100bb', '600x600bb') },
-              duration: Math.round(r.trackTimeMillis / 1000),
-              preview: r.previewUrl,
-              source: "Apple Audio"
+    const heard = [];
+    const unheard = [];
+    for (const track of usable) {
+      if (heardIds.has(track.id)) {
+        heard.push(track);
+      } else {
+        unheard.push(track);
+      }
+    }
+
+    const familiar = Math.max(1, Math.floor(limit / 4));
+    const shuffledHeard = [...heard].sort(() => Math.random() - 0.5);
+    const shuffledUnheard = [...unheard].sort(() => Math.random() - 0.5);
+
+    const chosenHeard = shuffledHeard.slice(0, Math.min(familiar, heard.length));
+    const neededUnheard = limit - chosenHeard.length;
+    const chosenUnheard = shuffledUnheard.slice(0, neededUnheard);
+
+    const combined = [...chosenUnheard, ...chosenHeard].sort(() => Math.random() - 0.5);
+
+    const perArtistCount = new Map();
+    const filtered = [];
+    for (const track of combined) {
+      const key = (track.artist || "").trim().toLowerCase();
+      const count = perArtistCount.get(key) || 0;
+      if (count < perArtist) {
+        perArtistCount.set(key, count + 1);
+        filtered.push(track);
+        if (filtered.length >= limit) break;
+      }
+    }
+    return filtered;
+  }
+
+  /**
+   * Builds Musicfy dynamic recommendation shelves synchronized with YouTube Music:
+   * 1. Because You Like <Song>: related tracks minus the seed song, partitioned for discovery.
+   * 2. More Like <Artist>: artist radio filtered to strictly exclude the seed artist itself (peer artists).
+   * 3. Because You Listen to Pop & Indie: top user genres & curated regional trends.
+   * 4. Try Something New: fresh ambient / chill / lofi instrumental.
+   * 5. Musicfy interleaved row arrangement with across-row deduplication.
+   */
+  async fetchMusicfyRecommendations() {
+    if (this.sectionTitleLabel) {
+      this.sectionTitleLabel.textContent = "Trending & Rekomendasi Musik";
+    }
+
+    const history = this.historyTracks || [];
+    const liked = Array.from(this.likedTrackIds);
+    const heardIds = new Set([...history.map(t => t.id), ...liked]);
+    const avoidSongs = new Set();
+    const avoidArtists = new Set();
+
+    // Top artist seed from history
+    const artistFreq = {};
+    history.forEach(t => {
+      if (t.artist) artistFreq[t.artist] = (artistFreq[t.artist] || 0) + 1;
+    });
+    const sortedArtists = Object.keys(artistFreq).sort((a, b) => artistFreq[b] - artistFreq[a]);
+    const seedArtist = sortedArtists[0] || "Bernadya";
+
+    // Top song seed
+    const seedSong = history[0] || (liked.length ? { id: liked[0], title: "Die With A Smile", artist: "Lady Gaga & Bruno Mars" } : { id: "seed_top", title: "Die With A Smile", artist: "Lady Gaga & Bruno Mars" });
+
+    const shelves = [];
+
+    const queryInnerTube = async (q) => {
+      if (window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function') {
+        try {
+          const res = await window.electronAPI.searchYouTubeMusic(q);
+          if (res && res.length) {
+            return res.map(t => ({
+              ...t,
+              is_liked: this.likedTrackIds.has(t.id)
             }));
           }
+        } catch (_) {}
+      }
+      return await this.fetchExternalMusic(q);
+    };
+
+    try {
+      const [rawSongRadio, rawArtistRadio, rawPop, rawChill] = await Promise.all([
+        queryInnerTube(`${seedSong.artist} ${seedSong.title} radio hits`),
+        queryInnerTube(`${seedArtist} hits radio mix`),
+        queryInnerTube("pop indonesia indie hits 2026"),
+        queryInnerTube("lofi chill beats acoustic relaxing instrumental")
+      ]);
+
+      // Shelf 1: "Karena Kamu Menyukai <Song>"
+      if (rawSongRadio && rawSongRadio.length) {
+        const candidates = rawSongRadio.filter(t => t.id !== seedSong.id && !t.title.toLowerCase().includes(seedSong.title.toLowerCase()));
+        const picked = this.pickDiverseTracks(candidates, heardIds, avoidSongs, avoidArtists, 8, 2);
+        if (picked.length >= 3) {
+          shelves.push({
+            id: `because_${seedSong.id || 'seed'}`,
+            label: "KARENA KAMU MENYUKAI",
+            title: `${seedSong.title} • ${seedSong.artist}`,
+            tracks: picked
+          });
         }
       }
 
-      if (chartItems && chartItems.length > 0) {
-        const parsedTracks = chartItems.map(item => {
-          const artwork = item.album && (item.album.cover_xl || item.album.cover_medium)
-            ? (item.album.cover_xl || item.album.cover_medium)
-            : (item.artist && item.artist.picture_medium ? item.artist.picture_medium : "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80");
+      // Shelf 2: "Mirip <Artist>" (Musicfy rule: strictly exclude seed artist itself)
+      if (rawArtistRadio && rawArtistRadio.length) {
+        const peerCandidates = rawArtistRadio.filter(t => !t.artist.toLowerCase().includes(seedArtist.toLowerCase()));
+        const picked = this.pickDiverseTracks(peerCandidates, heardIds, avoidSongs, avoidArtists, 8, 1);
+        if (picked.length >= 3) {
+          shelves.push({
+            id: `more_like_${seedArtist.toLowerCase().replace(/\s+/g, '_')}`,
+            label: `MIRIP ${seedArtist.toUpperCase()}`,
+            title: `More Like ${seedArtist}`,
+            tracks: picked
+          });
+        }
+      }
 
-          return {
-            id: `dz_${item.id}`,
-            title: item.title,
-            artist: item.artist.name,
-            album: item.album ? item.album.title : item.title,
-            duration_secs: item.duration || 180,
-            stream_url: item.preview,
-            artwork_url: artwork,
-            audio_format: { codec: "Hi-Res AAC", bitrate_kbps: 320, is_lossless: false },
-            source_label: item.source || "Deezer Hi-Fi",
-            is_liked: this.likedTrackIds.has(`dz_${item.id}`)
-          };
-        });
+      // Shelf 3: "Karena Kamu Mendengarkan Pop"
+      if (rawPop && rawPop.length) {
+        const picked = this.pickDiverseTracks(rawPop, heardIds, avoidSongs, avoidArtists, 8, 2);
+        if (picked.length >= 3) {
+          shelves.push({
+            id: "genre_pop",
+            label: "KARENA KAMU MENDENGARKAN POP",
+            title: "Pilihan Pop & Indie Terbaik",
+            tracks: picked
+          });
+        }
+      }
 
-        // Combine local FLAC masters with live top hits
-        this.tracks = [...SAMPLE_MASTER_TRACKS, ...parsedTracks];
-        this.renderTrackGrid(this.tracks);
-        this.updateHeroFeatured(this.tracks[4] || this.tracks[0]);
+      // Shelf 4: "Coba Sesuatu yang Baru"
+      if (rawChill && rawChill.length) {
+        const picked = this.pickDiverseTracks(rawChill, heardIds, avoidSongs, avoidArtists, 8, 2);
+        if (picked.length >= 3) {
+          shelves.push({
+            id: "try_new",
+            label: "COBA SESUATU YANG BARU",
+            title: "Chill Lofi & Instrumental",
+            tracks: picked
+          });
+        }
+      }
+
+      // Musicfy Interleaved Arrangement + Across-Row Deduplication
+      const seenSongIds = new Set();
+      const finalShelves = [];
+
+      for (const shelf of shelves) {
+        const uniqueTracks = [];
+        for (const track of shelf.tracks) {
+          const trackKey = `${track.title.toLowerCase().trim()}__${track.artist.toLowerCase().trim()}`;
+          if (!seenSongIds.has(track.id) && !seenSongIds.has(trackKey)) {
+            seenSongIds.add(track.id);
+            seenSongIds.add(trackKey);
+            uniqueTracks.push(track);
+          }
+        }
+        if (uniqueTracks.length >= 3) {
+          finalShelves.push({
+            ...shelf,
+            tracks: uniqueTracks
+          });
+        }
+      }
+
+      this.currentShelves = finalShelves;
+      this.tracks = finalShelves.flatMap(s => s.tracks);
+
+      if (this.tracks.length === 0) {
+        await this.fetchTrendingChart();
+        return;
+      }
+
+      this.renderShelves(finalShelves);
+
+      if (!this.isPlaying && this.tracks.length > 0 && !this.audio.src) {
+        this.loadTrack(0, false);
       }
     } catch (e) {
-      console.warn("Chart fetch notice:", e);
+      console.warn("Musicfy recommendations error:", e);
+      await this.fetchTrendingChart();
     }
   }
 
-  async searchOnlineMusic(query) {
-    this.sectionTitleLabel.textContent = `Mencari "${query}" di Multi-Provider...`;
-    this.trackGrid.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 48px 0; color: var(--color-brand-primary);">
-        <div style="font-size: 28px; animation: pulse 1s infinite;">⚡</div>
-        <div style="margin-top: 12px; font-weight: 600;">Menghubungkan ke Deezer, Apple Music & FLAC Provider...</div>
-      </div>
-    `;
+  renderShelves(shelves) {
+    if (!this.trackGrid) return;
+    this.trackGrid.innerHTML = "";
 
-    try {
-      let results = [];
+    if (!shelves || shelves.length === 0) {
+      this.trackGrid.innerHTML = `
+        <div style="text-align: center; padding: 48px 0; color: var(--color-text-secondary); font-size: 13px;">
+          Tidak ada lagu yang ditemukan. Coba segarkan kembali.
+        </div>
+      `;
+      return;
+    }
 
-      // 1. Query YouTube Music InnerTube (Official Mobile Plugin)
-      if (this.isPluginEnabled("ytmusic") && window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function') {
-        try {
-          const ytTracks = await window.electronAPI.searchYouTubeMusic(query);
-          if (ytTracks && Array.isArray(ytTracks) && ytTracks.length > 0) {
-            results.push(...ytTracks.map(item => ({
-              ...item,
-              is_liked: this.likedTrackIds.has(item.id)
-            })));
-          }
-        } catch (err) {
-          console.warn("YouTube Music InnerTube search notice:", err);
+    shelves.forEach(shelf => {
+      const shelfEl = document.createElement("div");
+      shelfEl.className = "musicfy-shelf";
+
+      const headerEl = document.createElement("div");
+      headerEl.className = "shelf-header";
+      headerEl.innerHTML = `
+        <span class="shelf-label">${this.escapeHtml(shelf.label)}</span>
+        <h3 class="shelf-title">${this.escapeHtml(shelf.title)}</h3>
+      `;
+      shelfEl.appendChild(headerEl);
+
+      const listEl = document.createElement("div");
+      listEl.className = "track-list";
+
+      shelf.tracks.forEach((track, idx) => {
+        const isActive = this.tracks[this.currentTrackIndex]?.id === track.id;
+        const isLiked = this.likedTrackIds.has(track.id);
+        const row = document.createElement("div");
+        row.className = `track-row ${isActive ? 'active' : ''}`;
+        row.id = `track_row_${track.id}`;
+
+        row.innerHTML = `
+          <div class="track-row-num">
+            <span class="num-text">${idx + 1}</span>
+            <span class="play-icon">▶</span>
+            ${isActive && this.isPlaying ? '<div class="playing-bars"><span></span><span></span><span></span></div>' : ''}
+          </div>
+          <img src="${track.artwork_url}" class="track-row-art" alt="${this.escapeHtml(track.title)}" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80'">
+          <div class="track-row-info">
+            <div class="track-row-title">${this.escapeHtml(track.title)}</div>
+            <div class="track-row-sub">${this.escapeHtml(track.artist)}</div>
+          </div>
+          <button class="track-row-heart ${isLiked ? 'liked' : ''}" title="Suka" id="row_like_${track.id}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="${isLiked ? '#00E599' : 'none'}" stroke="${isLiked ? '#00E599' : 'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+          </button>
+          <div class="track-row-duration">${this.formatTime(track.duration_secs || 180)}</div>
+        `;
+
+        row.addEventListener("click", (e) => {
+          if (e.target.closest('.track-row-heart')) return;
+          const globalIdx = this.tracks.findIndex(t => t.id === track.id);
+          this.loadTrack(globalIdx !== -1 ? globalIdx : 0, true);
+          this.showToast(`Memutar ${track.title}`);
+          this.renderShelves(this.currentShelves);
+        });
+
+        const heartBtn = row.querySelector(`#row_like_${track.id}`);
+        if (heartBtn) {
+          heartBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.toggleLikeTrack(track);
+            const currentlyLiked = this.likedTrackIds.has(track.id);
+            heartBtn.classList.toggle("liked", currentlyLiked);
+            const svg = heartBtn.querySelector("svg");
+            if (svg) {
+              svg.setAttribute("fill", currentlyLiked ? "#00E599" : "none");
+              svg.setAttribute("stroke", currentlyLiked ? "#00E599" : "currentColor");
+            }
+          });
         }
+
+        listEl.appendChild(row);
+      });
+
+      shelfEl.appendChild(listEl);
+      this.trackGrid.appendChild(shelfEl);
+    });
+
+    this.renderQueue();
+  }
+
+  toggleLikeTrack(track) {
+    if (!track || !track.id) return;
+    const isLiked = this.likedTrackIds.has(track.id);
+    let likedTracks = JSON.parse(localStorage.getItem("sorafy_liked_tracks") || "[]");
+
+    if (isLiked) {
+      this.likedTrackIds.delete(track.id);
+      track.is_liked = false;
+      likedTracks = likedTracks.filter(t => t.id !== track.id);
+      this.showToast("Dihapus dari Lagu Favorit");
+    } else {
+      this.likedTrackIds.add(track.id);
+      track.is_liked = true;
+      if (!likedTracks.some(t => t.id === track.id)) {
+        likedTracks.unshift(track);
       }
+      this.showToast("Disimpan ke Lagu Favorit ❤️");
+    }
+    localStorage.setItem("sorafy_liked_ids", JSON.stringify([...this.likedTrackIds]));
+    localStorage.setItem("sorafy_liked_tracks", JSON.stringify(likedTracks));
+    this.updateLikeButton();
+  }
 
-      // 2. Query Deezer
-      try {
-        let dzRes = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=25`);
-        if (dzRes.ok) {
-          const json = await dzRes.json();
-          if (json && json.data) {
-            results.push(...json.data.map(item => ({
-              id: `dz_${item.id}`,
-              title: item.title,
-              artist: item.artist.name,
-              album: item.album ? item.album.title : item.title,
-              duration_secs: item.duration || 180,
-              stream_url: item.preview,
-              artwork_url: item.album ? (item.album.cover_xl || item.album.cover_medium) : item.artist.picture_medium,
-              audio_format: { codec: "Hi-Fi AAC", bitrate_kbps: 320, is_lossless: false },
-              source_label: "Deezer Hi-Fi",
-              is_liked: this.likedTrackIds.has(`dz_${item.id}`)
-            })));
-          }
-        }
-      } catch (err) {
-        // JSONP fallback
-        const jsonpData = await fetchDeezerJsonp(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=25`).catch(() => null);
-        if (jsonpData && jsonpData.data) {
-          results.push(...jsonpData.data.map(item => ({
+  async fetchExternalMusic(query) {
+    try {
+      const dzRes = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=20`);
+      if (dzRes.ok) {
+        const json = await dzRes.json();
+        if (json && json.data) {
+          return json.data.map(item => ({
             id: `dz_${item.id}`,
             title: item.title,
             artist: item.artist.name,
@@ -829,52 +938,110 @@ class SoraFyDesktopApp {
             audio_format: { codec: "Hi-Fi AAC", bitrate_kbps: 320, is_lossless: false },
             source_label: "Deezer Hi-Fi",
             is_liked: this.likedTrackIds.has(`dz_${item.id}`)
-          })));
+          }));
         }
       }
+    } catch (_) {}
 
-      // Query Apple Music / iTunes
-      try {
-        const itRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=song&limit=20`);
-        if (itRes.ok) {
-          const itJson = await itRes.json();
-          if (itJson && itJson.results) {
-            const itunesItems = itJson.results.map(r => ({
-              id: `it_${r.trackId}`,
-              title: r.trackName,
-              artist: r.artistName,
-              album: r.collectionName,
-              duration_secs: Math.round(r.trackTimeMillis / 1000),
-              stream_url: r.previewUrl,
-              artwork_url: (r.artworkUrl100 || "").replace('100x100bb', '600x600bb'),
-              audio_format: { codec: "Apple Master AAC", bitrate_kbps: 256, is_lossless: false },
-              source_label: "Apple Audio",
-              is_liked: this.likedTrackIds.has(`it_${r.trackId}`)
-            }));
-            results.push(...itunesItems);
+    try {
+      const itRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=song&limit=20`);
+      if (itRes.ok) {
+        const itJson = await itRes.json();
+        if (itJson && itJson.results) {
+          return itJson.results.map(r => ({
+            id: `it_${r.trackId}`,
+            title: r.trackName,
+            artist: r.artistName,
+            album: r.collectionName || r.trackName,
+            duration_secs: Math.round(r.trackTimeMillis / 1000),
+            stream_url: r.previewUrl,
+            artwork_url: (r.artworkUrl100 || "").replace('100x100bb', '600x600bb'),
+            audio_format: { codec: "Apple AAC", bitrate_kbps: 256, is_lossless: false },
+            source_label: "Apple Music",
+            is_liked: this.likedTrackIds.has(`it_${r.trackId}`)
+          }));
+        }
+      }
+    } catch (_) {}
+
+    return [];
+  }
+
+  async fetchTrendingChart() {
+    try {
+      let tracks = [];
+      if (window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function') {
+        const res = await window.electronAPI.searchYouTubeMusic("top hits indonesia 2026");
+        if (res && res.length) tracks = res;
+      }
+      if (!tracks.length) {
+        tracks = await this.fetchExternalMusic("top global hits");
+      }
+      if (tracks.length) {
+        this.tracks = tracks.map(t => ({
+          ...t,
+          is_liked: this.likedTrackIds.has(t.id)
+        }));
+        this.renderTrackGrid(this.tracks);
+        if (!this.isPlaying && this.tracks.length > 0 && !this.audio.src) {
+          this.loadTrack(0, false);
+        }
+      }
+    } catch (e) {
+      console.warn("Chart fetch notice:", e);
+    }
+  }
+
+  async searchOnlineMusic(query) {
+    this.sectionTitleLabel.textContent = `Mencari "${query}"...`;
+    this.trackGrid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 48px 0; color: var(--color-text-secondary);">
+        <div style="font-size: 22px; margin-bottom: 12px; opacity: 0.7;">✦</div>
+        <div style="font-size: 13px; font-weight: 600;">Menghubungkan ke Multi-Provider...</div>
+      </div>
+    `;
+
+    try {
+      let results = [];
+
+      // 1. YouTube Music InnerTube
+      if (this.isPluginEnabled("ytmusic") && window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function') {
+        try {
+          const ytTracks = await window.electronAPI.searchYouTubeMusic(query);
+          if (ytTracks && ytTracks.length) {
+            results.push(...ytTracks.map(item => ({
+              ...item,
+              is_liked: this.likedTrackIds.has(item.id)
+            })));
           }
+        } catch (err) {
+          console.warn("YouTube Music search notice:", err);
         }
-      } catch (err) {
-        console.warn("iTunes search notice:", err);
       }
 
-      // Filter and deduplicate
+      // 2. Deezer & Apple Music fallback
+      if (results.length < 15) {
+        const extTracks = await this.fetchExternalMusic(query);
+        results.push(...extTracks);
+      }
+
+      // Deduplicate
       const uniqueResults = [];
-      const seenTitles = new Set();
+      const seenKeys = new Set();
       for (const t of results) {
-        const key = `${t.title.toLowerCase()}_${t.artist.toLowerCase()}`;
-        if (!seenTitles.has(key)) {
-          seenTitles.add(key);
+        const key = `${t.title.toLowerCase().trim()}__${t.artist.toLowerCase().trim()}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
           uniqueResults.push(t);
         }
       }
 
-      this.sectionTitleLabel.textContent = `Hasil Pencarian (${uniqueResults.length} lagu ditemukan)`;
+      this.sectionTitleLabel.textContent = `Hasil Pencarian (${uniqueResults.length} lagu)`;
 
       if (uniqueResults.length === 0) {
         this.trackGrid.innerHTML = `
-          <div style="grid-column: 1/-1; text-align: center; padding: 48px 0; color: var(--color-text-secondary);">
-            Tidak ada lagu ditemukan untuk "${query}". Coba kata kunci atau nama artis lain.
+          <div style="grid-column: 1/-1; text-align: center; padding: 48px 0; color: var(--color-text-secondary); font-size: 13px;">
+            Tidak ada lagu ditemukan untuk "${this.escapeHtml(query)}".
           </div>
         `;
         return;
@@ -889,28 +1056,59 @@ class SoraFyDesktopApp {
     }
   }
 
-  filterByCategory(category) {
+  async filterByCategory(category) {
     if (category === "all") {
-      this.fetchTrendingChart();
-    } else if (category === "lossless") {
-      const lossless = this.tracks.filter(t => t.audio_format.is_lossless);
-      this.renderTrackGrid(lossless.length > 0 ? lossless : SAMPLE_MASTER_TRACKS);
-      this.showToast("Menampilkan Katalog FLAC Lossless");
-    } else if (category === "deezer") {
-      this.searchOnlineMusic("pop top hits");
-    } else if (category === "jiosaavn") {
-      this.searchOnlineMusic("acoustic relaxing");
-    } else if (category === "jamendo") {
-      this.searchOnlineMusic("indie lofi chill");
+      this.renderLoadingPlaceholder("Memuat rekomendasi cerdas Musicfy...");
+      await this.fetchMusicfyRecommendations();
+      return;
     }
-  }
 
-  updateHeroFeatured(track) {
-    if (!track) return;
-    const heroTitle = document.querySelector(".hero-title");
-    const heroDesc = document.querySelector(".hero-desc");
-    if (heroTitle) heroTitle.textContent = `${track.title} • ${track.artist}`;
-    if (heroDesc) heroDesc.textContent = `Streaming langsung berkualitas jernih dari ${track.source_label}. Diputar tanpa kompresi dengan audio DSP parametrik.`;
+    const categoryQueries = {
+      pop: "pop indonesia hits 2026",
+      chill: "santai chill acoustic lofi relaxing",
+      indie: "indie pop alternative indonesia",
+      fokus: "focus study lofi ambient beats instrumental",
+      workout: "workout cardio high energy EDM pop",
+      lossless: "flac lossless acoustic hi-res hits"
+    };
+
+    const query = categoryQueries[category] || `${category} hits`;
+    const labels = {
+      pop: "Koleksi Pop Indonesia",
+      chill: "Santai & Chill Lofi",
+      indie: "Indie & Alternatif",
+      fokus: "Fokus & Belajar",
+      workout: "Workout & Energi",
+      lossless: "Hi-Res Audio"
+    };
+
+    if (this.sectionTitleLabel) {
+      this.sectionTitleLabel.textContent = labels[category] || `Genre: ${category}`;
+    }
+
+    this.renderLoadingPlaceholder(`Mencari trek ${labels[category] || category}...`);
+
+    try {
+      let tracks = [];
+      if (window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function') {
+        const res = await window.electronAPI.searchYouTubeMusic(query);
+        if (res && res.length) {
+          tracks = res.map(t => ({
+            ...t,
+            is_liked: this.likedTrackIds.has(t.id)
+          }));
+        }
+      }
+      if (!tracks.length) {
+        tracks = await this.fetchExternalMusic(query);
+      }
+
+      this.tracks = tracks;
+      this.renderTrackGrid(this.tracks);
+      this.showToast(`Memuat kategori ${labels[category] || category}`);
+    } catch (e) {
+      console.warn("Category filter notice:", e);
+    }
   }
 
   // =========================================================
@@ -1066,15 +1264,22 @@ class SoraFyDesktopApp {
   }
 
   showLikedSongs() {
-    const liked = this.tracks.filter(t => this.likedTrackIds.has(t.id));
+    const saved = JSON.parse(localStorage.getItem("sorafy_liked_tracks") || "[]");
+    const currentLiked = this.tracks.filter(t => this.likedTrackIds.has(t.id));
+    const map = new Map();
+    saved.forEach(t => map.set(t.id, t));
+    currentLiked.forEach(t => map.set(t.id, t));
+    const liked = Array.from(map.values()).filter(t => this.likedTrackIds.has(t.id));
+
     this.sectionTitleLabel.textContent = `Lagu Favorit (${liked.length})`;
     if (liked.length === 0) {
       this.trackGrid.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 48px 0; color: var(--color-text-secondary);">
+        <div style="grid-column: 1/-1; text-align: center; padding: 48px 0; color: var(--color-text-secondary); font-size: 13px;">
           Belum ada lagu favorit. Klik ikon hati ❤️ pada lagu apa pun untuk menyimpannya di sini.
         </div>
       `;
     } else {
+      this.tracks = liked;
       this.renderTrackGrid(liked);
     }
   }
