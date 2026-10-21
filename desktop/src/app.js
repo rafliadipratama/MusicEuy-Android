@@ -505,7 +505,7 @@ class SoraFyDesktopApp {
       this.playerArtist.addEventListener("click", () => {
         const cur = this.tracks[this.currentTrackIndex];
         if (cur && cur.artist) {
-          this.openArtistDetail(cur.artist);
+          this.openArtistDetail(cur.artist, cur.artist_browse_id || '');
         }
       });
     }
@@ -1171,7 +1171,7 @@ class SoraFyDesktopApp {
     if (artistEl) {
       artistEl.addEventListener("click", (e) => {
         e.stopPropagation();
-        this.openArtistDetail(track.artist);
+        this.openArtistDetail(track.artist, track.artist_browse_id || '');
       });
     }
 
@@ -1630,7 +1630,7 @@ class SoraFyDesktopApp {
 
     this.artistNameHeading.textContent = artistName;
     this.artistBioText.textContent = `Memuat profil resmi ${artistName}...`;
-    const avatar = getArtistAvatar(artistName);
+    let avatar = getArtistAvatar(artistName);
     this.artistAvatarImg.src = avatar;
     this.artistHeroBanner.style.backgroundImage = `url('${avatar}')`;
 
@@ -1644,10 +1644,34 @@ class SoraFyDesktopApp {
     this.artistPeerRow.innerHTML = `<div style="color: var(--color-text-secondary); font-size: 12px; padding: 8px;">Memuat rekomendasi artis serupa...</div>`;
 
     try {
+      // 1. Resolve artist official profile & browseId if missing
+      let resolvedBio = null;
+      if (!browseId && window.electronAPI && typeof window.electronAPI.resolveArtistProfile === 'function') {
+        resolvedBio = await window.electronAPI.resolveArtistProfile(artistName).catch(() => null);
+        if (resolvedBio) {
+          if (resolvedBio.browse_id) {
+            browseId = resolvedBio.browse_id;
+            this.currentArtist.browseId = browseId;
+          }
+          if (resolvedBio.avatar_url) {
+            this.artistAvatarImg.src = resolvedBio.avatar_url;
+            this.artistHeroBanner.style.backgroundImage = `url('${resolvedBio.avatar_url}')`;
+            MASTER_ARTIST_AVATARS[artistName.toLowerCase().trim()] = resolvedBio.avatar_url;
+            if (resolvedBio.name) {
+              MASTER_ARTIST_AVATARS[resolvedBio.name.toLowerCase().trim()] = resolvedBio.avatar_url;
+              this.artistNameHeading.textContent = resolvedBio.name;
+            }
+          }
+          if (resolvedBio.description) {
+            this.artistBioText.textContent = resolvedBio.description;
+          }
+        }
+      }
+
       const [bioData, topSongs, videos, albums, peers] = await Promise.all([
         (browseId && window.electronAPI && typeof window.electronAPI.browseYouTube === 'function')
           ? window.electronAPI.browseYouTube(browseId).catch(() => null)
-          : Promise.resolve(null),
+          : Promise.resolve(resolvedBio),
         this.queryInnerTubeSongs(`${artistName} lagu hits populer`),
         window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function'
           ? window.electronAPI.searchYouTubeMusic(`${artistName} official music video live`, 'video').catch(() => [])
@@ -1660,15 +1684,23 @@ class SoraFyDesktopApp {
           : Promise.resolve([])
       ]);
 
-      if (bioData) {
-        if (bioData.avatar_url) {
-          this.artistAvatarImg.src = bioData.avatar_url;
-          this.artistHeroBanner.style.backgroundImage = `url('${bioData.avatar_url}')`;
+      const effectiveBio = bioData || resolvedBio;
+      if (effectiveBio) {
+        if (effectiveBio.name) {
+          this.artistNameHeading.textContent = effectiveBio.name;
         }
-        if (bioData.description) {
-          this.artistBioText.textContent = bioData.description;
+        if (effectiveBio.avatar_url) {
+          this.artistAvatarImg.src = effectiveBio.avatar_url;
+          this.artistHeroBanner.style.backgroundImage = `url('${effectiveBio.avatar_url}')`;
+          MASTER_ARTIST_AVATARS[artistName.toLowerCase().trim()] = effectiveBio.avatar_url;
+          if (effectiveBio.name) {
+            MASTER_ARTIST_AVATARS[effectiveBio.name.toLowerCase().trim()] = effectiveBio.avatar_url;
+          }
+        }
+        if (effectiveBio.description) {
+          this.artistBioText.textContent = effectiveBio.description;
         } else {
-          this.artistBioText.textContent = `Artis resmi ${artistName}. Dengarkan seluruh diskografi, video musik, dan trek populer di SoraFy.`;
+          this.artistBioText.textContent = `Artis resmi ${effectiveBio.name || artistName}. Dengarkan seluruh diskografi, video musik, dan trek populer di SoraFy.`;
         }
       } else {
         this.artistBioText.textContent = `Artis resmi ${artistName}. Dengarkan seluruh diskografi, video musik, dan trek populer di SoraFy.`;
@@ -1873,7 +1905,7 @@ class SoraFyDesktopApp {
 
     try {
       if (filterType === 'all') {
-        const [songs, artists, videos] = await Promise.all([
+        const [songs, rawArtists, videos] = await Promise.all([
           this.queryInnerTubeSongs(query),
           window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function'
             ? window.electronAPI.searchYouTubeMusic(query, 'artist').catch(() => [])
@@ -1883,6 +1915,21 @@ class SoraFyDesktopApp {
             : Promise.resolve([])
         ]);
 
+        let artists = rawArtists || [];
+        // Auto-resolve official artist if no artist shelf was returned
+        if (artists.length === 0 && window.electronAPI && typeof window.electronAPI.resolveArtistProfile === 'function') {
+          const resolved = await window.electronAPI.resolveArtistProfile(query).catch(() => null);
+          if (resolved && resolved.name && resolved.avatar_url) {
+            artists = [{
+              id: resolved.browse_id || ('art_' + resolved.name.toLowerCase().replace(/[^a-z0-9]/g, '_')),
+              name: resolved.name,
+              avatar_url: resolved.avatar_url,
+              browse_id: resolved.browse_id,
+              sub_label: 'Artis Terverifikasi'
+            }];
+          }
+        }
+
         let total = 0;
 
         // Render Artists
@@ -1891,6 +1938,9 @@ class SoraFyDesktopApp {
           this.searchArtistsSection.style.display = "block";
           this.searchArtistsGrid.innerHTML = "";
           artists.slice(0, 6).forEach(art => {
+            if (art.avatar_url) {
+              MASTER_ARTIST_AVATARS[art.name.toLowerCase().trim()] = art.avatar_url;
+            }
             const card = document.createElement("div");
             card.className = "artist-card";
             card.innerHTML = `
@@ -1975,26 +2025,45 @@ class SoraFyDesktopApp {
         });
         this.searchResultsCount.textContent = `Ditemukan ${songs.length} lagu`;
       } else if (filterType === 'artist') {
-        const artists = window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function'
-          ? await window.electronAPI.searchYouTubeMusic(query, 'artist')
+        let artists = window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function'
+          ? await window.electronAPI.searchYouTubeMusic(query, 'artist').catch(() => [])
           : [];
+        if ((!artists || artists.length === 0) && window.electronAPI && typeof window.electronAPI.resolveArtistProfile === 'function') {
+          const resolved = await window.electronAPI.resolveArtistProfile(query).catch(() => null);
+          if (resolved && resolved.name && resolved.avatar_url) {
+            artists = [{
+              id: resolved.browse_id || ('art_' + resolved.name.toLowerCase().replace(/[^a-z0-9]/g, '_')),
+              name: resolved.name,
+              avatar_url: resolved.avatar_url,
+              browse_id: resolved.browse_id,
+              sub_label: 'Artis Terverifikasi'
+            }];
+          }
+        }
         this.searchArtistsSection.style.display = "block";
         this.searchArtistsGrid.innerHTML = "";
-        artists.forEach(art => {
-          const card = document.createElement("div");
-          card.className = "artist-card";
-          card.innerHTML = `
-            <div class="artist-card-art-box">
-              <img src="${art.avatar_url || getArtistAvatar(art.name)}" class="artist-card-art" alt="${this.escapeHtml(art.name)}" onerror="this.src='${getArtistAvatar(art.name)}'">
-            </div>
-            <div class="artist-card-name">${this.escapeHtml(art.name)}</div>
-            <div class="artist-card-role">Artis Terverifikasi</div>
-          `;
-          card.addEventListener("click", () => {
-            this.openArtistDetail(art.name, art.browse_id);
+        if (!artists || artists.length === 0) {
+          this.searchArtistsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 24px; color: var(--color-text-secondary); font-size: 13px;">Tidak ada artis ditemukan untuk "${this.escapeHtml(query)}".</div>`;
+        } else {
+          artists.forEach(art => {
+            if (art.avatar_url) {
+              MASTER_ARTIST_AVATARS[art.name.toLowerCase().trim()] = art.avatar_url;
+            }
+            const card = document.createElement("div");
+            card.className = "artist-card";
+            card.innerHTML = `
+              <div class="artist-card-art-box">
+                <img src="${art.avatar_url || getArtistAvatar(art.name)}" class="artist-card-art" alt="${this.escapeHtml(art.name)}" onerror="this.src='${getArtistAvatar(art.name)}'">
+              </div>
+              <div class="artist-card-name">${this.escapeHtml(art.name)}</div>
+              <div class="artist-card-role">Artis Terverifikasi</div>
+            `;
+            card.addEventListener("click", () => {
+              this.openArtistDetail(art.name, art.browse_id);
+            });
+            this.searchArtistsGrid.appendChild(card);
           });
-          this.searchArtistsGrid.appendChild(card);
-        });
+        }
         this.searchResultsCount.textContent = `Ditemukan ${artists.length} artis`;
       } else if (filterType === 'video') {
         const videos = window.electronAPI && typeof window.electronAPI.searchYouTubeMusic === 'function'

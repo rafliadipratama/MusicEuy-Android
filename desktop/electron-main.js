@@ -271,7 +271,30 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
 
           if (contents) {
             for (const sec of contents) {
-              const shelf = sec.musicShelfRenderer;
+              // Top Verified Artist / Hero Card
+              if (sec.musicCardShelfRenderer && (filterType === 'artist' || filterType === 'all')) {
+                const card = sec.musicCardShelfRenderer;
+                const title = card.title?.runs?.[0]?.text || '';
+                const thumbs = card.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails
+                  || card.thumbnail?.croppedSquareThumbnailRenderer?.thumbnail?.thumbnails || [];
+                let artwork = thumbs.length ? thumbs[thumbs.length - 1].url : '';
+                if (artwork) {
+                  artwork = artwork.replace(/=(?:w\d+-h\d+|s\d+).*$/, '=w544-h544-p-l90-rj');
+                }
+                const browseId = card.onTap?.browseEndpoint?.browseId
+                  || card.title?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseId || '';
+                if (title) {
+                  itemsList.unshift({
+                    id: browseId || ('art_' + title.toLowerCase().replace(/[^a-z0-9]/g, '_')),
+                    name: title,
+                    avatar_url: artwork,
+                    browse_id: browseId,
+                    sub_label: 'Artis Terverifikasi'
+                  });
+                }
+              }
+
+              const shelf = sec.musicShelfRenderer || sec.musicPlaylistShelfRenderer;
               if (!shelf || !shelf.contents) continue;
 
               for (const item of shelf.contents) {
@@ -285,6 +308,7 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
                 // Subtitle (Artist, Album, Duration)
                 const subRuns = renderer.flexColumns[1]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs || [];
                 const artist = subRuns[0]?.text || 'Artist';
+                const artistBrowseId = subRuns[0]?.navigationEndpoint?.browseEndpoint?.browseId || '';
                 const album = subRuns.length > 2 ? subRuns[2]?.text : '';
                 const durationStr = subRuns.length > 0 ? subRuns[subRuns.length - 1]?.text : '3:30';
 
@@ -304,11 +328,12 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
                 const browseId = navEndpoint?.browseEndpoint?.browseId
                   || renderer.flexColumns[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseId || '';
 
-                // Thumbnail (upgrade resolution)
-                const thumbs = renderer.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails || [];
+                // Thumbnail (upgrade resolution from Google/YouTube CDN)
+                const thumbs = renderer.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails
+                  || renderer.thumbnail?.croppedSquareThumbnailRenderer?.thumbnail?.thumbnails || [];
                 let artwork = thumbs.length ? thumbs[thumbs.length - 1].url : '';
                 if (artwork) {
-                  artwork = artwork.replace(/=w\d+-h\d+/, '=w544-h544');
+                  artwork = artwork.replace(/=(?:w\d+-h\d+|s\d+).*$/, '=w544-h544-p-l90-rj');
                 }
 
                 if (filterType === 'artist') {
@@ -344,6 +369,7 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
                       video_id: videoId,
                       title: title,
                       artist: artist,
+                      artist_browse_id: artistBrowseId,
                       album: album || title,
                       duration_secs: durationSec,
                       artwork_url: artwork || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
@@ -363,6 +389,7 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
                       video_id: videoId,
                       title: title,
                       artist: artist,
+                      artist_browse_id: artistBrowseId,
                       album: album || title,
                       duration_secs: durationSec,
                       artwork_url: artwork,
@@ -422,9 +449,12 @@ function browseYouTubeInnerTube(browseId) {
           const header = json.header?.musicImmersiveHeaderRenderer || json.header?.musicVisualHeaderRenderer || json.header?.musicDetailHeaderRenderer;
           const name = header?.title?.runs?.[0]?.text || '';
           const desc = header?.description?.runs?.[0]?.text || '';
-          const thumbs = header?.thumbnails || header?.thumbnail?.croppedSquareThumbnailRenderer?.thumbnail?.thumbnails || [];
+          const thumbs = header?.thumbnails
+            || header?.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails
+            || header?.thumbnail?.croppedSquareThumbnailRenderer?.thumbnail?.thumbnails
+            || [];
           let avatarUrl = thumbs.length ? thumbs[thumbs.length - 1].url : '';
-          if (avatarUrl) avatarUrl = avatarUrl.replace(/=w\d+-h\d+/, '=w544-h544');
+          if (avatarUrl) avatarUrl = avatarUrl.replace(/=(?:w\d+-h\d+|s\d+).*$/, '=w544-h544-p-l90-rj');
 
           // Extract tracks if it's a playlist or artist
           const parsedTracks = [];
@@ -444,8 +474,10 @@ function browseYouTubeInnerTube(browseId) {
                 const overlay = r.overlay?.musicItemThumbnailOverlayRenderer;
                 const videoId = overlay?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId
                   || r.playlistItemData?.videoId || '';
-                const tThumbs = r.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails || [];
-                const artwork = tThumbs.length ? tThumbs[tThumbs.length - 1].url : '';
+                const tThumbs = r.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails
+                  || r.thumbnail?.croppedSquareThumbnailRenderer?.thumbnail?.thumbnails || [];
+                let artwork = tThumbs.length ? tThumbs[tThumbs.length - 1].url : '';
+                if (artwork) artwork = artwork.replace(/=(?:w\d+-h\d+|s\d+).*$/, '=w544-h544-p-l90-rj');
 
                 if (tTitle && videoId) {
                   parsedTracks.push({
@@ -680,6 +712,31 @@ function createWindow() {
   win.setMenuBarVisibility(false);
 }
 
+async function resolveArtistProfile(name) {
+  if (!name || !name.trim()) return null;
+  const trimmed = name.trim();
+  try {
+    const artists = await searchYouTubeMusicInnerTube(trimmed, 'artist');
+    if (!artists || !artists.length) return null;
+    const match = artists.find(a => a.name.toLowerCase() === trimmed.toLowerCase()) || artists[0];
+    let bio = null;
+    if (match.browse_id) {
+      bio = await browseYouTubeInnerTube(match.browse_id);
+    }
+    return {
+      name: bio?.name || match.name || trimmed,
+      browse_id: match.browse_id || '',
+      avatar_url: bio?.avatar_url || match.avatar_url || '',
+      banner_url: bio?.avatar_url || match.avatar_url || '',
+      description: bio?.description || '',
+      tracks: bio?.tracks || []
+    };
+  } catch (err) {
+    console.warn('resolveArtistProfile error:', err);
+    return null;
+  }
+}
+
 // IPC Handlers for YouTube Music InnerTube Search & Audio Streaming
 ipcMain.handle('search-yt-music', async (event, query, filterType = 'song') => {
   if (!query || !query.trim()) return [];
@@ -689,6 +746,11 @@ ipcMain.handle('search-yt-music', async (event, query, filterType = 'song') => {
 ipcMain.handle('browse-yt', async (event, browseId) => {
   if (!browseId) return null;
   return await browseYouTubeInnerTube(browseId);
+});
+
+ipcMain.handle('resolve-artist-profile', async (event, name) => {
+  if (!name || !name.trim()) return null;
+  return await resolveArtistProfile(name);
 });
 
 ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) => {
