@@ -8,6 +8,41 @@ const des = require('des.js');
 app.commandLine.appendSwitch('disable-features', 'Vulkan');
 app.commandLine.appendSwitch('disable-dev-shm-usage');
 
+// Apple / Safari User-Agent (exact match with Android MusicStreamSource.kt & MusicCacheManager.kt)
+const APPLE_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
+
+let cachedVisitorData = null;
+function getVisitorData() {
+  if (cachedVisitorData) return Promise.resolve(cachedVisitorData);
+  return new Promise((resolve) => {
+    https.get('https://music.youtube.com/sw.js_data', {
+      headers: { 'User-Agent': APPLE_UA }
+    }, res => {
+      let b = '';
+      res.on('data', c => b += c);
+      res.on('end', () => {
+        try {
+          if (b.length > 5) {
+            const arr = JSON.parse(b.substring(5));
+            const candidates = arr[0] && arr[0][2];
+            if (candidates) {
+              for (const c of candidates) {
+                if (typeof c === 'string' && c.startsWith('Cgt')) {
+                  cachedVisitorData = c;
+                  return resolve(c);
+                }
+              }
+            }
+          }
+          resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    }).on('error', () => resolve(null));
+  });
+}
+
 // Lightweight local audio proxy for YouTube InnerTube streams (handles Range & iOS headers)
 let localProxyPort = 0;
 const localAudioProxy = http.createServer((req, res) => {
@@ -21,7 +56,7 @@ const localAudioProxy = http.createServer((req, res) => {
   try {
     const u = new URL(target);
     const headers = {
-      'User-Agent': 'com.google.ios.youtube/21.03.3 (iPad7,6; U; CPU iPadOS 17_7_10 like Mac OS X; en-US)'
+      'User-Agent': APPLE_UA
     };
     if (req.headers.range) {
       headers['Range'] = req.headers.range;
@@ -34,7 +69,7 @@ const localAudioProxy = http.createServer((req, res) => {
     }, (upRes) => {
       const respHeaders = {
         'Access-Control-Allow-Origin': '*',
-        'Content-Type': upRes.headers['content-type'] || 'audio/webm'
+        'Content-Type': upRes.headers['content-type'] || 'audio/mp4'
       };
       if (upRes.headers['content-length']) respHeaders['Content-Length'] = upRes.headers['content-length'];
       if (upRes.headers['content-range']) respHeaders['Content-Range'] = upRes.headers['content-range'];
@@ -406,21 +441,23 @@ function searchYouTubeId(query) {
   });
 }
 
-function resolveInnerTubeStream(videoId) {
+async function resolveInnerTubeStream(videoId) {
+  const vData = await getVisitorData();
   return new Promise((resolve) => {
+    const clientContext = {
+      clientName: "VISIONOS",
+      clientVersion: "0.1",
+      osName: "visionOS",
+      osVersion: "1.3.21O771",
+      deviceMake: "Apple",
+      deviceModel: "RealityDevice14,1",
+      hl: "id",
+      gl: "ID"
+    };
+    if (vData) clientContext.visitorData = vData;
+
     const payload = JSON.stringify({
-      context: {
-        client: {
-          clientName: "IOS",
-          clientVersion: "21.03.3",
-          osName: "iPadOS",
-          osVersion: "17.7.10.21H450",
-          deviceMake: "Apple",
-          deviceModel: "iPad7,6",
-          hl: "id",
-          gl: "ID"
-        }
-      },
+      context: { client: clientContext },
       videoId: videoId
     });
 
@@ -430,7 +467,7 @@ function resolveInnerTubeStream(videoId) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "com.google.ios.youtube/21.03.3 (iPad7,6; U; CPU iPadOS 17_7_10 like Mac OS X; en-US)",
+        "User-Agent": APPLE_UA,
         "Content-Length": Buffer.byteLength(payload)
       }
     }, res => {
@@ -450,8 +487,9 @@ function resolveInnerTubeStream(videoId) {
               url: streamUrl,
               rawUrl: rawUrl,
               bitrate: formats[0].bitrate || 160000,
-              mimeType: formats[0].mimeType || 'audio/webm; codecs="opus"',
-              provider: 'InnerTube Opus HD',
+              mimeType: formats[0].mimeType || 'audio/mp4',
+              provider: 'YouTube Music InnerTube',
+              duration: parseInt(json.videoDetails?.lengthSeconds, 10) || 0,
               isFull: true
             });
           } else {
@@ -539,7 +577,7 @@ ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) 
 });
 
 app.whenReady().then(() => {
-  // Spoof iOS User-Agent on googlevideo requests to prevent 403 Forbidden
+  // Set Safari/Apple User-Agent on googlevideo requests to prevent 403 Forbidden
   if (session && session.defaultSession) {
     session.defaultSession.webRequest.onBeforeSendHeaders(
       { urls: ['*://*.googlevideo.com/*', '*://*.youtube.com/*'] },
@@ -548,7 +586,7 @@ app.whenReady().then(() => {
         delete details.requestHeaders['sec-ch-ua'];
         delete details.requestHeaders['sec-ch-ua-mobile'];
         delete details.requestHeaders['sec-ch-ua-platform'];
-        details.requestHeaders['User-Agent'] = 'com.google.ios.youtube/21.03.3 (iPad7,6; U; CPU iPadOS 17_7_10 like Mac OS X; en-US)';
+        details.requestHeaders['User-Agent'] = APPLE_UA;
         callback({ cancel: false, requestHeaders: details.requestHeaders });
       }
     );

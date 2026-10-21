@@ -897,7 +897,13 @@ class SoraFyDesktopApp {
       }
     }
 
+    if (!track.stream_url) {
+      this.showToast("Gagal memuat URL audio untuk lagu ini");
+      return;
+    }
+
     this.audio.src = track.stream_url;
+    this.audio.load();
     this.updateLikeButton();
 
     // Record into history
@@ -911,10 +917,21 @@ class SoraFyDesktopApp {
       this.audio.play().then(() => {
         this.isPlaying = true;
         this.updatePlayPauseIcon();
-      }).catch(err => {
+      }).catch(async (err) => {
         console.warn("Audio autoplay notice:", err);
+        if (track.fallback_url && track.fallback_url !== track.stream_url) {
+          try {
+            this.audio.src = track.fallback_url;
+            this.audio.load();
+            await this.audio.play();
+            this.isPlaying = true;
+            this.updatePlayPauseIcon();
+            return;
+          } catch (e2) {}
+        }
         this.isPlaying = false;
         this.updatePlayPauseIcon();
+        this.showToast("Tidak dapat memutar audio");
       });
     }
   }
@@ -1028,18 +1045,22 @@ class SoraFyDesktopApp {
       this.isPlaying = false;
       this.updatePlayPauseIcon();
     } else {
-      if (!this.audio.src) {
+      if (!this.audio.src || this.audio.error) {
         this.loadTrack(this.currentTrackIndex, true);
         return;
       }
       this.audio.play().then(() => {
         this.isPlaying = true;
         this.updatePlayPauseIcon();
-      }).catch(err => {
-        console.warn("Audio play error:", err);
-        this.isPlaying = false;
-        this.updatePlayPauseIcon();
-        this.showToast("Tidak dapat memutar audio");
+      }).catch(async (err) => {
+        console.warn("Audio play error, reloading track:", err);
+        try {
+          await this.loadTrack(this.currentTrackIndex, true);
+        } catch (e2) {
+          this.isPlaying = false;
+          this.updatePlayPauseIcon();
+          this.showToast("Tidak dapat memutar audio");
+        }
       });
     }
   }
