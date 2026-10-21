@@ -22,5 +22,8 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
     "electron": "^44.9.2"
+  },
+  "dependencies": {
+    "des.js": "^1.1.0"
   }
 }

@@ -1,12 +1,73 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
 const https = require('https');
+const des = require('des.js');
 
 // Disable incompatible Vulkan on Linux Wayland to guarantee silky smooth rendering
 app.commandLine.appendSwitch('disable-features', 'Vulkan');
+app.commandLine.appendSwitch('disable-dev-shm-usage');
 
 // In-memory stream cache for instant 0ms playback on repeated tracks
 const streamCache = new Map();
+
+// JioSaavn DES 320kbps Stream Decryptor (Key: 38346591, matches Android MusicStreamSource.kt)
+function decryptSaavnMediaUrl(encryptedUrl) {
+  try {
+    const key = Buffer.from('38346591', 'ascii');
+    const d = des.DES.create({ type: 'decrypt', key: key });
+    const input = Buffer.from(encryptedUrl, 'base64');
+    const out = Buffer.concat([Buffer.from(d.update(input)), Buffer.from(d.final())]);
+    const pad = out[out.length - 1];
+    const cleanBuf = (pad > 0 && pad <= 8) ? out.slice(0, out.length - pad) : out;
+    const rawUrl = cleanBuf.toString('utf8');
+    return rawUrl.replace(/_(96|160|320)\.mp4/, '_320.mp4').replace('http://', 'https://');
+  } catch (e) {
+    return null;
+  }
+}
+
+function resolveJioSaavnStream(title, artist) {
+  return new Promise((resolve) => {
+    const query = `${artist} ${title}`.trim();
+    const encoded = encodeURIComponent(query);
+    const url = `https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&n=5&p=1&q=${encoded}&_marker=0&ctx=android`;
+
+    const req = https.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    }, res => {
+      let body = '';
+      res.on('data', c => body += c);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(body);
+          const results = json.results || [];
+          if (!results.length) return resolve(null);
+
+          for (const item of results) {
+            if (!item.encrypted_media_url) continue;
+            const fullUrl = decryptSaavnMediaUrl(item.encrypted_media_url);
+            if (fullUrl && fullUrl.startsWith('https://')) {
+              return resolve({
+                url: fullUrl,
+                bitrate: 320000,
+                mimeType: 'audio/mp4',
+                duration: parseInt(item.duration, 10) || 0,
+                provider: 'JioSaavn 320k',
+                isFull: true
+              });
+            }
+          }
+          resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    });
+    req.on('error', () => resolve(null));
+  });
+}
 
 function searchYouTubeId(query) {
   return new Promise((resolve) => {
@@ -92,7 +153,9 @@ function resolveInnerTubeStream(videoId) {
             resolve({
               url: formats[0].url,
               bitrate: formats[0].bitrate || 160000,
-              mimeType: formats[0].mimeType || 'audio/webm; codecs="opus"'
+              mimeType: formats[0].mimeType || 'audio/webm; codecs="opus"',
+              provider: 'InnerTube Opus',
+              isFull: true
             });
           } else {
             resolve(null);
@@ -122,7 +185,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false // allow cross-origin streams & covers
+      webSecurity: false // allow cross-origin audio streams & covers
     }
   });
 
@@ -138,6 +201,16 @@ ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) 
     return cached.data;
   }
 
+  // 1. Try JioSaavn 320k direct stream first (matches Android APK!)
+  if (title && artist) {
+    const saavnStream = await resolveJioSaavnStream(title, artist);
+    if (saavnStream && saavnStream.url) {
+      streamCache.set(cacheKey, { data: saavnStream, expireAt: Date.now() + 45 * 60 * 1000 });
+      return saavnStream;
+    }
+  }
+
+  // 2. Fallback to InnerTube iOS stream
   let vid = videoId;
   if (!vid && title && artist) {
     vid = await searchYouTubeId(`${artist} ${title}`);
@@ -146,15 +219,8 @@ ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) 
   if (vid) {
     const stream = await resolveInnerTubeStream(vid);
     if (stream && stream.url) {
-      const result = {
-        url: stream.url,
-        bitrate: stream.bitrate,
-        mimeType: stream.mimeType,
-        isFull: true
-      };
-      // Cache for 45 minutes
-      streamCache.set(cacheKey, { data: result, expireAt: Date.now() + 45 * 60 * 1000 });
-      return result;
+      streamCache.set(cacheKey, { data: stream, expireAt: Date.now() + 45 * 60 * 1000 });
+      return stream;
     }
   }
 
@@ -162,6 +228,21 @@ ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) 
 });
 
 app.whenReady().then(() => {
+  // Spoof iOS User-Agent on googlevideo requests to prevent 403 Forbidden
+  if (session && session.defaultSession) {
+    session.defaultSession.webRequest.onBeforeSendHeaders(
+      { urls: ['*://*.googlevideo.com/*', '*://*.youtube.com/*'] },
+      (details, callback) => {
+        delete details.requestHeaders['Origin'];
+        delete details.requestHeaders['sec-ch-ua'];
+        delete details.requestHeaders['sec-ch-ua-mobile'];
+        delete details.requestHeaders['sec-ch-ua-platform'];
+        details.requestHeaders['User-Agent'] = 'com.google.ios.youtube/21.03.3 (iPad7,6; U; CPU iPadOS 17_7_10 like Mac OS X; en-US)';
+        callback({ cancel: false, requestHeaders: details.requestHeaders });
+      }
+    );
+  }
+
   createWindow();
 
   app.on('activate', () => {

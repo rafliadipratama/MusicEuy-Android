@@ -5,82 +5,93 @@
 const SAMPLE_MASTER_TRACKS = [
   {
     id: "sora_001",
-    title: "Midnight Emerald (SoraFy Drift)",
-    artist: "Priangan Sound Lab",
-    album: "Electric Obsidian EP",
-    duration_secs: 214,
-    stream_url: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3",
-    artwork_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
-    audio_format: { codec: "FLAC Lossless", bitrate_kbps: 1411, is_lossless: true },
-    source_label: "SoraFy FLAC",
+    title: "Blinding Lights",
+    artist: "The Weeknd",
+    album: "After Hours",
+    duration_secs: 200,
+    stream_url: "https://aac.saavncdn.com/265/49d2e76e53abba8b08c951447abacbb0_320.mp4",
+    artwork_url: "https://c.saavncdn.com/265/After-Hours-English-2020-20200320023605-500x500.jpg",
+    audio_format: { codec: "AAC 320k", bitrate_kbps: 320, is_lossless: false },
+    source_label: "SoraFy 320k",
     is_liked: true,
+    is_full_stream: true,
     lyrics: [
-      { timestamp_ms: 0, text: "(Ambient Rain & Emerald Synthesis)" },
-      { timestamp_ms: 12000, text: "Gently drifting through the obsidian sky" },
-      { timestamp_ms: 24000, text: "Neon ribbons folding in the night" },
-      { timestamp_ms: 38000, text: "Listen closely to the pulse of Priangan" },
-      { timestamp_ms: 52000, text: "Electric lime lights guide our way home" },
-      { timestamp_ms: 68000, text: "Lossless frequencies soothing the soul" },
-      { timestamp_ms: 85000, text: "SoraFy resonance in infinite loop" },
-      { timestamp_ms: 110000, text: "No compression, pure harmonic grace" },
-      { timestamp_ms: 135000, text: "Into the quiet dawn we drift away" }
+      { timestamp_ms: 0, text: "(Synth Intro)" },
+      { timestamp_ms: 27000, text: "I've been tryna call" },
+      { timestamp_ms: 31000, text: "I've been on my own for long enough" },
+      { timestamp_ms: 36000, text: "Maybe you can show me how to love, maybe" },
+      { timestamp_ms: 45000, text: "I'm going through withdrawals" },
+      { timestamp_ms: 49000, text: "You don't even have to do too much" },
+      { timestamp_ms: 54000, text: "You can turn me on with just a touch, baby" },
+      { timestamp_ms: 63000, text: "I look around and Sin City's cold and empty" },
+      { timestamp_ms: 72000, text: "No one's around to judge me" },
+      { timestamp_ms: 77000, text: "I can't see clearly when you're gone" },
+      { timestamp_ms: 81000, text: "I said, ooh, I'm blinded by the lights" },
+      { timestamp_ms: 91000, text: "No, I can't sleep until I feel your touch" },
+      { timestamp_ms: 100000, text: "I said, ooh, I'm drowning in the night" },
+      { timestamp_ms: 109000, text: "Oh, when I'm like this, you're the one I trust" }
     ]
   },
   {
     id: "sora_002",
-    title: "Electric Lime Pulse",
-    artist: "Neon Bandung",
-    album: "West Java Cyber",
-    duration_secs: 185,
-    stream_url: "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=electronic-future-beats-117997.mp3",
-    artwork_url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-    audio_format: { codec: "FLAC Lossless", bitrate_kbps: 1411, is_lossless: true },
-    source_label: "SoraFy Cyber",
+    title: "Starboy",
+    artist: "The Weeknd ft. Daft Punk",
+    album: "Starboy",
+    duration_secs: 225,
+    stream_url: "https://aac.saavncdn.com/216/8b8a4f2344d7703773d2aa956ecbe51b_320.mp4",
+    artwork_url: "https://c.saavncdn.com/216/ZZang-KARAOKE-2024-The-Weeknd-Vol-2-Instrumental-2024-20260620203409-500x500.webp",
+    audio_format: { codec: "AAC 320k", bitrate_kbps: 320, is_lossless: false },
+    source_label: "SoraFy 320k",
     is_liked: false,
+    is_full_stream: true,
     lyrics: [
-      { timestamp_ms: 0, text: "(Cyber Synth Arpeggio)" },
-      { timestamp_ms: 10000, text: "Fast lanes moving through Braga neon" },
-      { timestamp_ms: 22000, text: "Pulse of 140 beats per minute" },
-      { timestamp_ms: 36000, text: "Bass reverberates across the digital square" },
-      { timestamp_ms: 50000, text: "Electric lime, illuminate the dark" },
-      { timestamp_ms: 72000, text: "Synthesized perfection, non-stop flow" }
+      { timestamp_ms: 0, text: "(Piano & Drum intro)" },
+      { timestamp_ms: 13000, text: "I'm tryna put you in the worst mood, ah" },
+      { timestamp_ms: 16000, text: "P1 cleaner than your church shoes, ah" },
+      { timestamp_ms: 20000, text: "Milli point two just to hurt you, ah" },
+      { timestamp_ms: 23000, text: "All red Lamb' just to tease you, ah" },
+      { timestamp_ms: 38000, text: "Look what you've done" },
+      { timestamp_ms: 41000, text: "I'm a motherfuckin' starboy" }
     ]
   },
   {
     id: "sora_003",
-    title: "Origami Ribbons",
-    artist: "Sora Ambient",
-    album: "Geometry of Waves",
-    duration_secs: 242,
-    stream_url: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=chill-abstract-intention-12099.mp3",
-    artwork_url: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
-    audio_format: { codec: "FLAC Lossless", bitrate_kbps: 1411, is_lossless: true },
-    source_label: "SoraFy Master",
+    title: "Yellow",
+    artist: "Coldplay",
+    album: "Parachutes",
+    duration_secs: 271,
+    stream_url: "https://aac.saavncdn.com/263/2083848071f4ca4b33f8866c02a16ee3_320.mp4",
+    artwork_url: "https://c.saavncdn.com/263/ZZang-KARAOKE-2024-POP-Vol-60-Instrumental-2024-20260511142050-500x500.webp",
+    audio_format: { codec: "AAC 320k", bitrate_kbps: 320, is_lossless: false },
+    source_label: "SoraFy Acoustic",
     is_liked: true,
+    is_full_stream: true,
     lyrics: [
-      { timestamp_ms: 0, text: "(Deep Sub & Harmonic Bells)" },
-      { timestamp_ms: 15000, text: "Fold the sound into geometry" },
-      { timestamp_ms: 32000, text: "Each crease a memory of acoustic warmth" },
-      { timestamp_ms: 58000, text: "Floating weights and tranquil heights" },
-      { timestamp_ms: 90000, text: "Origami ribbons unfolding in peace" }
+      { timestamp_ms: 0, text: "(Acoustic guitar intro)" },
+      { timestamp_ms: 16000, text: "Look at the stars" },
+      { timestamp_ms: 20000, text: "Look how they shine for you" },
+      { timestamp_ms: 24000, text: "And everything you do" },
+      { timestamp_ms: 32000, text: "Yeah they were all yellow" }
     ]
   },
   {
     id: "sora_004",
-    title: "Sundanese Dawn (Bamboo Echo)",
-    artist: "Kancana Collective",
-    album: "Highland Resonance",
-    duration_secs: 205,
-    stream_url: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3",
-    artwork_url: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
-    audio_format: { codec: "FLAC Master", bitrate_kbps: 1411, is_lossless: true },
-    source_label: "SoraFy Folk",
+    title: "Shape of You",
+    artist: "Ed Sheeran",
+    album: "÷ (Divide)",
+    duration_secs: 140,
+    stream_url: "https://aac.saavncdn.com/444/c72a75582084c9e31a0e8f60339da41e_320.mp4",
+    artwork_url: "https://c.saavncdn.com/444/Shape-of-You-Instrumental-2021-20211029105017-500x500.webp",
+    audio_format: { codec: "AAC 320k", bitrate_kbps: 320, is_lossless: false },
+    source_label: "SoraFy Pop",
     is_liked: false,
+    is_full_stream: true,
     lyrics: [
-      { timestamp_ms: 0, text: "(Suling Bamboo & Water Stream)" },
-      { timestamp_ms: 18000, text: "Embun pagi di lereng Tangkuban" },
-      { timestamp_ms: 35000, text: "Angin semilir membawa kidung damai" },
-      { timestamp_ms: 60000, text: "Suara suling bambu menembus kabut" }
+      { timestamp_ms: 0, text: "(Marimba rhythm)" },
+      { timestamp_ms: 10000, text: "The club isn't the best place to find a lover" },
+      { timestamp_ms: 13000, text: "So the bar is where I go" },
+      { timestamp_ms: 17000, text: "Me and my friends at the table doing shots" },
+      { timestamp_ms: 20000, text: "Drinking fast and then we talk slow" }
     ]
   }
 ];
@@ -416,6 +427,18 @@ class SoraFyDesktopApp {
         if (this.tracks[this.currentTrackIndex]) {
           this.tracks[this.currentTrackIndex].duration_secs = Math.round(this.audio.duration);
         }
+      }
+    });
+    this.audio.addEventListener("error", () => {
+      console.warn("Audio element error on src:", this.audio.src, this.audio.error);
+      const cur = this.tracks[this.currentTrackIndex];
+      if (cur && cur.fallback_url && this.audio.src !== cur.fallback_url) {
+        console.log("Switching to fallback preview stream:", cur.fallback_url);
+        this.audio.src = cur.fallback_url;
+        this.audio.play().catch(() => {});
+      } else {
+        this.isPlaying = false;
+        this.updatePlayPauseIcon();
       }
     });
     this.audio.addEventListener("ended", () => this.onTrackEnded());
@@ -780,6 +803,10 @@ class SoraFyDesktopApp {
       this.playerSourceTag.textContent = "";
     }
 
+    // Set initial display times immediately
+    this.currentTimeLabel.textContent = "0:00";
+    this.durationLabel.textContent = this.formatTime(track.duration_secs || 180);
+
     // Resolve FULL-LENGTH audio stream (matching Android APK)
     if (window.electronAPI && typeof window.electronAPI.resolveFullStream === 'function' && !track.is_full_stream) {
       try {
@@ -789,11 +816,16 @@ class SoraFyDesktopApp {
           videoId: track.video_id
         });
         if (full && full.url) {
+          track.fallback_url = track.stream_url;
           track.stream_url = full.url;
           track.is_full_stream = true;
-          track.audio_format.codec = "Opus HD";
-          track.audio_format.bitrate_kbps = Math.round((full.bitrate || 160000) / 1000);
-          if (this.playerBadge) this.playerBadge.textContent = "Opus HD";
+          if (full.duration && full.duration > 0) {
+            track.duration_secs = full.duration;
+            this.durationLabel.textContent = this.formatTime(full.duration);
+          }
+          track.audio_format.codec = full.provider || (full.mimeType?.includes("mp4") ? "AAC 320k" : "Opus HD");
+          track.audio_format.bitrate_kbps = Math.round((full.bitrate || 320000) / 1000);
+          if (this.playerBadge) this.playerBadge.textContent = track.audio_format.codec;
         }
       } catch (err) {
         console.warn("Full stream resolver notice:", err);
@@ -815,7 +847,9 @@ class SoraFyDesktopApp {
         this.isPlaying = true;
         this.updatePlayPauseIcon();
       }).catch(err => {
-        console.log("Audio autoplay notice:", err);
+        console.warn("Audio autoplay notice:", err);
+        this.isPlaying = false;
+        this.updatePlayPauseIcon();
       });
     }
   }
@@ -927,11 +961,22 @@ class SoraFyDesktopApp {
     if (this.isPlaying) {
       this.audio.pause();
       this.isPlaying = false;
+      this.updatePlayPauseIcon();
     } else {
-      this.audio.play();
-      this.isPlaying = true;
+      if (!this.audio.src) {
+        this.loadTrack(this.currentTrackIndex, true);
+        return;
+      }
+      this.audio.play().then(() => {
+        this.isPlaying = true;
+        this.updatePlayPauseIcon();
+      }).catch(err => {
+        console.warn("Audio play error:", err);
+        this.isPlaying = false;
+        this.updatePlayPauseIcon();
+        this.showToast("Tidak dapat memutar audio");
+      });
     }
-    this.updatePlayPauseIcon();
   }
 
   updatePlayPauseIcon() {
