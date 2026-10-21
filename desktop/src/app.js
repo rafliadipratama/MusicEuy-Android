@@ -342,6 +342,10 @@ class SoraFyDesktopApp {
     this.wavePhase = 0;
     this.animationFrame = null;
 
+    // Side panel tab & volume states
+    this.activeSideTab = "lyrics";
+    this.previousVolume = 0.85;
+
     this.initElements();
     this.initEvents();
     this.initPlugins();
@@ -349,6 +353,11 @@ class SoraFyDesktopApp {
     this.loadInitialCatalog();
     this.setupWaveCanvas();
     this.startWaveAnimation();
+
+    // Initialize persisted volume
+    const savedVol = localStorage.getItem("sorafy_volume");
+    const initialVol = savedVol !== null ? parseFloat(savedVol) : 0.85;
+    this.setVolume(isNaN(initialVol) ? 0.85 : initialVol);
   }
 
   initElements() {
@@ -360,6 +369,9 @@ class SoraFyDesktopApp {
     this.repeatBtn = document.getElementById("repeatBtn");
     this.likeBtn = document.getElementById("likeBtn");
     this.volumeSlider = document.getElementById("volumeSlider");
+    this.volumeMuteBtn = document.getElementById("volumeMuteBtn");
+    this.volumeIcon = document.getElementById("volumeIcon");
+    this.volumeLabel = document.getElementById("volumeLabel");
 
     this.playerTitle = document.getElementById("playerTitle");
     this.playerArtist = document.getElementById("playerArtist");
@@ -371,10 +383,20 @@ class SoraFyDesktopApp {
     this.durationLabel = document.getElementById("durationLabel");
 
     this.lyricsContainer = document.getElementById("lyricsContainer");
-    this.lyricsPanel = document.getElementById("lyricsPanel");
+    this.sideDrawer = document.getElementById("sideDrawer") || document.getElementById("lyricsPanel");
+    this.lyricsPanel = this.sideDrawer;
+    this.tabLyricsBtn = document.getElementById("tabLyricsBtn");
+    this.tabQueueBtn = document.getElementById("tabQueueBtn");
+    this.clearQueueBtn = document.getElementById("clearQueueBtn");
+    this.closeSideDrawerBtn = document.getElementById("closeSideDrawerBtn") || document.getElementById("closeLyricsBtn");
+    this.closeLyricsBtn = this.closeSideDrawerBtn;
+    this.queueContainer = document.getElementById("queueContainer");
+    this.queueNowPlaying = document.getElementById("queueNowPlaying");
+    this.queueList = document.getElementById("queueList");
+    this.queueBadge = document.getElementById("queueBadge");
     this.appLayout = document.getElementById("appLayout");
     this.toggleLyricsBtn = document.getElementById("toggleLyricsBtn");
-    this.closeLyricsBtn = document.getElementById("closeLyricsBtn");
+    this.toggleQueueBtn = document.getElementById("toggleQueueBtn");
 
     this.searchInput = document.getElementById("searchInput");
     this.categoryChips = document.querySelectorAll(".category-chips .chip");
@@ -450,12 +472,53 @@ class SoraFyDesktopApp {
       this.updateLikeButton();
     });
 
-    this.volumeSlider.addEventListener("input", (e) => {
-      this.audio.volume = parseFloat(e.target.value);
-    });
+    if (this.volumeSlider) {
+      this.volumeSlider.addEventListener("input", (e) => {
+        this.setVolume(parseFloat(e.target.value));
+      });
+    }
 
-    this.toggleLyricsBtn.addEventListener("click", () => this.toggleLyricsDrawer());
-    this.closeLyricsBtn.addEventListener("click", () => this.toggleLyricsDrawer(false));
+    if (this.volumeMuteBtn) {
+      this.volumeMuteBtn.addEventListener("click", () => {
+        this.toggleMute();
+      });
+    }
+
+    if (this.tabLyricsBtn) {
+      this.tabLyricsBtn.addEventListener("click", () => {
+        this.switchSideTab("lyrics");
+      });
+    }
+
+    if (this.tabQueueBtn) {
+      this.tabQueueBtn.addEventListener("click", () => {
+        this.switchSideTab("queue");
+      });
+    }
+
+    if (this.clearQueueBtn) {
+      this.clearQueueBtn.addEventListener("click", () => {
+        this.clearUpcomingQueue();
+      });
+    }
+
+    if (this.closeSideDrawerBtn) {
+      this.closeSideDrawerBtn.addEventListener("click", () => {
+        this.toggleSideDrawer(false);
+      });
+    }
+
+    if (this.toggleLyricsBtn) {
+      this.toggleLyricsBtn.addEventListener("click", () => {
+        this.toggleLyricsTab();
+      });
+    }
+
+    if (this.toggleQueueBtn) {
+      this.toggleQueueBtn.addEventListener("click", () => {
+        this.toggleQueueTab();
+      });
+    }
 
     if (this.heroPlayBtn) {
       this.heroPlayBtn.addEventListener("click", () => {
@@ -912,6 +975,9 @@ class SoraFyDesktopApp {
     // Fetch dynamic LRCLIB Synced Karaoke Lyrics
     this.fetchTrackLyrics(track);
 
+    // Update responsive drag-and-drop queue
+    this.renderQueue();
+
     if (autoPlay) {
       this.ensureAudioContextActive();
       this.audio.play().then(() => {
@@ -1318,13 +1384,293 @@ class SoraFyDesktopApp {
     }, 2400);
   }
 
-  toggleLyricsDrawer(forceState) {
-    if (forceState !== undefined) {
-      this.appLayout.classList.toggle("lyrics-collapsed", !forceState);
+  escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // =========================================================
+  // Volume Controller & Persistence
+  // =========================================================
+  setVolume(val) {
+    const clamped = Math.max(0, Math.min(1, val));
+    if (this.audio) {
+      this.audio.volume = clamped;
+    }
+    const percent = Math.round(clamped * 100);
+    if (this.volumeSlider) {
+      this.volumeSlider.value = clamped;
+      this.volumeSlider.style.background = `linear-gradient(to right, var(--color-brand-primary) 0%, var(--color-brand-primary) ${percent}%, rgba(255, 255, 255, 0.12) ${percent}%, rgba(255, 255, 255, 0.12) 100%)`;
+    }
+    if (this.volumeLabel) {
+      this.volumeLabel.textContent = `${percent}%`;
+    }
+    this.updateVolumeIcon(clamped);
+    localStorage.setItem("sorafy_volume", clamped.toString());
+  }
+
+  updateVolumeIcon(val) {
+    if (!this.volumeIcon) return;
+    if (val <= 0.001) {
+      this.volumeIcon.innerHTML = `
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        <line x1="23" y1="9" x2="17" y2="15"></line>
+        <line x1="17" y1="9" x2="23" y2="15"></line>
+      `;
+      if (this.volumeMuteBtn) this.volumeMuteBtn.title = "Bunyikan (Unmute)";
+    } else if (val < 0.5) {
+      this.volumeIcon.innerHTML = `
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+      `;
+      if (this.volumeMuteBtn) this.volumeMuteBtn.title = "Bisukan (Mute)";
     } else {
-      this.appLayout.classList.toggle("lyrics-collapsed");
+      this.volumeIcon.innerHTML = `
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+      `;
+      if (this.volumeMuteBtn) this.volumeMuteBtn.title = "Bisukan (Mute)";
+    }
+  }
+
+  toggleMute() {
+    if (this.audio.volume > 0.01) {
+      this.previousVolume = this.audio.volume;
+      this.setVolume(0);
+      this.showToast("Volume Dibisukan (Muted)");
+    } else {
+      const restoreVol = this.previousVolume > 0.05 ? this.previousVolume : 0.85;
+      this.setVolume(restoreVol);
+      this.showToast(`Volume ${Math.round(restoreVol * 100)}%`);
+    }
+  }
+
+  // =========================================================
+  // Side Panel (Lyrics & Queue) Controls
+  // =========================================================
+  toggleSideDrawer(forceState) {
+    const isCurrentlyCollapsed = this.appLayout.classList.contains("lyrics-collapsed");
+    const willCollapse = forceState !== undefined ? !forceState : !isCurrentlyCollapsed;
+    this.appLayout.classList.toggle("lyrics-collapsed", willCollapse);
+
+    if (!willCollapse) {
+      this.switchSideTab(this.activeSideTab || "lyrics");
+    } else {
+      if (this.toggleLyricsBtn) this.toggleLyricsBtn.classList.remove("active");
+      if (this.toggleQueueBtn) this.toggleQueueBtn.classList.remove("active");
     }
     setTimeout(() => this.setupWaveCanvas(), 250);
+  }
+
+  toggleLyricsDrawer(forceState) {
+    this.toggleSideDrawer(forceState);
+  }
+
+  switchSideTab(tab) {
+    this.activeSideTab = tab;
+    if (tab === "lyrics") {
+      if (this.tabLyricsBtn) this.tabLyricsBtn.classList.add("active");
+      if (this.tabQueueBtn) this.tabQueueBtn.classList.remove("active");
+      if (this.lyricsContainer) this.lyricsContainer.style.display = "flex";
+      if (this.queueContainer) this.queueContainer.style.display = "none";
+      if (this.clearQueueBtn) this.clearQueueBtn.style.display = "none";
+      if (this.toggleLyricsBtn) this.toggleLyricsBtn.classList.add("active");
+      if (this.toggleQueueBtn) this.toggleQueueBtn.classList.remove("active");
+    } else {
+      if (this.tabLyricsBtn) this.tabLyricsBtn.classList.remove("active");
+      if (this.tabQueueBtn) this.tabQueueBtn.classList.add("active");
+      if (this.lyricsContainer) this.lyricsContainer.style.display = "none";
+      if (this.queueContainer) this.queueContainer.style.display = "flex";
+      const upcomingCount = Math.max(0, this.tracks.length - 1 - this.currentTrackIndex);
+      if (this.clearQueueBtn) this.clearQueueBtn.style.display = upcomingCount > 0 ? "inline-flex" : "none";
+      if (this.toggleLyricsBtn) this.toggleLyricsBtn.classList.remove("active");
+      if (this.toggleQueueBtn) this.toggleQueueBtn.classList.add("active");
+      this.renderQueue();
+    }
+  }
+
+  toggleLyricsTab() {
+    const isCollapsed = this.appLayout.classList.contains("lyrics-collapsed");
+    if (isCollapsed) {
+      this.toggleSideDrawer(true);
+      this.switchSideTab("lyrics");
+    } else if (this.activeSideTab === "lyrics") {
+      this.toggleSideDrawer(false);
+    } else {
+      this.switchSideTab("lyrics");
+    }
+  }
+
+  toggleQueueTab() {
+    const isCollapsed = this.appLayout.classList.contains("lyrics-collapsed");
+    if (isCollapsed) {
+      this.toggleSideDrawer(true);
+      this.switchSideTab("queue");
+    } else if (this.activeSideTab === "queue") {
+      this.toggleSideDrawer(false);
+    } else {
+      this.switchSideTab("queue");
+    }
+  }
+
+  // =========================================================
+  // Drag & Drop Responsive Queue Manager
+  // =========================================================
+  renderQueue() {
+    if (!this.queueContainer) return;
+
+    const currentTrack = this.tracks[this.currentTrackIndex];
+    const upcomingCount = Math.max(0, this.tracks.length - 1 - this.currentTrackIndex);
+    if (this.queueBadge) {
+      this.queueBadge.textContent = upcomingCount;
+    }
+    if (this.clearQueueBtn) {
+      this.clearQueueBtn.style.display = upcomingCount > 0 && this.activeSideTab === "queue" ? "inline-flex" : "none";
+    }
+
+    // Render "Sedang Diputar"
+    if (this.queueNowPlaying) {
+      if (currentTrack) {
+        this.queueNowPlaying.innerHTML = `
+          <img src="${currentTrack.artwork_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80'}" class="queue-item-art" alt="${this.escapeHtml(currentTrack.title)}">
+          <div class="queue-item-info">
+            <span class="queue-item-title">${this.escapeHtml(currentTrack.title)}</span>
+            <span class="queue-item-artist">${this.escapeHtml(currentTrack.artist)}</span>
+          </div>
+          <span class="queue-item-duration">${this.formatTime(currentTrack.duration_secs || 0)}</span>
+        `;
+      } else {
+        this.queueNowPlaying.innerHTML = `
+          <div style="font-size: 12px; color: var(--color-text-secondary); padding: 8px;">Tidak ada lagu yang sedang diputar</div>
+        `;
+      }
+    }
+
+    // Render "Berikutnya" (Upcoming tracks)
+    if (!this.queueList) return;
+    this.queueList.innerHTML = "";
+
+    if (upcomingCount === 0) {
+      this.queueList.innerHTML = `
+        <div style="text-align: center; padding: 32px 16px; color: var(--color-text-tertiary); font-size: 13px;">
+          <div style="font-size: 24px; margin-bottom: 8px;">🎵</div>
+          Tidak ada antrean berikutnya.<br>Pilih lagu untuk menambah antrean.
+        </div>
+      `;
+      return;
+    }
+
+    let draggedItemIndex = null;
+
+    for (let i = this.currentTrackIndex + 1; i < this.tracks.length; i++) {
+      const track = this.tracks[i];
+      const queueIdx = i;
+
+      const item = document.createElement("div");
+      item.className = "queue-item";
+      item.draggable = true;
+      item.dataset.index = queueIdx;
+
+      item.innerHTML = `
+        <span class="queue-drag-handle" title="Tarik untuk memindahkan urutan">⋮⋮</span>
+        <img src="${track.artwork_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80'}" class="queue-item-art" alt="${this.escapeHtml(track.title)}">
+        <div class="queue-item-info">
+          <span class="queue-item-title">${this.escapeHtml(track.title)}</span>
+          <span class="queue-item-artist">${this.escapeHtml(track.artist)}</span>
+        </div>
+        <span class="queue-item-duration">${this.formatTime(track.duration_secs || 0)}</span>
+        <button class="queue-item-remove" title="Hapus dari antrean" data-action="remove">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      `;
+
+      // Click to play directly
+      item.addEventListener("click", (e) => {
+        if (e.target.closest('[data-action="remove"]') || e.target.closest('.queue-drag-handle')) {
+          return;
+        }
+        this.loadTrack(queueIdx, true);
+      });
+
+      // Remove single track
+      const removeBtn = item.querySelector('[data-action="remove"]');
+      if (removeBtn) {
+        removeBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const removed = this.tracks.splice(queueIdx, 1);
+          this.renderQueue();
+          if (removed && removed[0]) {
+            this.showToast(`Dihapus dari antrean: ${removed[0].title}`);
+          }
+        });
+      }
+
+      // Drag and Drop Listeners
+      item.addEventListener("dragstart", (e) => {
+        draggedItemIndex = queueIdx;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", queueIdx.toString());
+        setTimeout(() => item.classList.add("dragging"), 0);
+      });
+
+      item.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const rect = item.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        if (e.clientY < midY) {
+          item.classList.add("drag-over-top");
+          item.classList.remove("drag-over-bottom");
+        } else {
+          item.classList.add("drag-over-bottom");
+          item.classList.remove("drag-over-top");
+        }
+      });
+
+      item.addEventListener("dragleave", () => {
+        item.classList.remove("drag-over-top", "drag-over-bottom");
+      });
+
+      item.addEventListener("drop", (e) => {
+        e.preventDefault();
+        item.classList.remove("drag-over-top", "drag-over-bottom");
+        const fromIndex = draggedItemIndex !== null ? draggedItemIndex : parseInt(e.dataTransfer.getData("text/plain"), 10);
+        const toIndex = queueIdx;
+
+        if (fromIndex !== null && !isNaN(fromIndex) && fromIndex !== toIndex) {
+          const [movedTrack] = this.tracks.splice(fromIndex, 1);
+          this.tracks.splice(toIndex, 0, movedTrack);
+          this.renderQueue();
+          this.showToast("Urutan antrean diperbarui");
+        }
+      });
+
+      item.addEventListener("dragend", () => {
+        item.classList.remove("dragging", "drag-over-top", "drag-over-bottom");
+        draggedItemIndex = null;
+        document.querySelectorAll(".queue-item").forEach(el => {
+          el.classList.remove("drag-over-top", "drag-over-bottom", "dragging");
+        });
+      });
+
+      this.queueList.appendChild(item);
+    }
+  }
+
+  clearUpcomingQueue() {
+    if (this.currentTrackIndex < this.tracks.length - 1) {
+      this.tracks.splice(this.currentTrackIndex + 1);
+      this.renderQueue();
+      this.showToast("Antrean berikutnya dibersihkan");
+    }
   }
 
   // =========================================================
