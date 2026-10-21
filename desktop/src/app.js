@@ -408,6 +408,14 @@ class SoraFyDesktopApp {
     }
 
     this.audio.addEventListener("timeupdate", () => this.onTimeUpdate());
+    this.audio.addEventListener("loadedmetadata", () => {
+      if (this.audio.duration && !isNaN(this.audio.duration)) {
+        this.durationLabel.textContent = this.formatTime(this.audio.duration);
+        if (this.tracks[this.currentTrackIndex]) {
+          this.tracks[this.currentTrackIndex].duration_secs = Math.round(this.audio.duration);
+        }
+      }
+    });
     this.audio.addEventListener("ended", () => this.onTrackEnded());
 
     // Wave canvas click to seek
@@ -766,6 +774,29 @@ class SoraFyDesktopApp {
     this.playerBadge.textContent = track.audio_format.codec;
     if (this.playerSourceTag) {
       this.playerSourceTag.textContent = track.source_label || "SoraFy Master";
+    }
+
+    // Resolve FULL-LENGTH audio stream (matching Android APK)
+    if (window.electronAPI && typeof window.electronAPI.resolveFullStream === 'function' && !track.is_full_stream) {
+      try {
+        const full = await window.electronAPI.resolveFullStream({
+          title: track.title,
+          artist: track.artist,
+          videoId: track.video_id
+        });
+        if (full && full.url) {
+          track.stream_url = full.url;
+          track.is_full_stream = true;
+          track.audio_format.codec = "Opus Full HD";
+          track.audio_format.bitrate_kbps = Math.round((full.bitrate || 160000) / 1000);
+          this.playerBadge.textContent = "Opus Full HD";
+          if (this.playerSourceTag) {
+            this.playerSourceTag.textContent = "SoraFy Full Stream";
+          }
+        }
+      } catch (err) {
+        console.warn("Full stream resolver notice:", err);
+      }
     }
 
     this.audio.src = track.stream_url;
