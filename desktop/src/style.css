@@ -2530,3 +2530,318 @@ body {
     padding: 0 16px;
   }
 }
+
+/* =========================================================
+   Screen Player (Dedicated Fullscreen / Now Playing View)
+   ========================================================= */
+#screenPlayerViewContainer {
+  padding: 16px 28px 40px 28px;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.screen-player-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.screen-player-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #141820;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.player-mode-btn {
+  background: transparent;
+  color: #94A3B8;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.player-mode-btn:hover {
+  color: #FFFFFF;
+}
+
+.player-mode-btn.active {
+  background: #FFFFFF;
+  color: #07080A;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.screen-player-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.screen-player-body {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 36px;
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .screen-player-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.screen-player-visual-col {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.screen-player-art-box {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  background: #141820;
+  transition: transform 0.3s ease;
+}
+
+.screen-player-artwork-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.screen-player-video-box {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000000;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.screen-player-video-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.screen-player-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding: 0 6px;
+}
+
+.screen-player-meta-info {
+  flex: 1;
+  min-width: 0;
+  padding-right: 16px;
+}
+
+.screen-player-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.3px;
+}
+
+.screen-player-artist {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #94A3B8;
+  margin: 4px 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.screen-player-artist:hover {
+  color: #FFFFFF;
+  text-decoration: underline;
+}
+
+.screen-player-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.screen-player-controls-card {
+  margin-top: 18px;
+  background: #11151C;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  padding: 16px 20px 18px 20px;
+}
+
+.screen-player-progress-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.screen-player-seekbar-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.screen-player-slider {
+  width: 100%;
+  height: 5px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  transition: height 0.15s ease;
+}
+
+.screen-player-slider:hover {
+  height: 7px;
+}
+
+.screen-player-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #00E599;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  transition: transform 0.15s ease;
+}
+
+.screen-player-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+}
+
+.screen-player-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.screen-player-play-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  color: #07080A;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.screen-player-play-btn:hover {
+  background: #F1F5F9;
+  transform: scale(1.06);
+}
+
+.screen-player-play-btn:active {
+  transform: scale(0.96);
+}
+
+/* Right Side Column: Lyrics & Queue in Screen Player */
+.screen-player-side-col {
+  background: #11151C;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  padding: 20px;
+  height: 520px;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen-player-tabs-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+.screen-side-tab {
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.screen-side-tab:hover {
+  color: #FFFFFF;
+}
+
+.screen-side-tab.active {
+  color: #00E599;
+  background: rgba(0, 229, 153, 0.1);
+}
+
+.screen-player-side-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen-lyrics-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px 24px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.screen-lyrics-placeholder {
+  color: #64748B;
+  font-size: 14px;
+  text-align: center;
+  padding-top: 60px;
+}
+
+.screen-queue-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+

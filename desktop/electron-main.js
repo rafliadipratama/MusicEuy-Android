@@ -11,6 +11,7 @@ app.commandLine.appendSwitch('log-level', '3'); // Suppress harmless Chromium Oz
 
 // Apple / Safari User-Agent (exact match with Android MusicStreamSource.kt & MusicCacheManager.kt)
 const APPLE_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
+const IOS_UA = 'com.google.ios.youtube/21.03.3 (iPad7,6; U; CPU iPadOS 17_7_10 like Mac OS X; en-US)';
 
 let cachedVisitorData = null;
 function getVisitorData() {
@@ -57,7 +58,7 @@ const localAudioProxy = http.createServer((req, res) => {
   try {
     const u = new URL(target);
     const headers = {
-      'User-Agent': APPLE_UA
+      'User-Agent': IOS_UA
     };
     if (req.headers.range) {
       headers['Range'] = req.headers.range;
@@ -772,19 +773,17 @@ function searchYouTubeId(query) {
 }
 
 async function resolveInnerTubeStream(videoId) {
-  const vData = await getVisitorData();
   return new Promise((resolve) => {
     const clientContext = {
-      clientName: "VISIONOS",
-      clientVersion: "0.1",
-      osName: "visionOS",
-      osVersion: "1.3.21O771",
+      clientName: "IOS",
+      clientVersion: "21.03.3",
+      osName: "iPadOS",
+      osVersion: "17.7.10.21H450",
       deviceMake: "Apple",
-      deviceModel: "RealityDevice14,1",
+      deviceModel: "iPad7,6",
       hl: "id",
       gl: "ID"
     };
-    if (vData) clientContext.visitorData = vData;
 
     const payload = JSON.stringify({
       context: { client: clientContext },
@@ -792,12 +791,12 @@ async function resolveInnerTubeStream(videoId) {
     });
 
     const req = https.request({
-      hostname: "music.youtube.com",
+      hostname: "www.youtube.com",
       path: "/youtubei/v1/player",
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": APPLE_UA,
+        "User-Agent": IOS_UA,
         "Content-Length": Buffer.byteLength(payload)
       }
     }, res => {
@@ -816,6 +815,7 @@ async function resolveInnerTubeStream(videoId) {
             resolve({
               url: streamUrl,
               rawUrl: rawUrl,
+              videoId: videoId,
               bitrate: formats[0].bitrate || 160000,
               mimeType: formats[0].mimeType || 'audio/mp4',
               provider: 'YouTube Music InnerTube',
@@ -937,12 +937,15 @@ ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) 
     }
   }
 
-  // 3. Fallback to JioSaavn ONLY IF strictly matched and NOT Indian/cover content
+  // 3. Fallback search on YouTube
   if (title && artist) {
-    const saavnStream = await resolveJioSaavnStream(title, artist);
-    if (saavnStream && saavnStream.url) {
-      streamCache.set(cacheKey, { data: saavnStream, expireAt: Date.now() + 45 * 60 * 1000 });
-      return saavnStream;
+    const fallbackVid = await searchYouTubeId(`${artist} ${title}`);
+    if (fallbackVid) {
+      const stream = await resolveInnerTubeStream(fallbackVid);
+      if (stream && stream.url) {
+        streamCache.set(cacheKey, { data: stream, expireAt: Date.now() + 45 * 60 * 1000 });
+        return stream;
+      }
     }
   }
 

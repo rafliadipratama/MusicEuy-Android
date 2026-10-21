@@ -479,6 +479,44 @@ class SoraFyDesktopApp {
     this.contextMenuLikeText = document.getElementById("contextMenuLikeText");
     this.contextMenuTrack = null;
     this.artistRoleBadge = document.getElementById("artistRoleBadge");
+
+    // Dedicated Screen Player Elements
+    this.screenPlayerViewContainer = document.getElementById("screenPlayerViewContainer");
+    this.screenPlayerBackBtn = document.getElementById("screenPlayerBackBtn");
+    this.modeAudioBtn = document.getElementById("modeAudioBtn");
+    this.modeVideoBtn = document.getElementById("modeVideoBtn");
+    this.screenPlayerBadge = document.getElementById("screenPlayerBadge");
+    this.screenPlayerToggleLyricsBtn = document.getElementById("screenPlayerToggleLyricsBtn");
+    this.screenPlayerToggleQueueBtn = document.getElementById("screenPlayerToggleQueueBtn");
+    this.screenPlayerAudioView = document.getElementById("screenPlayerAudioView");
+    this.screenPlayerArtwork = document.getElementById("screenPlayerArtwork");
+    this.screenPlayerVideoView = document.getElementById("screenPlayerVideoView");
+    this.screenPlayerVideoFrame = document.getElementById("screenPlayerVideoFrame");
+    this.screenPlayerTitle = document.getElementById("screenPlayerTitle");
+    this.screenPlayerArtist = document.getElementById("screenPlayerArtist");
+    this.screenPlayerLikeBtn = document.getElementById("screenPlayerLikeBtn");
+    this.screenPlayerAddToPlaylistBtn = document.getElementById("screenPlayerAddToPlaylistBtn");
+    this.screenPlayerCurrentTime = document.getElementById("screenPlayerCurrentTime");
+    this.screenPlayerDuration = document.getElementById("screenPlayerDuration");
+    this.screenPlayerSeekbar = document.getElementById("screenPlayerSeekbar");
+    this.screenPlayerShuffleBtn = document.getElementById("screenPlayerShuffleBtn");
+    this.screenPlayerPrevBtn = document.getElementById("screenPlayerPrevBtn");
+    this.screenPlayerPlayPauseBtn = document.getElementById("screenPlayerPlayPauseBtn");
+    this.screenPlayerPlayPauseIcon = document.getElementById("screenPlayerPlayPauseIcon");
+    this.screenPlayerNextBtn = document.getElementById("screenPlayerNextBtn");
+    this.screenPlayerRepeatBtn = document.getElementById("screenPlayerRepeatBtn");
+    this.screenTabLyricsBtn = document.getElementById("screenTabLyricsBtn");
+    this.screenTabQueueBtn = document.getElementById("screenTabQueueBtn");
+    this.screenPlayerLyricsBox = document.getElementById("screenPlayerLyricsBox");
+    this.screenPlayerQueueBox = document.getElementById("screenPlayerQueueBox");
+    this.screenPlayerQueueList = document.getElementById("screenPlayerQueueList");
+
+    this.bottomPlayerTrackInfo = document.getElementById("bottomPlayerTrackInfo");
+    this.expandPlayerBtn = document.getElementById("expandPlayerBtn");
+
+    this.currentScreenMode = "audio"; // "audio" or "video"
+    this.activeScreenSideTab = "lyrics"; // "lyrics" or "queue"
+    this.previousView = "home";
   }
 
   initEvents() {
@@ -575,6 +613,98 @@ class SoraFyDesktopApp {
         this.showToast("Menyinkronkan rekomendasi Musicfy...");
         this.fetchMusicfyRecommendations();
       });
+    }
+
+    // Bottom Player expand clicks -> Opens Dedicated Screen Player
+    if (this.bottomPlayerTrackInfo) {
+      this.bottomPlayerTrackInfo.addEventListener("click", (e) => {
+        if (e.target.closest('#likeBtn') || e.target.closest('.heart-btn')) return;
+        this.switchView("player");
+      });
+    }
+    if (this.expandPlayerBtn) {
+      this.expandPlayerBtn.addEventListener("click", () => {
+        this.switchView("player");
+      });
+    }
+
+    // Screen Player Actions & Synchronized Controls
+    if (this.screenPlayerBackBtn) {
+      this.screenPlayerBackBtn.addEventListener("click", () => {
+        this.switchView(this.previousView && this.previousView !== "player" ? this.previousView : "home");
+      });
+    }
+    if (this.modeAudioBtn) {
+      this.modeAudioBtn.addEventListener("click", () => this.setScreenPlayerMode("audio"));
+    }
+    if (this.modeVideoBtn) {
+      this.modeVideoBtn.addEventListener("click", () => this.setScreenPlayerMode("video"));
+    }
+    if (this.screenPlayerPlayPauseBtn) {
+      this.screenPlayerPlayPauseBtn.addEventListener("click", () => this.togglePlayPause());
+    }
+    if (this.screenPlayerPrevBtn) {
+      this.screenPlayerPrevBtn.addEventListener("click", () => this.playPrevious());
+    }
+    if (this.screenPlayerNextBtn) {
+      this.screenPlayerNextBtn.addEventListener("click", () => this.playNext());
+    }
+    if (this.screenPlayerShuffleBtn) {
+      this.screenPlayerShuffleBtn.addEventListener("click", () => {
+        this.isShuffled = !this.isShuffled;
+        this.shuffleBtn.classList.toggle("active", this.isShuffled);
+        this.screenPlayerShuffleBtn.classList.toggle("active", this.isShuffled);
+        this.showToast(this.isShuffled ? "Shuffle Diaktifkan" : "Shuffle Dimatikan");
+      });
+    }
+    if (this.screenPlayerRepeatBtn) {
+      this.screenPlayerRepeatBtn.addEventListener("click", () => {
+        this.repeatMode = (this.repeatMode + 1) % 3;
+        this.repeatBtn.classList.toggle("active", this.repeatMode > 0);
+        this.screenPlayerRepeatBtn.classList.toggle("active", this.repeatMode > 0);
+        const labels = ["Repeat Nonaktif", "Ulangi Semua", "Ulangi Lagu Ini"];
+        this.showToast(labels[this.repeatMode]);
+      });
+    }
+    if (this.screenPlayerLikeBtn) {
+      this.screenPlayerLikeBtn.addEventListener("click", () => {
+        const cur = this.tracks[this.currentTrackIndex];
+        if (cur) this.toggleLikeTrack(cur);
+      });
+    }
+    if (this.screenPlayerAddToPlaylistBtn) {
+      this.screenPlayerAddToPlaylistBtn.addEventListener("click", () => {
+        const cur = this.tracks[this.currentTrackIndex];
+        if (cur) this.openAddToPlaylistModal(cur);
+      });
+    }
+    if (this.screenPlayerArtist) {
+      this.screenPlayerArtist.addEventListener("click", () => {
+        const cur = this.tracks[this.currentTrackIndex];
+        if (cur && cur.artist) {
+          this.openArtistDetail(cur.artist, cur.artist_browse_id || '');
+        }
+      });
+    }
+    if (this.screenPlayerSeekbar) {
+      this.screenPlayerSeekbar.addEventListener("input", (e) => {
+        const val = parseFloat(e.target.value);
+        if (this.audio.duration && !isNaN(this.audio.duration)) {
+          this.audio.currentTime = (val / 100) * this.audio.duration;
+        }
+      });
+    }
+    if (this.screenTabLyricsBtn) {
+      this.screenTabLyricsBtn.addEventListener("click", () => this.switchScreenSideTab("lyrics"));
+    }
+    if (this.screenTabQueueBtn) {
+      this.screenTabQueueBtn.addEventListener("click", () => this.switchScreenSideTab("queue"));
+    }
+    if (this.screenPlayerToggleLyricsBtn) {
+      this.screenPlayerToggleLyricsBtn.addEventListener("click", () => this.switchScreenSideTab("lyrics"));
+    }
+    if (this.screenPlayerToggleQueueBtn) {
+      this.screenPlayerToggleQueueBtn.addEventListener("click", () => this.switchScreenSideTab("queue"));
     }
 
     // Artist Detail screen actions
@@ -2081,9 +2211,12 @@ class SoraFyDesktopApp {
       `;
 
       card.addEventListener("click", () => {
+        vid.is_video = true;
         this.tracks = [vid, ...this.tracks.filter(t => t.id !== vid.id)];
         this.loadTrack(0, true);
-        this.showToast(`Memutar audio video: ${vid.title}`);
+        this.switchView("player");
+        this.setScreenPlayerMode("video");
+        this.showToast(`Memutar video: ${vid.title}`);
       });
 
       card.addEventListener("contextmenu", (e) => {
@@ -2310,9 +2443,12 @@ class SoraFyDesktopApp {
               </div>
             `;
             card.addEventListener("click", () => {
+              vid.is_video = true;
               this.tracks = [vid, ...songs];
               this.loadTrack(0, true);
-              this.showToast(`Memutar audio video: ${vid.title}`);
+              this.switchView("player");
+              this.setScreenPlayerMode("video");
+              this.showToast(`Memutar video: ${vid.title}`);
             });
             card.addEventListener("contextmenu", (e) => {
               e.preventDefault();
@@ -2440,9 +2576,12 @@ class SoraFyDesktopApp {
             </div>
           `;
           card.addEventListener("click", () => {
+            vid.is_video = true;
             this.tracks = [vid];
             this.loadTrack(0, true);
-            this.showToast(`Memutar audio video: ${vid.title}`);
+            this.switchView("player");
+            this.setScreenPlayerMode("video");
+            this.showToast(`Memutar video: ${vid.title}`);
           });
           card.addEventListener("contextmenu", (e) => {
             e.preventDefault();
@@ -2551,6 +2690,10 @@ class SoraFyDesktopApp {
     const track = this.tracks[index];
     if (!track) return;
 
+    if (!track.video_id && track.id && track.id.startsWith("yt_")) {
+      track.video_id = track.id.replace(/^yt_/, "");
+    }
+
     this.playerTitle.textContent = track.title;
     this.playerArtist.textContent = track.artist;
     this.playerArtwork.src = track.artwork_url;
@@ -2564,6 +2707,9 @@ class SoraFyDesktopApp {
     // Set initial display times immediately
     this.currentTimeLabel.textContent = "0:00";
     this.durationLabel.textContent = this.formatTime(track.duration_secs || 180);
+
+    // Synchronize Screen Player immediately
+    this.updateScreenPlayer();
 
     // Resolve FULL-LENGTH audio stream (matching Android APK)
     if (window.electronAPI && typeof window.electronAPI.resolveFullStream === 'function' && !track.is_full_stream) {
@@ -2580,10 +2726,12 @@ class SoraFyDesktopApp {
           if (full.duration && full.duration > 0) {
             track.duration_secs = full.duration;
             this.durationLabel.textContent = this.formatTime(full.duration);
+            if (this.screenPlayerDuration) this.screenPlayerDuration.textContent = this.formatTime(full.duration);
           }
           track.audio_format.codec = full.provider || (full.mimeType?.includes("mp4") ? "AAC 320k" : "Opus HD");
           track.audio_format.bitrate_kbps = Math.round((full.bitrate || 320000) / 1000);
           if (this.playerBadge) this.playerBadge.textContent = track.audio_format.codec;
+          if (this.screenPlayerBadge) this.screenPlayerBadge.textContent = track.audio_format.codec;
         }
       } catch (err) {
         console.warn("Full stream resolver notice:", err);
@@ -2609,6 +2757,13 @@ class SoraFyDesktopApp {
     this.renderQueue();
 
     if (autoPlay) {
+      // In video mode on screen player, let YouTube embed handle the playback without double audio
+      if (this.currentView === "player" && this.currentScreenMode === "video") {
+        this.isPlaying = true;
+        this.updatePlayPauseIcon();
+        return;
+      }
+
       this.ensureAudioContextActive();
       this.audio.play().then(() => {
         this.isPlaying = true;
@@ -2739,6 +2894,16 @@ class SoraFyDesktopApp {
       this.likeBtn.classList.remove("liked");
       this.likeBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
     }
+
+    if (this.screenPlayerLikeBtn) {
+      if (isLiked) {
+        this.screenPlayerLikeBtn.classList.add("liked");
+        this.screenPlayerLikeBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="#00E599" stroke="#00E599" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
+      } else {
+        this.screenPlayerLikeBtn.classList.remove("liked");
+        this.screenPlayerLikeBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
+      }
+    }
   }
 
   togglePlayPause() {
@@ -2771,8 +2936,14 @@ class SoraFyDesktopApp {
   updatePlayPauseIcon() {
     if (this.isPlaying) {
       this.playPauseIcon.innerHTML = `<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>`;
+      if (this.screenPlayerPlayPauseIcon) {
+        this.screenPlayerPlayPauseIcon.innerHTML = `<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>`;
+      }
     } else {
       this.playPauseIcon.innerHTML = `<polygon points="5 3 19 12 5 21 5 3"></polygon>`;
+      if (this.screenPlayerPlayPauseIcon) {
+        this.screenPlayerPlayPauseIcon.innerHTML = `<polygon points="5 3 19 12 5 21 5 3"></polygon>`;
+      }
     }
   }
 
@@ -2807,6 +2978,15 @@ class SoraFyDesktopApp {
     this.currentTimeLabel.textContent = this.formatTime(current);
     this.durationLabel.textContent = this.formatTime(total);
 
+    if (this.screenPlayerCurrentTime) this.screenPlayerCurrentTime.textContent = this.formatTime(current);
+    if (this.screenPlayerDuration) this.screenPlayerDuration.textContent = this.formatTime(total);
+
+    if (this.screenPlayerSeekbar && total > 0) {
+      const pct = (current / total) * 100;
+      this.screenPlayerSeekbar.value = pct;
+      this.screenPlayerSeekbar.style.background = `linear-gradient(to right, var(--color-brand-primary) 0%, var(--color-brand-primary) ${pct}%, rgba(255, 255, 255, 0.12) ${pct}%, rgba(255, 255, 255, 0.12) 100%)`;
+    }
+
     this.syncLyrics(current * 1000);
   }
 
@@ -2820,13 +3000,18 @@ class SoraFyDesktopApp {
   loadLyrics(lyrics) {
     this.currentLyrics = lyrics;
     this.lyricsContainer.innerHTML = "";
+    if (this.screenPlayerLyricsBox) this.screenPlayerLyricsBox.innerHTML = "";
 
     if (!lyrics || lyrics.length === 0) {
       this.lyricsContainer.innerHTML = `<div style="color: var(--color-text-tertiary); text-align: center; margin-top: 40px;">Tidak ada lirik tersinkronisasi untuk lagu ini.</div>`;
+      if (this.screenPlayerLyricsBox) {
+        this.screenPlayerLyricsBox.innerHTML = `<div class="screen-lyrics-placeholder">Tidak ada lirik tersinkronisasi untuk lagu ini.</div>`;
+      }
       return;
     }
 
     lyrics.forEach((line) => {
+      // Bottom drawer lyrics
       const p = document.createElement("p");
       p.className = "lyric-line";
       p.textContent = line.text;
@@ -2835,6 +3020,18 @@ class SoraFyDesktopApp {
         this.audio.currentTime = line.timestamp_ms / 1000;
       });
       this.lyricsContainer.appendChild(p);
+
+      // Dedicated Screen player lyrics
+      if (this.screenPlayerLyricsBox) {
+        const sp = document.createElement("p");
+        sp.className = "screen-lyric-line";
+        sp.textContent = line.text;
+        sp.dataset.time = line.timestamp_ms;
+        sp.addEventListener("click", () => {
+          this.audio.currentTime = line.timestamp_ms / 1000;
+        });
+        this.screenPlayerLyricsBox.appendChild(sp);
+      }
     });
   }
 
@@ -2861,6 +3058,18 @@ class SoraFyDesktopApp {
           l.classList.remove("active");
         }
       });
+
+      if (this.screenPlayerLyricsBox) {
+        const screenLines = this.screenPlayerLyricsBox.querySelectorAll(".screen-lyric-line");
+        screenLines.forEach((l, idx) => {
+          if (idx === activeIdx) {
+            l.classList.add("active");
+            l.scrollIntoView({ behavior: "smooth", block: "center" });
+          } else {
+            l.classList.remove("active");
+          }
+        });
+      }
     }
   }
 
@@ -2950,6 +3159,9 @@ class SoraFyDesktopApp {
   // View Switching
   // =========================================================
   switchView(viewName) {
+    if (this.currentView !== "player") {
+      this.previousView = this.currentView;
+    }
     this.currentView = viewName;
 
     this.navItems.forEach(item => {
@@ -2973,6 +3185,20 @@ class SoraFyDesktopApp {
     }
     if (this.playlistViewContainer) {
       this.playlistViewContainer.style.display = (viewName === "playlist") ? "block" : "none";
+    }
+    if (this.screenPlayerViewContainer) {
+      this.screenPlayerViewContainer.style.display = (viewName === "player") ? "block" : "none";
+      if (viewName === "player") {
+        this.updateScreenPlayer(true);
+      } else {
+        // If exiting screen player while video was active, clear iframe and resume audio
+        if (this.screenPlayerVideoFrame && this.currentScreenMode === "video") {
+          this.screenPlayerVideoFrame.src = "";
+          if (this.audio && this.audio.paused && this.isPlaying) {
+            this.audio.play().catch(() => {});
+          }
+        }
+      }
     }
 
     if (viewName === "plugins") {
@@ -3280,6 +3506,8 @@ class SoraFyDesktopApp {
 
       this.queueList.appendChild(item);
     }
+
+    this.renderScreenPlayerQueue();
   }
 
   clearUpcomingQueue() {
@@ -3287,6 +3515,175 @@ class SoraFyDesktopApp {
       this.tracks.splice(this.currentTrackIndex + 1);
       this.renderQueue();
       this.showToast("Antrean berikutnya dibersihkan");
+    }
+  }
+
+  // =========================================================
+  // Dedicated Screen Player Methods
+  // =========================================================
+  setScreenPlayerMode(mode) {
+    this.currentScreenMode = mode;
+    if (this.modeAudioBtn) this.modeAudioBtn.classList.toggle("active", mode === "audio");
+    if (this.modeVideoBtn) this.modeVideoBtn.classList.toggle("active", mode === "video");
+
+    const track = this.tracks[this.currentTrackIndex];
+    const vid = track ? (track.video_id || (track.id && track.id.startsWith("yt_") ? track.id.replace(/^yt_/, "") : "")) : "";
+
+    if (mode === "video") {
+      if (this.screenPlayerAudioView) this.screenPlayerAudioView.style.display = "none";
+      if (this.screenPlayerVideoView) this.screenPlayerVideoView.style.display = "block";
+
+      if (vid && this.screenPlayerVideoFrame) {
+        const curSec = Math.floor(this.audio ? (this.audio.currentTime || 0) : 0);
+        // Pause audio stream so sound does not clash
+        if (this.audio && !this.audio.paused) {
+          this.audio.pause();
+          this.isPlaying = true;
+          this.updatePlayPauseIcon();
+        }
+        const currentSrc = this.screenPlayerVideoFrame.src || "";
+        if (!currentSrc.includes(vid)) {
+          this.screenPlayerVideoFrame.src = `https://www.youtube-nocookie.com/embed/${vid}?autoplay=1&start=${curSec}&enablejsapi=1&controls=1&modestbranding=1&rel=0`;
+        }
+      }
+    } else {
+      // Audio mode
+      if (this.screenPlayerAudioView) this.screenPlayerAudioView.style.display = "flex";
+      if (this.screenPlayerVideoView) this.screenPlayerVideoView.style.display = "none";
+
+      if (this.screenPlayerVideoFrame) {
+        this.screenPlayerVideoFrame.src = "";
+      }
+      if (this.audio && this.audio.paused && this.isPlaying) {
+        this.audio.play().catch(() => {});
+        this.updatePlayPauseIcon();
+      }
+    }
+  }
+
+  updateScreenPlayer(isInitialOpen = false) {
+    const track = this.tracks[this.currentTrackIndex];
+    if (!track) return;
+
+    if (this.screenPlayerTitle) this.screenPlayerTitle.textContent = track.title;
+    if (this.screenPlayerArtist) this.screenPlayerArtist.textContent = track.artist;
+    if (this.screenPlayerArtwork) {
+      this.screenPlayerArtwork.src = track.artwork_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80';
+    }
+    if (this.screenPlayerBadge) {
+      this.screenPlayerBadge.textContent = track.audio_format?.codec || "Opus HD";
+    }
+
+    if (this.screenPlayerLikeBtn) {
+      const isLiked = this.likedTrackIds.has(track.id);
+      this.screenPlayerLikeBtn.classList.toggle("liked", isLiked);
+      this.screenPlayerLikeBtn.innerHTML = isLiked
+        ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="#00E599" stroke="#00E599" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`
+        : `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
+    }
+
+    if (this.screenPlayerPlayPauseIcon) {
+      if (this.isPlaying) {
+        this.screenPlayerPlayPauseIcon.innerHTML = `<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>`;
+      } else {
+        this.screenPlayerPlayPauseIcon.innerHTML = `<polygon points="5 3 19 12 5 21 5 3"></polygon>`;
+      }
+    }
+
+    if (this.screenPlayerShuffleBtn) {
+      this.screenPlayerShuffleBtn.classList.toggle("active", this.isShuffled);
+    }
+    if (this.screenPlayerRepeatBtn) {
+      this.screenPlayerRepeatBtn.classList.toggle("active", this.repeatMode > 0);
+    }
+
+    // Auto-detect if track is a video or has video_id
+    if (track.is_video) {
+      this.setScreenPlayerMode("video");
+    } else if (this.currentScreenMode === "video" && !isInitialOpen) {
+      this.setScreenPlayerMode("video");
+    } else {
+      this.setScreenPlayerMode("audio");
+    }
+
+    this.renderScreenPlayerQueue();
+  }
+
+  switchScreenSideTab(tab) {
+    this.activeScreenSideTab = tab;
+    if (this.screenTabLyricsBtn) this.screenTabLyricsBtn.classList.toggle("active", tab === "lyrics");
+    if (this.screenTabQueueBtn) this.screenTabQueueBtn.classList.toggle("active", tab === "queue");
+    if (this.screenPlayerToggleLyricsBtn) this.screenPlayerToggleLyricsBtn.classList.toggle("active", tab === "lyrics");
+    if (this.screenPlayerToggleQueueBtn) this.screenPlayerToggleQueueBtn.classList.toggle("active", tab === "queue");
+
+    if (this.screenPlayerLyricsBox) this.screenPlayerLyricsBox.style.display = (tab === "lyrics") ? "block" : "none";
+    if (this.screenPlayerQueueBox) this.screenPlayerQueueBox.style.display = (tab === "queue") ? "block" : "none";
+    if (tab === "queue") {
+      this.renderScreenPlayerQueue();
+    }
+  }
+
+  renderScreenPlayerQueue() {
+    if (!this.screenPlayerQueueList) return;
+    this.screenPlayerQueueList.innerHTML = "";
+
+    const upcomingCount = Math.max(0, this.tracks.length - 1 - this.currentTrackIndex);
+    if (upcomingCount === 0) {
+      this.screenPlayerQueueList.innerHTML = `
+        <div style="text-align: center; padding: 32px 16px; color: var(--color-text-tertiary); font-size: 13px;">
+          <div style="font-size: 24px; margin-bottom: 8px;">🎵</div>
+          Tidak ada antrean berikutnya.<br>Pilih lagu untuk menambah antrean.
+        </div>
+      `;
+      return;
+    }
+
+    for (let i = this.currentTrackIndex + 1; i < this.tracks.length; i++) {
+      const track = this.tracks[i];
+      const queueIdx = i;
+
+      const item = document.createElement("div");
+      item.className = "queue-item";
+      item.dataset.index = queueIdx;
+
+      item.innerHTML = `
+        <img src="${track.artwork_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80'}" class="queue-item-art" alt="${this.escapeHtml(track.title)}">
+        <div class="queue-item-info">
+          <span class="queue-item-title">${this.escapeHtml(track.title)}</span>
+          <span class="queue-item-artist">${this.escapeHtml(track.artist)}</span>
+        </div>
+        <span class="queue-item-duration">${this.formatTime(track.duration_secs || 0)}</span>
+        <button class="queue-item-remove" title="Hapus dari antrean" data-action="remove">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      `;
+
+      item.addEventListener("click", (e) => {
+        if (e.target.closest('[data-action="remove"]')) return;
+        this.loadTrack(queueIdx, true);
+      });
+
+      item.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        this.showContextMenu(e, track);
+      });
+
+      const removeBtn = item.querySelector('[data-action="remove"]');
+      if (removeBtn) {
+        removeBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const removed = this.tracks.splice(queueIdx, 1);
+          this.renderQueue();
+          if (removed && removed[0]) {
+            this.showToast(`Dihapus dari antrean: ${removed[0].title}`);
+          }
+        });
+      }
+
+      this.screenPlayerQueueList.appendChild(item);
     }
   }
 
