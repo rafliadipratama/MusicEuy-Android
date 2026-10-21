@@ -287,7 +287,9 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
                   itemsList.unshift({
                     id: browseId || ('art_' + title.toLowerCase().replace(/[^a-z0-9]/g, '_')),
                     name: title,
-                    avatar_url: artwork,
+                    title: title,
+                    avatar_url: artwork || '',
+                    artwork_url: artwork || '',
                     browse_id: browseId,
                     sub_label: 'Artis Terverifikasi'
                   });
@@ -340,7 +342,9 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
                   itemsList.push({
                     id: browseId || ('art_' + title.toLowerCase().replace(/[^a-z0-9]/g, '_')),
                     name: title,
+                    title: title,
                     avatar_url: artwork || '',
+                    artwork_url: artwork || '',
                     browse_id: browseId,
                     sub_label: 'Artis'
                   });
@@ -723,11 +727,15 @@ async function resolveArtistProfile(name) {
     if (match.browse_id) {
       bio = await browseYouTubeInnerTube(match.browse_id);
     }
+    const artName = bio?.name || match.name || trimmed;
+    const artAvatar = bio?.avatar_url || match.avatar_url || '';
     return {
-      name: bio?.name || match.name || trimmed,
+      name: artName,
+      title: artName,
       browse_id: match.browse_id || '',
-      avatar_url: bio?.avatar_url || match.avatar_url || '',
-      banner_url: bio?.avatar_url || match.avatar_url || '',
+      avatar_url: artAvatar,
+      artwork_url: artAvatar,
+      banner_url: artAvatar,
       description: bio?.description || '',
       tracks: bio?.tracks || []
     };

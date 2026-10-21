@@ -1938,20 +1938,23 @@ class SoraFyDesktopApp {
           this.searchArtistsSection.style.display = "block";
           this.searchArtistsGrid.innerHTML = "";
           artists.slice(0, 6).forEach(art => {
-            if (art.avatar_url) {
-              MASTER_ARTIST_AVATARS[art.name.toLowerCase().trim()] = art.avatar_url;
+            const artName = art.name || art.title || "";
+            if (!artName) return;
+            const artAvatar = art.avatar_url || art.artwork_url || getArtistAvatar(artName);
+            if (artAvatar) {
+              MASTER_ARTIST_AVATARS[artName.toLowerCase().trim()] = artAvatar;
             }
             const card = document.createElement("div");
             card.className = "artist-card";
             card.innerHTML = `
               <div class="artist-card-art-box">
-                <img src="${art.avatar_url || getArtistAvatar(art.name)}" class="artist-card-art" alt="${this.escapeHtml(art.name)}" onerror="this.src='${getArtistAvatar(art.name)}'">
+                <img src="${artAvatar}" class="artist-card-art" alt="${this.escapeHtml(artName)}" onerror="this.src='${getArtistAvatar(artName)}'">
               </div>
-              <div class="artist-card-name">${this.escapeHtml(art.name)}</div>
+              <div class="artist-card-name">${this.escapeHtml(artName)}</div>
               <div class="artist-card-role">Artis Terverifikasi</div>
             `;
             card.addEventListener("click", () => {
-              this.openArtistDetail(art.name, art.browse_id);
+              this.openArtistDetail(artName, art.browse_id || art.id || '');
             });
             this.searchArtistsGrid.appendChild(card);
           });
@@ -2046,20 +2049,23 @@ class SoraFyDesktopApp {
           this.searchArtistsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 24px; color: var(--color-text-secondary); font-size: 13px;">Tidak ada artis ditemukan untuk "${this.escapeHtml(query)}".</div>`;
         } else {
           artists.forEach(art => {
-            if (art.avatar_url) {
-              MASTER_ARTIST_AVATARS[art.name.toLowerCase().trim()] = art.avatar_url;
+            const artName = art.name || art.title || "";
+            if (!artName) return;
+            const artAvatar = art.avatar_url || art.artwork_url || getArtistAvatar(artName);
+            if (artAvatar) {
+              MASTER_ARTIST_AVATARS[artName.toLowerCase().trim()] = artAvatar;
             }
             const card = document.createElement("div");
             card.className = "artist-card";
             card.innerHTML = `
               <div class="artist-card-art-box">
-                <img src="${art.avatar_url || getArtistAvatar(art.name)}" class="artist-card-art" alt="${this.escapeHtml(art.name)}" onerror="this.src='${getArtistAvatar(art.name)}'">
+                <img src="${artAvatar}" class="artist-card-art" alt="${this.escapeHtml(artName)}" onerror="this.src='${getArtistAvatar(artName)}'">
               </div>
-              <div class="artist-card-name">${this.escapeHtml(art.name)}</div>
+              <div class="artist-card-name">${this.escapeHtml(artName)}</div>
               <div class="artist-card-role">Artis Terverifikasi</div>
             `;
             card.addEventListener("click", () => {
-              this.openArtistDetail(art.name, art.browse_id);
+              this.openArtistDetail(artName, art.browse_id || art.id || '');
             });
             this.searchArtistsGrid.appendChild(card);
           });
