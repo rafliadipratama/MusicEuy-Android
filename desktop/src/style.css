@@ -1818,6 +1818,71 @@ body {
 /* =========================================================
    Artist Result Cards (Multi-Search & Recommendation)
    ========================================================= */
+.search-top-artist-hero {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  background: var(--color-surface-container);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 18px 24px;
+  margin-bottom: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.search-top-artist-hero:hover {
+  background: var(--color-surface-elevated);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-2px);
+}
+
+.search-top-artist-avatar {
+  width: 90px;
+  height: 90px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+  background: #181C22;
+}
+
+.search-top-artist-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-top-artist-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--color-brand-primary);
+}
+
+.search-top-artist-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-top-artist-sub {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.search-top-artist-action {
+  flex-shrink: 0;
+}
+
 .artist-results-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));

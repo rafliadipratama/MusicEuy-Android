@@ -272,9 +272,10 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
           if (contents) {
             for (const sec of contents) {
               // Top Verified Artist / Hero Card
-              if (sec.musicCardShelfRenderer && (filterType === 'artist' || filterType === 'all')) {
+              if (sec.musicCardShelfRenderer) {
                 const card = sec.musicCardShelfRenderer;
                 const title = card.title?.runs?.[0]?.text || '';
+                const sub = card.subtitle?.runs?.map(r => r.text).join('') || '';
                 const thumbs = card.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails
                   || card.thumbnail?.croppedSquareThumbnailRenderer?.thumbnail?.thumbnails || [];
                 let artwork = thumbs.length ? thumbs[thumbs.length - 1].url : '';
@@ -283,15 +284,34 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
                 }
                 const browseId = card.onTap?.browseEndpoint?.browseId
                   || card.title?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseId || '';
-                if (title) {
+                const pageType = card.onTap?.browseEndpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType
+                  || card.title?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType || '';
+
+                const isArtistCard = pageType === 'MUSIC_PAGE_TYPE_ARTIST' || sub.toLowerCase().includes('artis') || (browseId && browseId.startsWith('UC'));
+                const isPlaylistCard = pageType === 'MUSIC_PAGE_TYPE_PLAYLIST' || (browseId && (browseId.startsWith('VL') || browseId.startsWith('PL')));
+
+                if (isArtistCard && (filterType === 'artist' || filterType === 'all')) {
+                  if (title) {
+                    itemsList.unshift({
+                      id: browseId || ('art_' + title.toLowerCase().replace(/[^a-z0-9]/g, '_')),
+                      name: title,
+                      title: title,
+                      avatar_url: artwork || '',
+                      artwork_url: artwork || '',
+                      browse_id: browseId,
+                      sub_label: sub || 'Artis Terverifikasi',
+                      is_top_hero: true
+                    });
+                  }
+                } else if (isPlaylistCard && filterType === 'playlist') {
                   itemsList.unshift({
-                    id: browseId || ('art_' + title.toLowerCase().replace(/[^a-z0-9]/g, '_')),
-                    name: title,
+                    id: browseId || ('pl_' + title.toLowerCase().replace(/[^a-z0-9]/g, '_')),
                     title: title,
-                    avatar_url: artwork || '',
-                    artwork_url: artwork || '',
+                    author: 'SoraFy Koleksi',
+                    artwork_url: artwork,
                     browse_id: browseId,
-                    sub_label: 'Artis Terverifikasi'
+                    track_count: 'Daftar Putar',
+                    source_label: 'Koleksi Spesial'
                   });
                 }
               }
@@ -339,15 +359,22 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
                 }
 
                 if (filterType === 'artist') {
-                  itemsList.push({
-                    id: browseId || ('art_' + title.toLowerCase().replace(/[^a-z0-9]/g, '_')),
-                    name: title,
-                    title: title,
-                    avatar_url: artwork || '',
-                    artwork_url: artwork || '',
-                    browse_id: browseId,
-                    sub_label: 'Artis'
-                  });
+                  const pType = navEndpoint?.browseEndpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType
+                    || renderer.flexColumns[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType || '';
+                  const subStr = subRuns.map(r => r.text).join('').toLowerCase();
+                  const isArt = (pType === 'MUSIC_PAGE_TYPE_ARTIST' || subStr.includes('artis') || artist.toLowerCase() === 'artist' || (browseId && browseId.startsWith('UC'))) && !browseId.startsWith('VL') && !browseId.startsWith('PL');
+
+                  if (isArt) {
+                    itemsList.push({
+                      id: browseId || ('art_' + title.toLowerCase().replace(/[^a-z0-9]/g, '_')),
+                      name: title,
+                      title: title,
+                      avatar_url: artwork || '',
+                      artwork_url: artwork || '',
+                      browse_id: browseId,
+                      sub_label: subRuns.map(r => r.text).join('') || 'Artis'
+                    });
+                  }
                 } else if (filterType === 'playlist') {
                   let authorClean = artist;
                   if (!authorClean || authorClean.toLowerCase().includes('youtube') || authorClean === 'Artist') {
@@ -460,12 +487,17 @@ function browseYouTubeInnerTube(browseId) {
           let avatarUrl = thumbs.length ? thumbs[thumbs.length - 1].url : '';
           if (avatarUrl) avatarUrl = avatarUrl.replace(/=(?:w\d+-h\d+|s\d+).*$/, '=w544-h544-p-l90-rj');
 
-          // Extract tracks if it's a playlist or artist
+          // Extract tracks, albums, videos, and peers
           const parsedTracks = [];
+          const parsedAlbums = [];
+          const parsedVideos = [];
+          const parsedPeers = [];
+
           const contents = json.contents?.singleColumnBrowseResultsRenderer?.tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents
             || json.contents?.twoColumnBrowseResultsRenderer?.secondaryContents?.sectionListRenderer?.contents || [];
 
           for (const sec of contents) {
+            // Top Songs
             const shelf = sec.musicShelfRenderer || sec.musicPlaylistShelfRenderer;
             if (shelf && shelf.contents) {
               for (const item of shelf.contents) {
@@ -499,13 +531,75 @@ function browseYouTubeInnerTube(browseId) {
                 }
               }
             }
+
+            // Carousels (Albums, Singles, Videos, Live Sessions, Peers)
+            if (sec.musicCarouselShelfRenderer) {
+              const carousel = sec.musicCarouselShelfRenderer;
+              const cTitle = (carousel.header?.musicCarouselShelfBasicHeaderRenderer?.title?.runs?.[0]?.text || '').toLowerCase();
+              const items = carousel.contents || [];
+
+              for (const it of items) {
+                const r = it.musicTwoRowItemRenderer;
+                if (!r) continue;
+                const itTitle = r.title?.runs?.[0]?.text || '';
+                const itSub = r.subtitle?.runs?.map(x => x.text).join('') || '';
+                const itThumbs = r.thumbnailRenderer?.musicThumbnailRenderer?.thumbnail?.thumbnails || [];
+                let itArt = itThumbs.length ? itThumbs[itThumbs.length - 1].url : '';
+                if (itArt) itArt = itArt.replace(/=(?:w\d+-h\d+|s\d+).*$/, '=w544-h544-p-l90-rj');
+
+                const nav = r.navigationEndpoint;
+                const itBrowseId = nav?.browseEndpoint?.browseId || '';
+                const itVideoId = nav?.watchEndpoint?.videoId || '';
+                const itPageType = nav?.browseEndpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType || '';
+
+                if (cTitle.includes('album') || cTitle.includes('single') || itPageType === 'MUSIC_PAGE_TYPE_ALBUM') {
+                  if (itTitle) {
+                    parsedAlbums.push({
+                      id: itBrowseId || ('alb_' + itTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')),
+                      title: itTitle,
+                      artist: name,
+                      year: itSub,
+                      artwork_url: itArt,
+                      browse_id: itBrowseId
+                    });
+                  }
+                } else if (cTitle.includes('video') || cTitle.includes('langsung') || itVideoId) {
+                  if (itTitle && itVideoId) {
+                    const isOfficial = cTitle.includes('video') || /\b(official|mv|video musik)\b/i.test(itTitle);
+                    parsedVideos.push({
+                      id: 'yt_' + itVideoId,
+                      video_id: itVideoId,
+                      title: itTitle,
+                      artist: name,
+                      artwork_url: itArt || `https://i.ytimg.com/vi/${itVideoId}/hqdefault.jpg`,
+                      duration_secs: 210,
+                      is_official: isOfficial,
+                      video_badge: isOfficial ? 'Official' : 'Live / Session'
+                    });
+                  }
+                } else if (cTitle.includes('suka') || itPageType === 'MUSIC_PAGE_TYPE_ARTIST') {
+                  if (itTitle) {
+                    parsedPeers.push({
+                      id: itBrowseId || ('art_' + itTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')),
+                      name: itTitle,
+                      avatar_url: itArt,
+                      browse_id: itBrowseId,
+                      sub_label: itSub
+                    });
+                  }
+                }
+              }
+            }
           }
 
           resolve({
             name,
             description: desc,
             avatar_url: avatarUrl,
-            tracks: parsedTracks
+            tracks: parsedTracks,
+            albums: parsedAlbums,
+            videos: parsedVideos,
+            peers: parsedPeers
           });
         } catch (e) {
           resolve(null);
@@ -737,7 +831,10 @@ async function resolveArtistProfile(name) {
       artwork_url: artAvatar,
       banner_url: artAvatar,
       description: bio?.description || '',
-      tracks: bio?.tracks || []
+      tracks: bio?.tracks || [],
+      albums: bio?.albums || [],
+      videos: bio?.videos || [],
+      peers: bio?.peers || []
     };
   } catch (err) {
     console.warn('resolveArtistProfile error:', err);
