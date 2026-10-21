@@ -68,43 +68,28 @@
       <header class="content-header">
         <div class="search-box">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" id="searchInput" placeholder="Cari lagu, artis, FLAC, Deezer, atau paste link Spotify...">
+          <input type="text" id="searchInput" placeholder="Cari lagu atau artis...">
         </div>
 
-        <div class="category-chips">
-          <button class="chip active" data-category="all">Semua</button>
-          <button class="chip" data-category="lossless">FLAC Lossless</button>
-          <button class="chip" data-category="deezer">Deezer Hi-Fi</button>
-          <button class="chip" data-category="jiosaavn">JioSaavn AAC</button>
-          <button class="chip" data-category="jamendo">Jamendo Indie</button>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;">
+          <div class="category-chips">
+            <button class="chip active" data-category="all">Semua</button>
+            <button class="chip" data-category="lossless">FLAC Lossless</button>
+            <button class="chip" data-category="deezer">Deezer Hi-Fi</button>
+            <button class="chip" data-category="jiosaavn">JioSaavn AAC</button>
+            <button class="chip" data-category="jamendo">Jamendo Indie</button>
+          </div>
+          <button class="header-spotify-btn" id="openSpotifyImportBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle><path d="M8 11.5c3-1 6-1 8 0M7 14.5c3.5-1 7-1 10 0M9 9c2.5-.8 5-.8 7 0" stroke="#0B0D10" stroke-width="2" fill="none"></path></svg>
+            Impor Spotify
+          </button>
         </div>
       </header>
 
       <!-- Home View Container -->
       <div id="homeViewContainer">
-        <!-- Minimalist Featured Bar -->
-        <section class="hero-card" id="heroCard">
-          <div class="hero-info">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="live-indicator"></span>
-              <span class="hero-badge">Featured Master</span>
-            </div>
-            <h1 class="hero-title">Midnight Emerald • Priangan Sound Lab</h1>
-          </div>
-          <div class="hero-actions">
-            <button class="hero-play-btn" id="heroPlayBtn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-              Putar
-            </button>
-            <button class="hero-secondary-btn" id="openSpotifyImportBtn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle><path d="M8 11.5c3-1 6-1 8 0M7 14.5c3.5-1 7-1 10 0M9 9c2.5-.8 5-.8 7 0" stroke="#0B0D10" stroke-width="2" fill="none"></path></svg>
-              Impor Spotify
-            </button>
-          </div>
-        </section>
-
         <!-- Recommended Track List (Clean Minimalist Streamlined) -->
-        <section style="margin-top: 20px;">
+        <section>
           <div class="section-title">
             <span id="sectionTitleLabel">Trending & Rekomendasi</span>
             <span style="font-size: 13px; color: var(--color-brand-primary); cursor: pointer;" id="viewAllBtn">Muat Ulang</span>
@@ -112,8 +97,7 @@
           <div class="track-list-header">
             <span style="width: 28px; text-align: center;">#</span>
             <span style="flex: 1; padding-left: 56px;">Judul & Artis</span>
-            <span style="width: 140px; text-align: left;">Sumber</span>
-            <span style="width: 80px; text-align: right;">Durasi</span>
+            <span style="width: 70px; text-align: right;">Durasi</span>
           </div>
           <div class="track-list" id="trackGrid">
             <!-- Populated dynamically via JS -->
@@ -209,11 +193,7 @@
       <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80" alt="Track Artwork" class="player-artwork" id="playerArtwork">
       <div class="player-track-details">
         <span class="player-title" id="playerTitle">Midnight Emerald</span>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span class="player-artist" id="playerArtist">Priangan Sound Lab</span>
-          <span class="audio-tag" id="playerBadge">FLAC Lossless</span>
-          <span class="source-tag" id="playerSourceTag">SoraFy Master</span>
-        </div>
+        <span class="player-artist" id="playerArtist">Priangan Sound Lab</span>
       </div>
       <button class="heart-btn" id="likeBtn" title="Like Track">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>

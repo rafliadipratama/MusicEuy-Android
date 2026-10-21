@@ -396,9 +396,11 @@ class SoraFyDesktopApp {
     this.toggleLyricsBtn.addEventListener("click", () => this.toggleLyricsDrawer());
     this.closeLyricsBtn.addEventListener("click", () => this.toggleLyricsDrawer(false));
 
-    this.heroPlayBtn.addEventListener("click", () => {
-      this.loadTrack(0, true);
-    });
+    if (this.heroPlayBtn) {
+      this.heroPlayBtn.addEventListener("click", () => {
+        this.loadTrack(0, true);
+      });
+    }
 
     if (this.viewAllBtn) {
       this.viewAllBtn.addEventListener("click", () => {
@@ -771,9 +773,11 @@ class SoraFyDesktopApp {
     this.playerTitle.textContent = track.title;
     this.playerArtist.textContent = track.artist;
     this.playerArtwork.src = track.artwork_url;
-    this.playerBadge.textContent = track.audio_format.codec;
+    if (this.playerBadge) {
+      this.playerBadge.textContent = track.audio_format.codec;
+    }
     if (this.playerSourceTag) {
-      this.playerSourceTag.textContent = track.source_label || "SoraFy Master";
+      this.playerSourceTag.textContent = "";
     }
 
     // Resolve FULL-LENGTH audio stream (matching Android APK)
@@ -787,12 +791,9 @@ class SoraFyDesktopApp {
         if (full && full.url) {
           track.stream_url = full.url;
           track.is_full_stream = true;
-          track.audio_format.codec = "Opus Full HD";
+          track.audio_format.codec = "Opus HD";
           track.audio_format.bitrate_kbps = Math.round((full.bitrate || 160000) / 1000);
-          this.playerBadge.textContent = "Opus Full HD";
-          if (this.playerSourceTag) {
-            this.playerSourceTag.textContent = "SoraFy Full Stream";
-          }
+          if (this.playerBadge) this.playerBadge.textContent = "Opus HD";
         }
       } catch (err) {
         console.warn("Full stream resolver notice:", err);
@@ -1075,28 +1076,18 @@ class SoraFyDesktopApp {
         this.ctx.lineTo(x, y);
       }
 
-      const grad = this.ctx.createLinearGradient(0, 0, playedWidth, 0);
-      grad.addColorStop(0, "#00E599");
-      grad.addColorStop(1, "#C8FF29");
-
-      this.ctx.strokeStyle = grad;
-      this.ctx.lineWidth = 3.5;
-      this.ctx.shadowColor = "rgba(0, 229, 153, 0.6)";
-      this.ctx.shadowBlur = this.isPlaying ? 8 : 2;
+      this.ctx.strokeStyle = "#00E599";
+      this.ctx.lineWidth = 2.5;
       this.ctx.lineCap = "round";
       this.ctx.stroke();
-      this.ctx.shadowBlur = 0;
 
-      // Wave Head Thumb
+      // Wave Head Thumb (Flat clean, no neon blur)
       if (playedWidth > 0) {
         const thumbY = midY + Math.sin(playedWidth * frequency - this.wavePhase) * amplitude;
         this.ctx.beginPath();
-        this.ctx.arc(playedWidth, thumbY, 6, 0, Math.PI * 2);
-        this.ctx.fillStyle = "#C8FF29";
-        this.ctx.shadowColor = "rgba(200, 255, 41, 0.8)";
-        this.ctx.shadowBlur = 10;
+        this.ctx.arc(playedWidth, thumbY, 4, 0, Math.PI * 2);
+        this.ctx.fillStyle = "#FFFFFF";
         this.ctx.fill();
-        this.ctx.shadowBlur = 0;
       }
 
       this.animationFrame = requestAnimationFrame(draw);
@@ -1124,13 +1115,7 @@ class SoraFyDesktopApp {
         <img src="${track.artwork_url}" class="track-row-art" alt="${track.title}" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=150&q=80'">
         <div class="track-row-info">
           <div class="track-row-title">${track.title}</div>
-          <div class="track-row-sub">
-            <span>${track.artist}</span>
-            ${track.album ? `<span class="bullet">•</span><span>${track.album}</span>` : ''}
-          </div>
-        </div>
-        <div class="track-row-badge">
-          <span class="audio-tag">${track.source_label || track.audio_format.codec}</span>
+          <div class="track-row-sub">${track.artist}</div>
         </div>
         <button class="track-row-heart ${isLiked ? 'liked' : ''}" title="Suka" id="row_like_${track.id}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="${isLiked ? '#00E599' : 'none'}" stroke="${isLiked ? '#00E599' : 'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
