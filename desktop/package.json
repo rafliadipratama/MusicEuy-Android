@@ -1,18 +1,80 @@
 {
   "name": "sorafy",
   "version": "1.0.0",
-  "description": "SoraFy - High-fidelity cross-platform music streaming (Linux & Windows)",
+  "description": "SoraFy - High-fidelity cross-platform music streaming (macOS, Linux & Windows)",
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:dmg": "electron-builder --mac dmg",
+    "build:linux": "electron-builder --linux AppImage deb",
+    "build:win": "electron-builder --win nsis",
+    "dist": "electron-builder",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
+  },
+  "build": {
+    "appId": "com.rafliadipratama.sorafy",
+    "productName": "SoraFy",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron-main.js",
+      "preload.js",
+      "src/**/*",
+      "!src-tauri/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "src/assets/logo.png",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "SoraFy",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Audio"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    }
   },
   "keywords": [
     "sorafy",
     "music",
     "desktop",
+    "macos",
+    "dmg",
     "tauri",
     "rust",
     "electron"
@@ -21,9 +83,11 @@
   "license": "GPL-3.0",
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
-    "electron": "^44.9.2"
+    "electron": "^44.9.2",
+    "electron-builder": "^26.15.3"
   },
   "dependencies": {
-    "des.js": "^1.1.0"
+    "des.js": "^1.1.0",
+    "iconsax": "^0.1.1"
   }
 }

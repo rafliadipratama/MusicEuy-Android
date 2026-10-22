@@ -39,10 +39,45 @@ function resolveYtDlpStream(videoId) {
             videoId: videoId,
             bitrate: 160000,
             mimeType: 'audio/webm',
-            provider: 'YouTube Direct (yt-dlp)',
+            provider: 'Opus HD',
             duration: 0,
             isFull: true
           });
+        } else {
+          resolve(null);
+        }
+      }
+    );
+  });
+}
+
+const videoStreamCache = new Map();
+
+function resolveYtDlpVideoStream(videoId) {
+  if (!videoId) return Promise.resolve(null);
+  const cached = videoStreamCache.get(videoId);
+  if (cached && cached.expireAt > Date.now()) {
+    return Promise.resolve(cached.data);
+  }
+  return new Promise((resolve) => {
+    execFile(
+      YT_DLP_BIN,
+      ['-g', `https://www.youtube.com/watch?v=${videoId}`],
+      { timeout: 12000 },
+      (error, stdout) => {
+        if (error || !stdout) {
+          return resolve(null);
+        }
+        const lines = stdout.trim().split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length > 0 && lines[0].startsWith('http')) {
+          const res = {
+            url: lines[0],
+            audioUrl: lines.length > 1 ? lines[1] : null,
+            videoId: videoId,
+            mimeType: 'video/mp4'
+          };
+          videoStreamCache.set(videoId, { data: res, expireAt: Date.now() + 45 * 60 * 1000 });
+          resolve(res);
         } else {
           resolve(null);
         }
@@ -98,7 +133,7 @@ const localAudioProxy = http.createServer((req, res) => {
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="referrer" content="origin">
   <style>
     * { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #07080A; }
     iframe { border: none; width: 100%; height: 100%; display: block; }
@@ -106,8 +141,8 @@ const localAudioProxy = http.createServer((req, res) => {
 </head>
 <body>
   <iframe 
-    src="https://www.youtube.com/embed/${encodeURIComponent(vid)}?autoplay=1&start=${start}&enablejsapi=1&controls=1&modestbranding=1&rel=0&origin=https://www.youtube.com" 
-    referrerpolicy="strict-origin-when-cross-origin" 
+    src="https://www.youtube.com/embed/${encodeURIComponent(vid)}?autoplay=1&start=${start}&enablejsapi=1&controls=1&modestbranding=1&rel=0&origin=https://www.youtube.com&widget_referrer=https://www.youtube.com&playsinline=1" 
+    referrerpolicy="origin" 
     allow="autoplay; encrypted-media; picture-in-picture; web-share" 
     allowfullscreen>
   </iframe>
@@ -497,8 +532,27 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
 
                 // Subtitle (Artist, Album, Duration)
                 const subRuns = renderer.flexColumns[1]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs || [];
-                const artist = subRuns[0]?.text || 'Artist';
-                const artistBrowseId = subRuns[0]?.navigationEndpoint?.browseEndpoint?.browseId || '';
+
+                // Extract all artists (supporting collaborations & multiple artists)
+                const artistList = [];
+                for (const run of subRuns) {
+                  const pType = run.navigationEndpoint?.browseEndpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType;
+                  const bId = run.navigationEndpoint?.browseEndpoint?.browseId || '';
+                  if (pType === 'MUSIC_PAGE_TYPE_ARTIST' || bId.startsWith('UC')) {
+                    artistList.push({ name: run.text, browse_id: bId });
+                  }
+                }
+                if (artistList.length === 0 && subRuns.length > 0 && subRuns[0]?.text) {
+                  const rawArtist = subRuns[0].text;
+                  const parts = rawArtist.split(/\s*,\s*|\s+&\s+|\s+(?:feat|ft)\.?\s+/i);
+                  if (parts.length > 1) {
+                    parts.forEach(p => artistList.push({ name: p.trim(), browse_id: '' }));
+                  } else {
+                    artistList.push({ name: rawArtist, browse_id: subRuns[0]?.navigationEndpoint?.browseEndpoint?.browseId || '' });
+                  }
+                }
+                const artist = artistList.length ? artistList.map(a => a.name).join(', ') : (subRuns[0]?.text || 'Artist');
+                const artistBrowseId = artistList[0]?.browse_id || '';
                 const album = subRuns.length > 2 ? subRuns[2]?.text : '';
                 const durationStr = subRuns.length > 0 ? subRuns[subRuns.length - 1]?.text : '3:30';
 
@@ -568,6 +622,7 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
                       video_id: videoId,
                       title: title,
                       artist: artist,
+                      artists: artistList,
                       artist_browse_id: artistBrowseId,
                       album: album || title,
                       duration_secs: durationSec,
@@ -588,6 +643,7 @@ function searchYouTubeMusicInnerTube(query, filterType = 'song') {
                       video_id: videoId,
                       title: title,
                       artist: artist,
+                      artists: artistList,
                       artist_browse_id: artistBrowseId,
                       album: album || title,
                       duration_secs: durationSec,
@@ -688,15 +744,21 @@ function browseYouTubeInnerTube(browseId) {
                 if (artwork) artwork = artwork.replace(/=(?:w\d+-h\d+|s\d+).*$/, '=w544-h544-p-l90-rj');
 
                 if (tTitle && videoId) {
+                  const isVideoTitle = /\b(official\s*(?:music\s*)?video|video\s*musik|music\s*video|\bmv\b|\bm\/v\b|video\s*clip)\b/i.test(tTitle);
+                  if (isVideoTitle && browseId.startsWith('MPRE')) {
+                    // Do not include music videos in album tracklist
+                    continue;
+                  }
                   parsedTracks.push({
                     id: 'yt_' + videoId,
                     video_id: videoId,
-                    title: tTitle,
+                    title: tTitle.replace(/\s*\((?:official\s*)?(?:music\s*)?video\)/gi, '').trim(),
                     artist: tArtist,
                     album: tAlbum || tTitle,
                     duration_secs: 210,
                     artwork_url: artwork || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
                     stream_url: '',
+                    is_video: false,
                     source_label: 'SoraFy Stream',
                     audio_format: { codec: 'Opus HD', bitrate_kbps: 160, is_lossless: false }
                   });
@@ -705,17 +767,19 @@ function browseYouTubeInnerTube(browseId) {
             }
 
             // Carousels (Albums, Singles, Videos, Live Sessions, Peers)
-            if (sec.musicCarouselShelfRenderer) {
-              const carousel = sec.musicCarouselShelfRenderer;
-              const cTitle = (carousel.header?.musicCarouselShelfBasicHeaderRenderer?.title?.runs?.[0]?.text || '').toLowerCase();
-              const items = carousel.contents || [];
+            const carousel = sec.musicCarouselShelfRenderer;
+            const grid = sec.gridRenderer;
+            if (carousel || grid) {
+              const cTitle = (carousel?.header?.musicCarouselShelfBasicHeaderRenderer?.title?.runs?.[0]?.text || grid?.header?.gridHeaderRenderer?.title?.runs?.[0]?.text || '').toLowerCase();
+              const items = carousel?.contents || grid?.items || [];
 
               for (const it of items) {
                 const r = it.musicTwoRowItemRenderer;
                 if (!r) continue;
                 const itTitle = r.title?.runs?.[0]?.text || '';
                 const itSub = r.subtitle?.runs?.map(x => x.text).join('') || '';
-                const itThumbs = r.thumbnailRenderer?.musicThumbnailRenderer?.thumbnail?.thumbnails || [];
+                const itThumbs = r.thumbnailRenderer?.musicThumbnailRenderer?.thumbnail?.thumbnails
+                  || r.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails || [];
                 let itArt = itThumbs.length ? itThumbs[itThumbs.length - 1].url : '';
                 if (itArt) itArt = itArt.replace(/=(?:w\d+-h\d+|s\d+).*$/, '=w544-h544-p-l90-rj');
 
@@ -724,12 +788,31 @@ function browseYouTubeInnerTube(browseId) {
                 const itVideoId = nav?.watchEndpoint?.videoId || '';
                 const itPageType = nav?.browseEndpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType || '';
 
-                if (cTitle.includes('album') || cTitle.includes('single') || itPageType === 'MUSIC_PAGE_TYPE_ALBUM') {
+                if (cTitle.includes('album') || cTitle.includes('single') || cTitle.includes('terbaru') || cTitle.includes('rilisan') || cTitle.includes('new') || itPageType === 'MUSIC_PAGE_TYPE_ALBUM' || itBrowseId.startsWith('MPRE')) {
                   if (itTitle) {
+                    let itArtist = name || '';
+                    let itArtistBrowseId = '';
+                    if (r.subtitle?.runs && r.subtitle.runs.length > 0) {
+                      const artRun = r.subtitle.runs.find(run =>
+                        run.navigationEndpoint?.browseEndpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType === 'MUSIC_PAGE_TYPE_ARTIST' ||
+                        (run.navigationEndpoint?.browseEndpoint?.browseId && run.navigationEndpoint.browseEndpoint.browseId.startsWith('UC'))
+                      );
+                      if (artRun) {
+                        itArtist = artRun.text;
+                        itArtistBrowseId = artRun.navigationEndpoint?.browseEndpoint?.browseId || '';
+                      } else if (r.subtitle.runs.length >= 3) {
+                        itArtist = r.subtitle.runs[2].text;
+                      } else if (r.subtitle.runs.length > 0 && !['album', 'single', 'ep', '•', ' · '].includes(r.subtitle.runs[0].text.trim().toLowerCase())) {
+                        itArtist = r.subtitle.runs[0].text;
+                      }
+                    }
+                    if (!itArtist) itArtist = 'Artis';
+
                     parsedAlbums.push({
                       id: itBrowseId || ('alb_' + itTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')),
                       title: itTitle,
-                      artist: name,
+                      artist: itArtist,
+                      artist_browse_id: itArtistBrowseId,
                       year: itSub,
                       artwork_url: itArt,
                       browse_id: itBrowseId
@@ -1035,15 +1118,20 @@ ipcMain.handle('get-video-embed-url', async (event, { videoId, start = 0 }) => {
   return `http://127.0.0.1:${localProxyPort}/embed?v=${encodeURIComponent(videoId)}&start=${start}`;
 });
 
-ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) => {
-  const cacheKey = videoId || `${artist} - ${title}`.toLowerCase().trim();
+ipcMain.handle('resolve-direct-video', async (event, videoId) => {
+  if (!videoId) return null;
+  return await resolveYtDlpVideoStream(videoId);
+});
+
+ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId, isVideo }) => {
+  const cacheKey = (videoId ? `vid_${videoId}` : `${artist} - ${title}`).toLowerCase().trim();
   const cached = streamCache.get(cacheKey);
   if (cached && cached.expireAt > Date.now()) {
     return cached.data;
   }
 
-  // 1. High-speed Direct MP3 320k from JioSaavn (with strict match check, 100% reliable)
-  if (title && artist) {
+  // 1. High-speed Direct MP3 320k from JioSaavn (for audio tracks only, skip for music videos to preserve lip sync)
+  if (!isVideo && title && artist) {
     try {
       const saavnStream = await resolveJioSaavnStream(title, artist);
       if (saavnStream && saavnStream.url) {
@@ -1082,6 +1170,9 @@ ipcMain.handle('resolve-full-stream', async (event, { title, artist, videoId }) 
 
 app.whenReady().then(() => {
   if (session && session.defaultSession) {
+    const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
+    session.defaultSession.setUserAgent(CHROME_UA);
+
     session.defaultSession.webRequest.onBeforeSendHeaders(
       { urls: ['*://*.googlevideo.com/*', '*://*.youtube.com/*', '*://*.youtube-nocookie.com/*'] },
       (details, callback) => {
@@ -1107,6 +1198,10 @@ app.whenReady().then(() => {
         const responseHeaders = { ...details.responseHeaders };
         delete responseHeaders['x-frame-options'];
         delete responseHeaders['X-Frame-Options'];
+        delete responseHeaders['content-security-policy'];
+        delete responseHeaders['Content-Security-Policy'];
+        delete responseHeaders['content-security-policy-report-only'];
+        delete responseHeaders['Content-Security-Policy-Report-Only'];
         callback({ cancel: false, responseHeaders });
       }
     );

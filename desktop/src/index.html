@@ -6,6 +6,7 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>SoraFy - High-Fidelity Music Streaming</title>
   <link rel="stylesheet" href="style.css">
+  <script src="iconsax-bundle.js"></script>
 </head>
 <body>
 
@@ -28,23 +29,19 @@
 
       <nav class="nav-menu">
         <div class="nav-item active" data-view="home" id="navHome">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          <iconsax-icon name="home-2" type="bold" size="20" color="currentColor"></iconsax-icon>
           Home
         </div>
         <div class="nav-item" data-view="explore" id="navExplore">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+          <iconsax-icon name="discover" type="linear" size="20" color="currentColor"></iconsax-icon>
           Explore
         </div>
-        <div class="nav-item" data-view="player" id="navNowPlaying">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"></polygon></svg>
-          Now Playing
-        </div>
         <div class="nav-item" data-view="plugins" id="navPlugins">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+          <iconsax-icon name="box" type="linear" size="20" color="currentColor"></iconsax-icon>
           Ekstensi & Plugin
         </div>
         <div class="nav-item" data-view="equalizer" id="navEqualizer">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+          <iconsax-icon name="setting-4" type="linear" size="20" color="currentColor"></iconsax-icon>
           Equalizer DSP
         </div>
       </nav>
@@ -87,7 +84,9 @@
           <div class="search-box">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input type="text" id="searchInput" placeholder="Cari lagu, artis, video musik, atau playlist...">
-            <button id="searchClearBtn" class="search-clear-btn" style="display: none;">✕</button>
+            <button id="searchClearBtn" class="search-clear-btn" style="display: none;" title="Hapus Pencarian">
+              <iconsax-icon name="close-circle" type="linear" size="18" color="currentColor"></iconsax-icon>
+            </button>
           </div>
 
           <!-- Suggestion Pick Chips -->
@@ -128,6 +127,27 @@
 
       <!-- Home View Container -->
       <div id="homeViewContainer">
+        <!-- Quick Picks / Pilihan Cepat (YouTube Music Horizontal Swipe Style) -->
+        <section class="quick-picks-section" id="quickPicksSection" style="margin-bottom: 24px;">
+          <div class="section-title">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--color-text-secondary); font-weight: 700;">MULAI RADIO DARI LAGU</span>
+              <span style="font-size: 20px; font-weight: 800;">Pilihan Cepat</span>
+            </div>
+            <div class="carousel-nav-arrows">
+              <button class="carousel-arrow-btn" id="quickPicksPrevBtn" title="Geser Kiri">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </button>
+              <button class="carousel-arrow-btn" id="quickPicksNextBtn" title="Geser Kanan">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+          </div>
+          <div class="ytm-swipe-carousel" id="quickPicksCarousel">
+            <!-- Populated dynamically via JS: 4 rows per column, horizontally swipeable -->
+          </div>
+        </section>
+
         <!-- Curated Playlists Recommendations (Strictly no YT Music branding) -->
         <section class="curated-playlists-section" id="curatedPlaylistsSection">
           <div class="section-title">
@@ -156,11 +176,85 @@
         </section>
       </div>
 
+      <!-- Dedicated Exploration View Container (Eksplorasi) -->
+      <div id="exploreViewContainer" style="display: none;">
+        <!-- Explore Mood & Genre Quick Pills Bar -->
+        <div class="explore-hero-section">
+          <div class="explore-pill-grid">
+            <button class="explore-nav-pill active" data-explore-tab="charts">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+              <span>Tangga Lagu</span>
+            </button>
+            <button class="explore-nav-pill" data-explore-tab="new-releases">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              <span>Rilis Baru</span>
+            </button>
+            <button class="explore-nav-pill" data-explore-tab="moods">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+              <span>Mood & Genre</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 1. Top Charts 50 Swipe Carousel (Tangga Lagu Teratas) -->
+        <section class="explore-section" id="exploreChartsSection" style="margin-top: 24px;">
+          <div class="section-title">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--color-brand-primary); font-weight: 700;">TREN POPULER</span>
+              <span style="font-size: 20px; font-weight: 800;">Tangga Lagu Teratas (Top 50)</span>
+            </div>
+            <div class="carousel-nav-arrows">
+              <button class="carousel-arrow-btn" id="chartsPrevBtn" title="Geser Kiri">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </button>
+              <button class="carousel-arrow-btn" id="chartsNextBtn" title="Geser Kanan">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+          </div>
+          <div class="ytm-swipe-carousel" id="chartsCarousel">
+            <!-- Populated dynamically via JS in columns of 4 tracks each -->
+          </div>
+        </section>
+
+        <!-- 2. Mood & Genre Category Cards Grid -->
+        <section class="explore-section" id="exploreMoodsSection" style="margin-top: 32px;">
+          <div class="section-title">
+            <span style="font-size: 20px; font-weight: 800;">Suasana Hati & Kategori</span>
+            <span class="section-sub-action">Semua Kategori</span>
+          </div>
+          <div class="mood-genre-grid" id="moodGenreGrid">
+            <!-- Populated dynamically with colorful cards -->
+          </div>
+        </section>
+
+        <!-- 3. New Releases & Trending Albums -->
+        <section class="explore-section" id="exploreNewReleasesSection" style="margin-top: 32px;">
+          <div class="section-title">
+            <span style="font-size: 20px; font-weight: 800;">Album & Single Baru</span>
+            <span class="section-sub-action">Lihat Semua</span>
+          </div>
+          <div class="curated-playlists-row" id="exploreNewReleasesRow">
+            <!-- Populated dynamically with new album releases -->
+          </div>
+        </section>
+      </div>
+
       <!-- Multi-Type Search Results View Container -->
       <div id="searchResultsContainer" style="display: none;">
         <div class="search-results-header">
           <h2 id="searchResultsTitle" style="font-size: 20px; font-weight: 800;">Hasil Pencarian</h2>
           <span id="searchResultsCount" style="font-size: 13px; color: var(--color-text-secondary);"></span>
+        </div>
+
+        <!-- Top Result Section (Apple Music & Spotify inspired, matches mobile) -->
+        <div id="searchTopResultSection" style="display: none; margin-bottom: 28px;">
+          <div class="section-title">
+            <span>Hasil Teratas</span>
+          </div>
+          <div id="searchTopResultCard" class="top-result-card">
+            <!-- Populated dynamically -->
+          </div>
         </div>
 
         <!-- Artists Grid Results (When searching artists or 'all') -->
@@ -319,6 +413,10 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
                 Acak
               </button>
+              <button class="hero-secondary-btn" id="playlistEditBtn" style="display: none;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                Ubah
+              </button>
               <button class="hero-outline-btn delete-btn" id="playlistDeleteBtn" style="display: none;">
                 Hapus Playlist
               </button>
@@ -369,11 +467,17 @@
         </div>
 
         <div class="eq-card" style="margin-top: 20px;">
-          <div style="display: flex; gap: 10px; margin-bottom: 24px;">
+          <div style="display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap;">
             <button class="chip active" data-eq="Flat">Flat</button>
-            <button class="chip" data-eq="Bass Boost">Bass Boost 🔥</button>
-            <button class="chip" data-eq="Electronic / Cyber">Cyberpunk Beats ⚡</button>
-            <button class="chip" data-eq="Vocal / Acoustic">Vokal & Akustik 🎙️</button>
+            <button class="chip" data-eq="Bass Boost" style="display: inline-flex; align-items: center; gap: 6px;">
+              Bass Boost <iconsax-icon name="flash" type="bold" size="14" color="#EF4444"></iconsax-icon>
+            </button>
+            <button class="chip" data-eq="Electronic / Cyber" style="display: inline-flex; align-items: center; gap: 6px;">
+              Cyberpunk Beats <iconsax-icon name="cpu" type="bold" size="14" color="#3B82F6"></iconsax-icon>
+            </button>
+            <button class="chip" data-eq="Vocal / Acoustic" style="display: inline-flex; align-items: center; gap: 6px;">
+              Vokal & Akustik <iconsax-icon name="microphone-2" type="bold" size="14" color="#10B981"></iconsax-icon>
+            </button>
           </div>
 
           <div class="eq-sliders-row" id="eqBandsRow">
@@ -440,55 +544,56 @@
               <img id="screenPlayerArtwork" src="" alt="Album Artwork" class="screen-player-artwork-img">
             </div>
 
-            <!-- 2. Video Player Mode (jika muter video tampilin videonya) -->
+            <!-- 2. Video Player Mode (Direct native video stream, zero error 152, Pear Desktop cinema style) -->
             <div id="screenPlayerVideoView" class="screen-player-video-box" style="display: none;">
-              <iframe id="screenPlayerVideoFrame" class="screen-player-video-frame" src="" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe>
-            </div>
-
-            <!-- Track Metadata & Action Row -->
-            <div class="screen-player-meta-row">
-              <div class="screen-player-meta-info">
-                <h1 class="screen-player-title" id="screenPlayerTitle">SoraFy Desktop</h1>
-                <h2 class="screen-player-artist" id="screenPlayerArtist">Pilih lagu untuk memutar</h2>
+              <div id="screenPlayerVideoLoading" class="screen-player-video-loading" style="display: none;">
+                <iconsax-icon name="video-play" type="bold" size="40" color="#00E599"></iconsax-icon>
+                <div style="font-size: 13px; font-weight: 600; color: #FFFFFF; margin-top: 12px;">Menghubungkan video klip...</div>
               </div>
-              <div class="screen-player-actions">
-                <button class="track-row-heart" id="screenPlayerLikeBtn" title="Sukai Lagu">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                </button>
-                <button class="track-row-add-btn" id="screenPlayerAddToPlaylistBtn" title="Tambah ke Playlist">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                </button>
-              </div>
-            </div>
+              <video id="screenPlayerNativeVideo" class="screen-player-video-frame" playsinline style="display: none; width: 100%; height: 100%; border-radius: 18px; object-fit: contain;"></video>
+              <iframe id="screenPlayerVideoFrame" class="screen-player-video-frame" src="" style="display: none;" referrerpolicy="origin" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe>
 
-            <!-- Synchronized Controls in Screen Player -->
-            <div class="screen-player-controls-card">
-              <!-- Progress Bar Slider -->
-              <div class="screen-player-progress-container">
-                <span class="time-label" id="screenPlayerCurrentTime">0:00</span>
-                <div class="screen-player-seekbar-wrap">
-                  <input type="range" class="screen-player-slider" id="screenPlayerSeekbar" min="0" max="100" value="0" step="0.1">
+              <!-- Pear Desktop Style Cinema Video Overlay -->
+              <div id="screenPlayerVideoOverlay" class="screen-player-video-overlay">
+                <div class="video-overlay-top">
+                  <div class="video-overlay-track-info">
+                    <span id="videoOverlayTitle" class="video-overlay-title">Judul Video</span>
+                    <span id="videoOverlayArtist" class="video-overlay-artist">Artis</span>
+                  </div>
+                  <div class="video-overlay-actions">
+                    <button class="video-action-btn" id="videoOverlayPipBtn" title="Picture-in-Picture (PiP)">
+                      <iconsax-icon name="picture-frame" type="bold" size="18" color="#FFFFFF"></iconsax-icon>
+                    </button>
+                    <button class="video-action-btn" id="videoOverlayFullscreenBtn" title="Layar Penuh / Theater (F)">
+                      <iconsax-icon name="maximize-4" type="bold" size="18" color="#FFFFFF"></iconsax-icon>
+                    </button>
+                  </div>
                 </div>
-                <span class="time-label" id="screenPlayerDuration">0:00</span>
-              </div>
 
-              <!-- Transport Buttons -->
-              <div class="screen-player-transport">
-                <button class="control-btn" id="screenPlayerShuffleBtn" title="Acak">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
-                </button>
-                <button class="control-btn" id="screenPlayerPrevBtn" title="Sebelumnya">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"></line></svg>
-                </button>
-                <button class="screen-player-play-btn" id="screenPlayerPlayPauseBtn" title="Putar / Jeda">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" id="screenPlayerPlayPauseIcon"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                </button>
-                <button class="control-btn" id="screenPlayerNextBtn" title="Berikutnya">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"></line></svg>
-                </button>
-                <button class="control-btn" id="screenPlayerRepeatBtn" title="Ulangi">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
-                </button>
+                <div class="video-overlay-center">
+                  <button class="video-center-play-btn" id="videoOverlayCenterPlayBtn" title="Putar / Jeda">
+                    <iconsax-icon id="videoOverlayCenterPlayIcon" name="play" type="bold" size="30" color="#000000"></iconsax-icon>
+                  </button>
+                </div>
+
+                <div class="video-overlay-bottom">
+                  <div class="video-overlay-progress-bar" id="videoOverlayProgressBar" title="Klik untuk menggeser waktu">
+                    <div id="videoOverlayProgressFill" class="video-overlay-progress-fill"></div>
+                  </div>
+                  <div class="video-overlay-controls-row">
+                    <div class="video-overlay-left-controls">
+                      <span id="videoOverlayCurrentTime">0:00</span>
+                      <span style="opacity: 0.4; margin: 0 4px;">/</span>
+                      <span id="videoOverlayDuration">0:00</span>
+                    </div>
+                    <div class="video-overlay-right-controls">
+                      <button class="video-badge-mode-btn" id="videoOverlaySwitchAudioBtn" title="Beralih ke Mode Audio Saja">
+                        <iconsax-icon name="music" type="bold" size="14" color="#00E599"></iconsax-icon>
+                        <span>Mode Audio</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -512,8 +617,36 @@
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <button class="queue-clear-btn" id="clearQueueBtn" style="display: none;" title="Bersihkan Antrean">Bersihkan</button>
+          <button class="control-btn" id="lyricsSearchToggleBtn" title="Cari di Lirik (Ctrl+F)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </button>
           <button class="control-btn" id="closeSideDrawerBtn" title="Tutup Panel">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- In-Document Notes-App Style Lyrics Search Bar -->
+      <div class="lyrics-search-bar" id="lyricsSearchBar">
+        <div class="lyrics-search-input-wrap">
+          <svg class="lyrics-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="lyricsSearchInput" class="lyrics-search-input" placeholder="Cari bait di lirik..." autocomplete="off" spellcheck="false" />
+          <button class="lyrics-search-clear-btn" id="lyricsClearBtn" title="Hapus teks" style="display: none;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div class="lyrics-search-controls">
+          <span class="lyrics-match-counter" id="lyricsMatchCounter">0 / 0</span>
+          <div class="lyrics-stepper-group">
+            <button class="lyrics-stepper-btn" id="lyricsPrevMatchBtn" title="Hasil Sebelumnya (Shift+Enter)" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+            </button>
+            <button class="lyrics-stepper-btn" id="lyricsNextMatchBtn" title="Hasil Berikutnya (Enter)" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+          </div>
+          <button class="lyrics-search-close-btn" id="lyricsSearchCloseBtn" title="Tutup Pencarian (Esc)">
+            Selesai
           </button>
         </div>
       </div>
@@ -548,11 +681,16 @@
 
   <!-- Bottom Persistent Music Player -->
   <footer class="bottom-player">
-    <div class="current-track-info" id="bottomPlayerTrackInfo" style="cursor: pointer;" title="Buka Screen Player (Layar Penuh)">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='none' stroke='%235F6368' stroke-width='1.5'%3E%3Cpath d='M9 18V5l12-2v13'%3E%3C/path%3E%3Ccircle cx='6' cy='18' r='3'%3E%3C/circle%3E%3Ccircle cx='18' cy='16' r='3'%3E%3C/circle%3E%3C/svg%3E" alt="Track Artwork" class="player-artwork" id="playerArtwork">
+    <div class="current-track-info" id="bottomPlayerTrackInfo">
+      <div class="player-artwork-box" id="playerArtworkBox" title="Klik cover untuk membuka Layar Penuh">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 24 24' fill='none' stroke='%235F6368' stroke-width='1.5'%3E%3Cpath d='M9 18V5l12-2v13'%3E%3C/path%3E%3Ccircle cx='6' cy='18' r='3'%3E%3C/circle%3E%3Ccircle cx='18' cy='16' r='3'%3E%3C/circle%3E%3C/svg%3E" alt="Track Artwork" class="player-artwork" id="playerArtwork">
+        <div class="player-artwork-expand-overlay">
+          <iconsax-icon name="video-play" type="bold" size="18" color="#FFFFFF"></iconsax-icon>
+        </div>
+      </div>
       <div class="player-track-details">
         <span class="player-title" id="playerTitle">SoraFy Desktop</span>
-        <span class="player-artist" id="playerArtist">Pilih lagu untuk memutar</span>
+        <div class="player-artist" id="playerArtist">Pilih lagu untuk memutar</div>
       </div>
       <button class="heart-btn" id="likeBtn" title="Like Track">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
@@ -628,7 +766,9 @@
     <div class="modal-card">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <h3 style="font-size: 18px; font-weight: 700;">Impor Playlist Spotify</h3>
-        <button class="control-btn" id="closeSpotifyModalBtn">✕</button>
+        <button class="control-btn" id="closeSpotifyModalBtn" title="Tutup">
+          <iconsax-icon name="close-circle" type="linear" size="20" color="currentColor"></iconsax-icon>
+        </button>
       </div>
       <p style="font-size: 13px; color: var(--color-text-secondary); margin-top: 8px;">
         Masukkan tautan playlist publik Spotify (misal: <code>https://open.spotify.com/playlist/...</code>). Lagu-lagu akan otomatis disinkronkan ke katalog SoraFy.
@@ -646,7 +786,9 @@
     <div class="modal-card">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <h3 style="font-size: 18px; font-weight: 700;">+ Buat Playlist Baru</h3>
-        <button class="control-btn" id="closeCreatePlaylistModalBtn">✕</button>
+        <button class="control-btn" id="closeCreatePlaylistModalBtn" title="Tutup">
+          <iconsax-icon name="close-circle" type="linear" size="20" color="currentColor"></iconsax-icon>
+        </button>
       </div>
       <p style="font-size: 13px; color: var(--color-text-secondary); margin-top: 8px;">
         Beri nama playlist kamu untuk mengelompokkan lagu favorit, sesi santai, atau koleksi kerja.
@@ -660,12 +802,35 @@
     </div>
   </div>
 
+  <!-- Modal Dialog Edit Custom Playlist -->
+  <div id="editPlaylistModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 18px; font-weight: 700;">Ubah Rincian Playlist</h3>
+        <button class="control-btn" id="closeEditPlaylistModalBtn" title="Tutup">
+          <iconsax-icon name="close-circle" type="linear" size="20" color="currentColor"></iconsax-icon>
+        </button>
+      </div>
+      <p style="font-size: 13px; color: var(--color-text-secondary); margin-top: 8px;">
+        Perbarui nama dan deskripsi playlist Anda.
+      </p>
+      <input type="text" id="editPlaylistNameInput" class="modal-input" placeholder="Nama Playlist">
+      <textarea id="editPlaylistDescInput" class="modal-input" style="height: 70px; resize: none; margin-top: 10px;" placeholder="Deskripsi opsional..."></textarea>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+        <button class="hero-secondary-btn" id="cancelEditPlaylistBtn">Batal</button>
+        <button class="hero-play-btn" id="submitEditPlaylistBtn">Simpan Perubahan</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Dialog Add Track to Playlist -->
   <div id="addToPlaylistModal" class="modal-backdrop" style="display: none;">
     <div class="modal-card">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <h3 style="font-size: 18px; font-weight: 700;">Tambahkan ke Playlist</h3>
-        <button class="control-btn" id="closeAddToPlaylistModalBtn">✕</button>
+        <button class="control-btn" id="closeAddToPlaylistModalBtn" title="Tutup">
+          <iconsax-icon name="close-circle" type="linear" size="20" color="currentColor"></iconsax-icon>
+        </button>
       </div>
       <p style="font-size: 13px; color: var(--color-text-secondary); margin-top: 8px;" id="addToPlaylistTrackTitle">
         Pilih playlist tujuan untuk lagu ini:

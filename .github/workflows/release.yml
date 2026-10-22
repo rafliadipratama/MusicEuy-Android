@@ -99,9 +99,35 @@ jobs:
             desktop/src-tauri/target/release/bundle/nsis/*.exe
             desktop/src-tauri/target/release/bundle/msi/*.msi
 
-  # 4. Create Unified GitHub Release with All Platforms
+  # 4. Build macOS Apple Silicon & Intel DMG (Electron Builder & DMG)
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build macOS DMG
+        run: |
+          cd desktop
+          npm install
+          npm run build:dmg
+
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sorafy-macos-dmg
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/*.zip
+
+  # 5. Create Unified GitHub Release with All Platforms
   publish-release:
-    needs: [build-android, build-linux, build-windows]
+    needs: [build-android, build-linux, build-windows, build-macos]
     runs-on: ubuntu-latest
     steps:
       - name: Download all built artifacts
